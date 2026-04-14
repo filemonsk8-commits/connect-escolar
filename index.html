@@ -13,21 +13,17 @@
         button, select, input, .tab-btn { cursor: pointer; }
         .hidden { display: none !important; }
         #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: var(--primary); }
-        .login-box { background: white; padding: 30px; border-radius: 12px; text-align: center; }
+        .login-box { background: white; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         header { background: white; padding: 15px; display: flex; justify-content: space-between; border-bottom: 2px solid #ddd; position: sticky; top: 0; z-index: 10; }
         .tabs { display: flex; background: #eee; padding: 5px; gap: 5px; justify-content: center; }
         .tab-btn { padding: 10px 20px; border: none; background: none; font-weight: bold; color: #7f8c8d; }
         .tab-btn.active { background: white; color: var(--accent); border-radius: 5px; }
         .container { padding: 20px; max-width: 800px; margin: auto; }
         .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        
-        /* Mensagem de Edição */
         #edit-info { color: var(--edit); font-size: 0.8rem; font-weight: bold; margin-bottom: 10px; display: none; }
-
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         td { padding: 10px; border-bottom: 1px solid #eee; }
         textarea { width: 100%; height: 120px; border-radius: 8px; border: 1px solid #ddd; padding: 12px; font-size: 1rem; resize: none; box-sizing: border-box; }
-        
         .hist-item { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 10px; border-left: 4px solid var(--accent); position: relative; }
         .btn-edit { position: absolute; right: 10px; top: 10px; background: #eee; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.7rem; }
     </style>
@@ -37,8 +33,9 @@
     <div id="login-screen">
         <div class="login-box">
             <h2>Connect Escolar</h2>
-            <input type="password" id="pass" placeholder="Senha" style="padding:10px; width:80%"><br>
-            <button onclick="logar()" style="margin-top:10px; width:88%">Entrar</button>
+            <input type="password" id="pass" placeholder="Senha" style="padding:12px; width:80%; border-radius:8px; border:1px solid #ddd;" onkeydown="if(event.key==='Enter') logar()">
+            <br>
+            <button onclick="logar()" style="margin-top:15px; width:88%; padding:12px; border-radius:8px; background:var(--accent); color:white; border:none; font-weight:bold;">Entrar</button>
         </div>
     </div>
 
@@ -46,9 +43,7 @@
         <header>
             <select id="turma" onchange="atualizarTudo()">
                 <option value="">Selecione a Turma...</option>
-                <option>9º A (PC)</option><option>9º B (PC)</option><option>9º C (LD)</option><option>9º D (LD)</option>
-                <option>1º B (IFA)</option><option>2º B (Soc)</option><option>2º B DG (Hist)</option>
-            </select>
+                </select>
             <input type="date" id="data">
         </header>
 
@@ -61,7 +56,7 @@
         <div class="container">
             <div id="aba-v" class="card">
                 <h3>Controle de Vistos</h3>
-                <div id="lista">Escolha uma turma para começar.</div>
+                <div id="lista">Selecione uma turma no topo.</div>
             </div>
 
             <div id="aba-d" class="card hidden">
@@ -69,7 +64,6 @@
                 <div id="edit-info">✎ Você está editando um conteúdo antigo...</div>
                 <textarea id="cont" placeholder="Descreva o conteúdo ou atividade de hoje..."></textarea>
                 <button onclick="salvarD()" style="width:100%; margin-top:10px; background: #27ae60; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">Salvar Registro</button>
-                
                 <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
                 <h4>Histórico desta Turma</h4>
                 <div id="historico-lista">Selecione a turma para ver o passado.</div>
@@ -77,8 +71,10 @@
 
             <div id="aba-c" class="card hidden">
                 <h3>Importar Alunos</h3>
-                <textarea id="imp" placeholder="Cole a lista bruta aqui..."></textarea>
-                <button onclick="importar()" style="width:100%; margin-top:10px; padding:12px;">Atualizar Lista</button>
+                <p style="font-size:0.8rem; color:#666;">Digite o nome da nova turma abaixo:</p>
+                <input type="text" id="nova-turma" placeholder="Ex: 9º A (PC)" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ddd;">
+                <textarea id="imp" placeholder="Cole a lista de alunos aqui..."></textarea>
+                <button onclick="importar()" style="width:100%; margin-top:10px; padding:12px; border-radius:8px;">Criar/Atualizar Turma</button>
             </div>
         </div>
     </div>
@@ -88,10 +84,30 @@
         firebase.initializeApp(config);
         const db = firebase.database();
 
+        // Carrega a lista de turmas assim que o script inicia
+        function carregarListaDeTurmas() {
+            db.ref('turmas').on('value', s => {
+                const turmas = s.val();
+                const select = document.getElementById('turma');
+                const valorAtual = select.value;
+                select.innerHTML = '<option value="">Selecione a Turma...</option>';
+                if(turmas) {
+                    Object.keys(turmas).forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t;
+                        opt.innerHTML = t;
+                        select.appendChild(opt);
+                    });
+                }
+                select.value = valorAtual;
+            });
+        }
+
         function logar() {
             if(document.getElementById('pass').value === '2203') {
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('app').classList.remove('hidden');
+                carregarListaDeTurmas();
             } else alert('Senha Incorreta!');
         }
 
@@ -125,7 +141,6 @@
             const d = document.getElementById('data').value;
             const txt = document.getElementById('cont').value;
             if(!t || !txt) return alert('Selecione a turma e escreva o conteúdo!');
-            
             db.ref('diario/'+t+'/'+d).set({conteudo: txt}).then(() => {
                 alert('Salvo!');
                 document.getElementById('cont').value = "";
@@ -137,11 +152,9 @@
             const t = document.getElementById('turma').value;
             const listaDiv = document.getElementById('historico-lista');
             if(!t) return;
-
             db.ref('diario/'+t).on('value', s => {
                 const dados = s.val();
                 if(!dados) { listaDiv.innerHTML = "Nenhum registro encontrado."; return; }
-                
                 let h = "";
                 Object.keys(dados).reverse().forEach(data => {
                     h += `<div class="hist-item">
@@ -163,12 +176,15 @@
         }
 
         function importar() {
-            const t = document.getElementById('turma').value;
+            const t = document.getElementById('nova-turma').value || document.getElementById('turma').value;
+            if(!t) return alert('Dê um nome para a turma!');
             const nomes = document.getElementById('imp').value.split('\n')
                 .map(n => n.replace(/^[0-9\s.\-_]+/, '').trim())
                 .filter(n => n.length > 2);
             db.ref('turmas/'+t).set(nomes);
-            alert('Turma atualizada!');
+            alert('Turma ' + t + ' salva!');
+            document.getElementById('imp').value = "";
+            document.getElementById('nova-turma').value = "";
         }
 
         document.getElementById('data').valueAsDate = new Date();
