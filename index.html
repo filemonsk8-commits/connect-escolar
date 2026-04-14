@@ -48,8 +48,8 @@
                 <option>9ºD Letramento Digital</option>
                 <option>1ºB Sociologia</option>
                 <option>1ºB IFA</option>
-                <option>2ºB Sociologia</option>
                 <option>2ºA DG História</option>
+                <option>2ºA DG Filosofia</option> <option>2ºB Sociologia</option>
                 <option>2ºB DG História</option>
                 <option>2ºB DG Filosofia</option>
                 <option>2ºC Sociologia</option>
@@ -77,8 +77,8 @@
                 <textarea id="cont" placeholder="Conteúdo da aula de hoje..."></textarea>
                 <button onclick="salvarD()" style="width:100%; margin-top:10px; background: var(--success); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">Salvar no Diário</button>
                 <hr style="margin:25px 0; border:0; border-top:1px solid #eee;">
-                <h4>Histórico</h4>
-                <div id="historico-lista">Aguardando turma...</div>
+                <h4>Histórico desta Turma</h4>
+                <div id="historico-lista">Aguardando seleção de turma...</div>
             </div>
 
             <div id="aba-c" class="card hidden">
@@ -108,7 +108,10 @@
             event.target.classList.add('active');
         }
 
-        function atualizarTudo() { carregarAlunos(); carregarHistorico(); }
+        function atualizarTudo() { 
+            carregarAlunos(); 
+            carregarHistorico(); 
+        }
 
         function carregarAlunos() {
             const t = document.getElementById('turma').value;
@@ -119,7 +122,6 @@
                     document.getElementById('lista').innerHTML = "<p>Sem alunos. Vá em 'Config' e cole a lista.</p>";
                     return;
                 }
-                // Busca vistos salvos para esta data e turma
                 const d = document.getElementById('data').value;
                 db.ref('vistos/'+t+'/'+d).once('value', vsnap => {
                     const salvos = vsnap.val() || {};
@@ -141,7 +143,6 @@
             const t = document.getElementById('turma').value;
             const d = document.getElementById('data').value;
             if(!t) return alert('Selecione a turma!');
-            
             let dadosVistos = {};
             document.querySelectorAll('#lista tr').forEach((tr, i) => {
                 dadosVistos[i] = {};
@@ -149,7 +150,6 @@
                     dadosVistos[i][chk.dataset.ativ] = chk.checked;
                 });
             });
-
             db.ref('vistos/'+t+'/'+d).set(dadosVistos).then(() => alert('Vistos salvos!'));
         }
 
@@ -169,13 +169,17 @@
             const t = document.getElementById('turma').value;
             const list = document.getElementById('historico-lista');
             if(!t) return;
+            
+            list.innerHTML = "Carregando histórico..."; // Feedback visual
+
             db.ref('diario/'+t).on('value', s => {
                 const d = s.val();
-                if(!d) { list.innerHTML = "Sem histórico."; return; }
+                if(!d) { list.innerHTML = "Nenhum histórico encontrado para esta turma."; return; }
                 let h = "";
-                Object.keys(d).reverse().forEach(data => {
+                // Ordena por data (mais recente primeiro)
+                Object.keys(d).sort().reverse().forEach(data => {
                     h += `<div class="hist-item"><strong>${data.split('-').reverse().join('/')}</strong>
-                    <button class="btn-edit" onclick="prepararEdicao('${data}','${d[data].conteudo}')">Editar</button>
+                    <button class="btn-edit" onclick="prepararEdicao('${data}','${d[data].conteudo.replace(/'/g, "\\'")}')">Editar</button>
                     <p>${d[data].conteudo}</p></div>`;
                 });
                 list.innerHTML = h;
@@ -187,11 +191,12 @@
             document.getElementById('cont').value = t;
             document.getElementById('edit-info').style.display = "block";
             aba('d');
+            window.scrollTo(0,0);
         }
 
         function importar() {
             const t = document.getElementById('turma').value;
-            if(!t) return alert('Selecione a turma no seletor do topo primeiro!');
+            if(!t) return alert('Selecione a turma no seletor primeiro!');
             const nomes = document.getElementById('imp').value.split('\n')
                 .map(n => n.replace(/^[0-9\s.\-_]+/, '').trim())
                 .filter(n => n.length > 2);
