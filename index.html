@@ -8,7 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6; --white: #fff; --edit: #f39c12; }
+        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6; --white: #fff; --edit: #f39c12; --success: #27ae60; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; }
         button, select, input, .tab-btn { cursor: pointer; }
         .hidden { display: none !important; }
@@ -20,7 +20,6 @@
         .tab-btn.active { background: white; color: var(--accent); border-radius: 5px; }
         .container { padding: 20px; max-width: 800px; margin: auto; }
         .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        #edit-info { color: var(--edit); font-size: 0.8rem; font-weight: bold; margin-bottom: 10px; display: none; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         td { padding: 10px; border-bottom: 1px solid #eee; }
         textarea { width: 100%; height: 120px; border-radius: 8px; border: 1px solid #ddd; padding: 12px; font-size: 1rem; resize: none; box-sizing: border-box; }
@@ -43,7 +42,19 @@
         <header>
             <select id="turma" onchange="atualizarTudo()">
                 <option value="">Selecione a Turma...</option>
-                </select>
+                <option>9ºA Letramento Digital</option>
+                <option>9ºB Pensamento Comp.</option>
+                <option>9ºC Letramento Digital</option>
+                <option>9ºD Letramento Digital</option>
+                <option>1ºB Sociologia</option>
+                <option>1ºB IFA</option>
+                <option>2ºB Sociologia</option>
+                <option>2ºA DG História</option>
+                <option>2ºB DG História</option>
+                <option>2ºB DG Filosofia</option>
+                <option>2ºC Sociologia</option>
+                <option>2ºD Sociologia</option>
+            </select>
             <input type="date" id="data">
         </header>
 
@@ -56,25 +67,24 @@
         <div class="container">
             <div id="aba-v" class="card">
                 <h3>Controle de Vistos</h3>
-                <div id="lista">Selecione uma turma no topo.</div>
+                <div id="lista">Selecione a turma para carregar os alunos.</div>
+                <button onclick="salvarVistos()" style="width:100%; margin-top:20px; background:var(--accent); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">Salvar Vistos do Dia</button>
             </div>
 
             <div id="aba-d" class="card hidden">
                 <h3>Registro de Aula</h3>
-                <div id="edit-info">✎ Você está editando um conteúdo antigo...</div>
-                <textarea id="cont" placeholder="Descreva o conteúdo ou atividade de hoje..."></textarea>
-                <button onclick="salvarD()" style="width:100%; margin-top:10px; background: #27ae60; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">Salvar Registro</button>
-                <hr style="margin: 25px 0; border: 0; border-top: 1px solid #eee;">
-                <h4>Histórico desta Turma</h4>
-                <div id="historico-lista">Selecione a turma para ver o passado.</div>
+                <div id="edit-info" style="color:var(--edit); display:none; font-weight:bold; margin-bottom:10px;">✎ Editando conteúdo antigo...</div>
+                <textarea id="cont" placeholder="Conteúdo da aula de hoje..."></textarea>
+                <button onclick="salvarD()" style="width:100%; margin-top:10px; background: var(--success); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">Salvar no Diário</button>
+                <hr style="margin:25px 0; border:0; border-top:1px solid #eee;">
+                <h4>Histórico</h4>
+                <div id="historico-lista">Aguardando turma...</div>
             </div>
 
             <div id="aba-c" class="card hidden">
                 <h3>Importar Alunos</h3>
-                <p style="font-size:0.8rem; color:#666;">Digite o nome da nova turma abaixo:</p>
-                <input type="text" id="nova-turma" placeholder="Ex: 9º A (PC)" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ddd;">
-                <textarea id="imp" placeholder="Cole a lista de alunos aqui..."></textarea>
-                <button onclick="importar()" style="width:100%; margin-top:10px; padding:12px; border-radius:8px;">Criar/Atualizar Turma</button>
+                <textarea id="imp" placeholder="Cole a lista de alunos da turma selecionada aqui..."></textarea>
+                <button onclick="importar()" style="width:100%; margin-top:10px; padding:12px; border-radius:8px; background:var(--primary); color:white; border:none;">Salvar Lista na Turma</button>
             </div>
         </div>
     </div>
@@ -84,31 +94,11 @@
         firebase.initializeApp(config);
         const db = firebase.database();
 
-        // Carrega a lista de turmas assim que o script inicia
-        function carregarListaDeTurmas() {
-            db.ref('turmas').on('value', s => {
-                const turmas = s.val();
-                const select = document.getElementById('turma');
-                const valorAtual = select.value;
-                select.innerHTML = '<option value="">Selecione a Turma...</option>';
-                if(turmas) {
-                    Object.keys(turmas).forEach(t => {
-                        const opt = document.createElement('option');
-                        opt.value = t;
-                        opt.innerHTML = t;
-                        select.appendChild(opt);
-                    });
-                }
-                select.value = valorAtual;
-            });
-        }
-
         function logar() {
             if(document.getElementById('pass').value === '2203') {
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('app').classList.remove('hidden');
-                carregarListaDeTurmas();
-            } else alert('Senha Incorreta!');
+            } else alert('Senha 2203 Incorreta!');
         }
 
         function aba(a) {
@@ -118,31 +108,58 @@
             event.target.classList.add('active');
         }
 
-        function atualizarTudo() {
-            carregarAlunos();
-            carregarHistorico();
-        }
+        function atualizarTudo() { carregarAlunos(); carregarHistorico(); }
 
         function carregarAlunos() {
             const t = document.getElementById('turma').value;
             if(!t) return;
             db.ref('turmas/'+t).on('value', s => {
                 const lista = s.val() || [];
-                let h = '<table>';
-                lista.forEach((n, i) => {
-                    h += `<tr><td>${n}</td><td style="text-align:right">${[1,2,3,4,5].map(v => `<input type="checkbox" style="margin-left:7px">`).join('')}</td></tr>`;
+                if(lista.length === 0) {
+                    document.getElementById('lista').innerHTML = "<p>Sem alunos. Vá em 'Config' e cole a lista.</p>";
+                    return;
+                }
+                // Busca vistos salvos para esta data e turma
+                const d = document.getElementById('data').value;
+                db.ref('vistos/'+t+'/'+d).once('value', vsnap => {
+                    const salvos = vsnap.val() || {};
+                    let h = '<table>';
+                    lista.forEach((n, i) => {
+                        h += `<tr><td>${n}</td><td style="text-align:right">`;
+                        for(let v=1; v<=5; v++) {
+                            const checked = (salvos[i] && salvos[i][v]) ? 'checked' : '';
+                            h += `<input type="checkbox" class="v-${i}" data-ativ="${v}" ${checked} style="margin-left:7px">`;
+                        }
+                        h += `</td></tr>`;
+                    });
+                    document.getElementById('lista').innerHTML = h + '</table>';
                 });
-                document.getElementById('lista').innerHTML = h + '</table>';
             });
+        }
+
+        function salvarVistos() {
+            const t = document.getElementById('turma').value;
+            const d = document.getElementById('data').value;
+            if(!t) return alert('Selecione a turma!');
+            
+            let dadosVistos = {};
+            document.querySelectorAll('#lista tr').forEach((tr, i) => {
+                dadosVistos[i] = {};
+                tr.querySelectorAll('input').forEach(chk => {
+                    dadosVistos[i][chk.dataset.ativ] = chk.checked;
+                });
+            });
+
+            db.ref('vistos/'+t+'/'+d).set(dadosVistos).then(() => alert('Vistos salvos!'));
         }
 
         function salvarD() {
             const t = document.getElementById('turma').value;
             const d = document.getElementById('data').value;
             const txt = document.getElementById('cont').value;
-            if(!t || !txt) return alert('Selecione a turma e escreva o conteúdo!');
+            if(!t || !txt) return alert('Selecione turma e digite o conteúdo!');
             db.ref('diario/'+t+'/'+d).set({conteudo: txt}).then(() => {
-                alert('Salvo!');
+                alert('Diário atualizado!');
                 document.getElementById('cont').value = "";
                 document.getElementById('edit-info').style.display = "none";
             });
@@ -150,41 +167,38 @@
 
         function carregarHistorico() {
             const t = document.getElementById('turma').value;
-            const listaDiv = document.getElementById('historico-lista');
+            const list = document.getElementById('historico-lista');
             if(!t) return;
             db.ref('diario/'+t).on('value', s => {
-                const dados = s.val();
-                if(!dados) { listaDiv.innerHTML = "Nenhum registro encontrado."; return; }
+                const d = s.val();
+                if(!d) { list.innerHTML = "Sem histórico."; return; }
                 let h = "";
-                Object.keys(dados).reverse().forEach(data => {
-                    h += `<div class="hist-item">
-                            <strong>Data: ${data.split('-').reverse().join('/')}</strong>
-                            <button class="btn-edit" onclick="prepararEdicao('${data}', '${dados[data].conteudo.replace(/'/g, "\\'")}')">Editar</button>
-                            <p style="margin:5px 0 0 0; font-size:0.9rem; color:#555;">${dados[data].conteudo}</p>
-                          </div>`;
+                Object.keys(d).reverse().forEach(data => {
+                    h += `<div class="hist-item"><strong>${data.split('-').reverse().join('/')}</strong>
+                    <button class="btn-edit" onclick="prepararEdicao('${data}','${d[data].conteudo}')">Editar</button>
+                    <p>${d[data].conteudo}</p></div>`;
                 });
-                listaDiv.innerHTML = h;
+                list.innerHTML = h;
             });
         }
 
-        function prepararEdicao(data, texto) {
-            document.getElementById('data').value = data;
-            document.getElementById('cont').value = texto;
+        function prepararEdicao(d, t) {
+            document.getElementById('data').value = d;
+            document.getElementById('cont').value = t;
             document.getElementById('edit-info').style.display = "block";
-            window.scrollTo(0,0);
             aba('d');
         }
 
         function importar() {
-            const t = document.getElementById('nova-turma').value || document.getElementById('turma').value;
-            if(!t) return alert('Dê um nome para a turma!');
+            const t = document.getElementById('turma').value;
+            if(!t) return alert('Selecione a turma no seletor do topo primeiro!');
             const nomes = document.getElementById('imp').value.split('\n')
                 .map(n => n.replace(/^[0-9\s.\-_]+/, '').trim())
                 .filter(n => n.length > 2);
-            db.ref('turmas/'+t).set(nomes);
-            alert('Turma ' + t + ' salva!');
-            document.getElementById('imp').value = "";
-            document.getElementById('nova-turma').value = "";
+            db.ref('turmas/'+t).set(nomes).then(() => {
+                alert('Lista de ' + t + ' salva!');
+                document.getElementById('imp').value = "";
+            });
         }
 
         document.getElementById('data').valueAsDate = new Date();
