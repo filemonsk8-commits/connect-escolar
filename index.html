@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Escolar | Prof. Eduardo</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="shortcut icon" href="https://cdn-icons-png.flaticon.com/512/3429/3429149.png">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f0f2f5;
+            --white: #ffffff;
+            --success: #27ae60;
+            --border: #dcdde1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            color: var(--primary);
+            transition: all 0.3s;
+        }
+
+        /* Interatividade Mãozinha */
+        button, select, input, .tab-btn, .clickable { cursor: pointer; }
+
+        .hidden { display: none !important; }
+
+        /* Login Screen */
+        #login-screen {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--primary);
+        }
+
+        .login-card {
+            background: var(--white);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            text-align: center;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        /* App Header */
+        header {
+            background: var(--white);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            background: #e1e4e8;
+            padding: 8px;
+            gap: 10px;
+        }
+
+        .tab-btn {
+            padding: 10px 25px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-weight: 600;
+            color: #7f8c8d;
+        }
+
+        .tab-btn.active {
+            background: var(--white);
+            color: var(--accent);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Cards e Content */
+        .container { padding: 20px; max-width: 1000px; margin: auto; }
+        .card {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #eee; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
+
+        .visto-cell { text-align: center; width: 50px; }
+        
+        textarea {
+            width: 100%; height: 120px; border-radius: 8px; border: 1px solid var(--border);
+            padding: 12px; font-size: 1rem; resize: none; box-sizing: border-box;
+        }
+
+        input[type="text"], input[type="password"], select, input[type="date"] {
+            padding: 10px; border: 1px solid var(--border); border-radius: 6px; outline: none;
+        }
+
+        button {
+            background: var(--accent); color: white; border: none;
+            padding: 12px 20px; border-radius: 8px; font-weight: bold;
+        }
+
+        .btn-save { background: var(--success); width: 100%; margin-top: 15px; }
+
+        /* Estilo da Tabela de Alunos */
+        .student-name { font-weight: 500; text-transform: capitalize; }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <div class="login-card">
+            <h2 style="margin:0 0 10px 0;">Connect Escolar</h2>
+            <p style="color:#666; font-size:0.9rem;">Olá Eduardo, identifique-se:</p>
+            <input type="password" id="pass-input" placeholder="Senha" style="width:100%; box-sizing:border-box;">
+            <button onclick="checkLogin()" style="width:100%; margin-top:15px;">Entrar</button>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden">
+        <header>
+            <div>
+                <strong>Eduardo</strong> | 
+                <select id="select-turma" onchange="carregarTurma()">
+                    <option value="">Selecione a Turma</option>
+                    <option>9º A (PC)</option><option>9º B (PC)</option>
+                    <option>9º C (LD)</option><option>9º D (LD)</option>
+                    <option>1º B (IFA)</option><option>1º B (Soc)</option>
+                    <option>2º B (Soc)</option><option>2º C (Soc)</option>
+                    <option>2º D (Soc)</option><option>2º B DG (Hist)</option>
+                    <option>2º B DG (Filo)</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <input type="date" id="data-aula">
+                <select id="bim-select">
+                    <option value="1">1º Bim</option><option value="2">2º Bim</option>
+                    <option value="3">3º Bim</option><option value="4">4º Bim</option>
+                </select>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" onclick="nav('vistos')">Vistos</button>
+            <button class="tab-btn" onclick="nav('diario')">Diário</button>
+            <button class="tab-btn" onclick="nav('config')">⚙️ Config</button>
+        </nav>
+
+        <div class="container">
+            <div id="view-vistos" class="tab-content">
+                <div class="card">
+                    <div style="display:flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin:0">Controle de Atividades</h3>
+                        <small>Atividades numeradas de 1 a 5</small>
+                    </div>
+                    <div id="area-alunos">
+                        <p style="text-align:center; padding:40px; color:#999;">Escolha uma turma acima.</p>
+                    </div>
+                    <button class="btn-save" onclick="salvarVistos()">Salvar Vistos do Dia</button>
+                </div>
+            </div>
+
+            <div id="view-diario" class="tab-content hidden">
+                <div class="card">
+                    <h3>Conteúdo da Aula</h3>
+                    <textarea id="texto-diario" placeholder="Escreva o conteúdo passado no quadro ou atividades realizadas..."></textarea>
+                    <button class="btn-save" onclick="salvarDiario()">Salvar no Histórico</button>
+                </div>
+            </div>
+
+            <div id="view-config" class="tab-content hidden">
+                <div class="card">
+                    <h3>Importar Alunos</h3>
+                    <p style="font-size:0.8rem; color:#666;">Cole a lista bruta. O sistema limpará números e códigos automaticamente.</p>
+                    <textarea id="input-import" placeholder="01 - PEDRO...&#10;02 - MARIA..."></textarea>
+                    <button onclick="importar()" style="width:100%; margin-top:10px;">Limpar e Atualizar Turma</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURAÇÃO FIREBASE
+        const firebaseConfig = { databaseURL: "https://connect-escolar-fdef0-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // SEGURANÇA
+        function checkLogin() {
+            if(document.getElementById('pass-input').value === '2203') {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+            } else { alert('Senha incorreta!'); }
+        }
+
+        // NAVEGAÇÃO
+        function nav(aba) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('view-'+aba).classList.remove('hidden');
+            event.currentTarget.classList.add('active');
+        }
+
+        // IMPORTAÇÃO E LIMPEZA
+        function importar() {
+            const turma = document.getElementById('select-turma').value;
+            if(!turma) return alert('Selecione a turma primeiro!');
+            
+            const txt = document.getElementById('input-import').value;
+            const nomes = txt.split('\n')
+                .map(l => l.replace(/^[0-9\s.\-_]+/, '').trim())
+                .filter(l => l.length > 2)
+                .map(l => l.toLowerCase().replace(/(^\w|\s\w)/g, m => m.toUpperCase()));
+
+            db.ref('turmas/' + turma).set(nomes);
+            alert('Turma atualizada!');
+            carregarTurma();
+        }
+
+        // CARREGAR ALUNOS
+        function carregarTurma() {
+            const turma = document.getElementById('select-turma').value;
+            const container = document.getElementById('area-alunos');
+            if(!turma) return;
+
+            db.ref('turmas/' + turma).on('value', snap => {
+                const lista = snap.val() || [];
+                let html = '<table><tr><th>Aluno</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr>';
+                lista.forEach((nome, i) => {
+                    html += `<tr>
+                        <td class="student-name">${nome}</td>
+                        ${[1,2,3,4,5].map(n => `<td class="visto-cell"><input type="checkbox" id="v_${i}_${n}"></td>`).join('')}
+                    </tr>`;
+                });
+                container.innerHTML = html + '</table>';
+            });
+        }
+
+        // SALVAR DIÁRIO
+        function salvarDiario() {
+            const t = document.getElementById('select-turma').value;
+            const d = document.getElementById('data-aula').value;
+            const txt = document.getElementById('texto-diario').value;
+            if(!t || !txt) return alert('Preencha turma e conteúdo!');
+
+            db.ref('diario/' + t + '/' + d).set({ conteúdo: txt });
+            alert('Diário salvo!');
+        }
+
+        // DATA ATUAL
+        document.getElementById('data-aula').valueAsDate = new Date();
+    </script>
+</body>
+</html>
