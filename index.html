@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar | Prof. Eduardo</title>
+    <title>Connect Escolar 2.0 | Prof. Eduardo</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -21,12 +21,11 @@
         
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 40px; }
         
-        /* LOGIN MODERNO */
         #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
         .login-box { background: white; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); width: 85%; max-width: 350px; }
         .login-box h2 { color: var(--primary); margin-bottom: 25px; font-weight: 800; letter-spacing: -1px; }
 
-        /* HEADER E NAVEGAÇÃO INVERTIDA */
+        /* NAVEGAÇÃO NO TOPO (INVERTIDA) */
         nav.tabs { 
             display: flex; 
             background: var(--primary); 
@@ -50,6 +49,7 @@
         }
         .tab-btn.active { background: rgba(255,255,255,0.1); color: white; }
 
+        /* SELETORES ABAIXO DAS ABAS */
         header { background: white; padding: 15px; border-bottom: 1px solid #e2e8f0; }
         .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 900px; margin: auto; }
         
@@ -59,50 +59,35 @@
             padding: 12px; 
             font-size: 0.95rem; 
             outline: none; 
-            transition: 0.2s;
             background: #fff;
         }
-        select:focus, input:focus { border-color: var(--accent); ring: 2px var(--accent); }
 
-        /* CONTEÚDO */
         .container { padding: 15px; max-width: 900px; margin: auto; }
-        .card { background: var(--card); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; margin-bottom: 20px; }
+        .card { background: var(--card); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .hidden { display: none !important; }
 
-        /* TABELA DE VISTOS */
         table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
-        tr { background: #fdfdfd; }
         td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
-        td:first-child { border-radius: 10px 0 0 10px; font-weight: 500; }
-        td:last-child { border-radius: 0 10px 10px 0; }
-        
-        .nome-aluno { cursor: pointer; color: var(--primary); }
-        .nome-aluno:hover { color: var(--accent); }
-
-        /* CHECKBOXES ESTILIZADOS */
-        input[type="checkbox"] { transform: scale(1.3); accent-color: var(--accent); }
+        .nome-aluno { font-weight: 500; color: var(--primary); }
 
         .ativ-header { display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
-        .ativ-header input { font-size: 0.75rem; text-align: center; padding: 8px; min-width: 60px; background: #f8fafc; font-weight: bold; }
+        .ativ-header input { font-size: 0.75rem; text-align: center; padding: 8px; min-width: 65px; background: #f8fafc; font-weight: bold; }
 
-        /* BOTÕES */
-        .btn-main { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: 700; font-size: 1rem; cursor: pointer; transition: 0.2s; margin-top: 10px; }
-        .btn-main:active { transform: scale(0.98); }
+        .btn-main { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; margin-top: 10px; }
         .btn-blue { background: var(--accent); color: white; }
         .btn-green { background: var(--success); color: white; }
         .btn-red { background: var(--rec); color: white; }
 
-        /* HISTÓRICO */
         .hist-item { background: #f8fafc; padding: 15px; border-radius: 12px; margin-top: 10px; border-left: 5px solid var(--accent); position: relative; }
         .btn-edit-small { position: absolute; right: 10px; top: 10px; background: #fff; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; color: var(--edit); font-weight: bold; }
-        #edit-tag { background: #fffbeb; color: var(--edit); padding: 10px; border-radius: 8px; border: 1px solid #fef3c7; margin-bottom: 10px; display: none; font-size: 0.9rem; font-weight: 600; text-align: center; }
+        #edit-tag { background: #fffbeb; color: var(--edit); padding: 10px; border-radius: 8px; border: 1px solid #fef3c7; margin-bottom: 10px; display: none; font-weight: 600; text-align: center; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar</h2>
+            <h2 id="versao-nome">Connect Escolar 2.0</h2>
             <input type="password" id="pass" placeholder="Senha de Acesso" style="width:100%; box-sizing:border-box;" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar no Sistema</button>
         </div>
@@ -144,29 +129,29 @@
                     <input type="text" id="h4" placeholder="Ativ 4" onchange="salvarHeader()">
                     <input type="text" id="h5" placeholder="Ativ 5" onchange="salvarHeader()">
                 </div>
-                <div id="lista">Selecione uma turma para começar...</div>
-                <button onclick="salvarVistos()" class="btn-main btn-blue">Salvar Frequência e Vistos</button>
+                <div id="lista">Selecione uma turma para carregar...</div>
+                <button onclick="salvarVistos()" class="btn-main btn-blue">Salvar Vistos</button>
             </div>
 
             <div id="aba-r" class="card hidden">
-                <h3 style="margin-top:0">Recuperação Paralela</h3>
+                <h3 style="margin-top:0">Recuperação</h3>
                 <div id="lista-rec">Aguardando dados...</div>
-                <button onclick="salvarRec()" class="btn-main btn-red">Salvar Notas de Rec.</button>
+                <button onclick="salvarRec()" class="btn-main btn-red">Salvar Notas</button>
             </div>
 
             <div id="aba-d" class="card hidden">
-                <h3 style="margin-top:0">Registro de Conteúdo</h3>
-                <div id="edit-tag">✎ Modo Edição: Alterando registro existente</div>
-                <textarea id="cont" placeholder="O que foi trabalhado nesta aula?"></textarea>
-                <button onclick="salvarD()" class="btn-main btn-green">Salvar Diário de Aula</button>
-                <div id="historico-lista" style="margin-top:25px;"></div>
+                <h3 style="margin-top:0">Diário de Classe</h3>
+                <div id="edit-tag">✎ Modo Edição: Alterando registro</div>
+                <textarea id="cont" placeholder="Descreva a aula de hoje..." style="width:100%; height:120px; box-sizing:border-box;"></textarea>
+                <button onclick="salvarD()" class="btn-main btn-green">Salvar no Diário</button>
+                <div id="historico-lista" style="margin-top:20px;"></div>
             </div>
 
             <div id="aba-c" class="card hidden">
-                <h3 style="margin-top:0">Gerenciar Alunos</h3>
-                <p style="font-size:0.85rem; color:#64748b">Cole a lista completa. O sistema removerá números e símbolos automaticamente.</p>
-                <textarea id="imp" placeholder="Ex: 1. João Silva&#10;2. Maria Souza..." style="height:200px"></textarea>
-                <button onclick="importar()" class="btn-main btn-blue" style="background: var(--primary)">Limpar e Atualizar Lista</button>
+                <h3 style="margin-top:0">Importar Alunos</h3>
+                <p style="font-size:0.8rem; color:#64748b">Cole a lista com números e símbolos. O sistema limpará tudo.</p>
+                <textarea id="imp" placeholder="Ex: 1. JOÃO SILVA" style="width:100%; height:150px; box-sizing:border-box;"></textarea>
+                <button onclick="importar()" class="btn-main" style="background:var(--primary); color:white">Limpar e Importar Lista</button>
             </div>
         </div>
     </div>
@@ -176,6 +161,7 @@
         firebase.initializeApp(config);
         const db = firebase.database();
         let idEdicaoAtual = null;
+        let isEdicaoAntiga = false;
 
         function logar() {
             if(document.getElementById('pass').value === '2203') {
@@ -191,11 +177,7 @@
             event.currentTarget.classList.add('active');
         }
 
-        function atualizarTudo() { 
-            carregarHeaders(); carregarAlunos(); carregarHistorico(); carregarRec(); 
-            idEdicaoAtual = null; 
-            document.getElementById('edit-tag').style.display = "none";
-        }
+        function atualizarTudo() { carregarHeaders(); carregarAlunos(); carregarHistorico(); carregarRec(); idEdicaoAtual = null; document.getElementById('edit-tag').style.display = "none"; }
 
         function carregarHeaders() {
             const t = document.getElementById('turma').value;
@@ -226,7 +208,7 @@
                     const salvos = vsnap.val() || {};
                     let h = '<table>';
                     lista.forEach((n, i) => {
-                        h += `<tr><td class="nome-aluno" onclick="editarNomeIndividual(${i},'${n}')">${n}</td><td style="text-align:right; white-space:nowrap;">`;
+                        h += `<tr><td class="nome-aluno">${n}</td><td style="text-align:right; white-space:nowrap;">`;
                         for(let v=1; v<=5; v++) {
                             const ck = (salvos[i] && salvos[i][v]) ? 'checked' : '';
                             h += `<input type="checkbox" class="aluno-${i}" data-v="${v}" ${ck} style="margin-left:8px;">`;
@@ -236,14 +218,6 @@
                     document.getElementById('lista').innerHTML = h + '</table>';
                 });
             });
-        }
-
-        function editarNomeIndividual(id, nomeAntigo) {
-            const novo = prompt("Novo nome para este aluno:", nomeAntigo);
-            if(novo && novo !== nomeAntigo) {
-                const t = document.getElementById('turma').value;
-                db.ref('turmas/'+t+'/'+id).set(novo);
-            }
         }
 
         function salvarVistos() {
@@ -256,30 +230,47 @@
                 dados[i] = {};
                 tr.querySelectorAll('input').forEach(chk => { dados[i][chk.dataset.v] = chk.checked; });
             });
-            db.ref('vistos/'+t+'/'+b+'/'+d).set(dados).then(() => alert('Salvo com sucesso!'));
+            db.ref('vistos/'+t+'/'+b+'/'+d).set(dados).then(() => alert('Salvo!'));
         }
 
+        // HISTÓRICO 2.0: BUSCA EM TODA A ÁRVORE PARA NÃO PERDER DADOS
         function carregarHistorico() {
             const t = document.getElementById('turma').value;
             const b = document.getElementById('bimestre').value;
             if(!t) return;
-            db.ref('diario/'+t+'/'+b).on('value', s => {
+            db.ref('diario/'+t).on('value', s => {
                 const total = s.val();
                 let html = '<h4>Histórico de Aulas</h4>';
-                if(!total) { document.getElementById('historico-lista').innerHTML = "Sem registros neste bimestre."; return; }
-                Object.keys(total).reverse().forEach(id => {
-                    const item = total[id];
-                    const dataFormat = item.data.split('-').reverse().join('/');
-                    html += `<div class="hist-item"><strong>${dataFormat}</strong>
-                    <button class="btn-edit-small" onclick="prepararEdicao('${id}','${item.conteudo}', '${item.data}')">Editar</button>
-                    <p>${item.conteudo}</p></div>`;
+                if(!total) { document.getElementById('historico-lista').innerHTML = "Sem registros."; return; }
+
+                // 1. Novos registros (Dentro do Bimestre)
+                if(total[b]) {
+                    Object.keys(total[b]).reverse().forEach(id => {
+                        const item = total[b][id];
+                        const dataFormat = item.data ? item.data.split('-').reverse().join('/') : id.split('-').reverse().join('/');
+                        html += `<div class="hist-item"><strong>${dataFormat}</strong>
+                        <button class="btn-edit-small" onclick="prepararEdicao('${id}','${item.conteudo}', '${item.data || id}', false)">Editar</button>
+                        <p>${item.conteudo}</p></div>`;
+                    });
+                }
+                // 2. Registros antigos (Na raiz da turma)
+                Object.keys(total).forEach(id => {
+                    if(id.includes('202')) { 
+                        const item = total[id];
+                        const txt = item.conteudo || item.conteúdo;
+                        if(txt) {
+                            html += `<div class="hist-item" style="border-left-color: #94a3b8;"><strong>${id.split('-').reverse().join('/')} (Antigo)</strong>
+                            <button class="btn-edit-small" onclick="prepararEdicao('${id}','${txt}', '${id}', true)">Editar</button>
+                            <p>${txt}</p></div>`;
+                        }
+                    }
                 });
                 document.getElementById('historico-lista').innerHTML = html;
             });
         }
 
-        function prepararEdicao(id, texto, dataOrig) {
-            idEdicaoAtual = id;
+        function prepararEdicao(id, texto, dataOrig, ehAntigo) {
+            idEdicaoAtual = id; isEdicaoAntiga = ehAntigo;
             document.getElementById('data').value = dataOrig;
             document.getElementById('cont').value = texto;
             document.getElementById('edit-tag').style.display = "block";
@@ -291,13 +282,13 @@
             const b = document.getElementById('bimestre').value;
             const d = document.getElementById('data').value;
             const txt = document.getElementById('cont').value;
-            if(!t || !txt) return alert('Preencha a turma e o conteúdo!');
+            if(!t || !txt) return alert('Campos vazios!');
             const id = idEdicaoAtual || Date.now();
-            db.ref(`diario/${t}/${b}/${id}`).set({ conteudo: txt, data: d }).then(() => {
-                alert('Diário atualizado!');
-                document.getElementById('cont').value = "";
+            const path = isEdicaoAntiga ? `diario/${t}/${id}` : `diario/${t}/${b}/${id}`;
+            db.ref(path).set({ conteudo: txt, data: d }).then(() => {
+                alert('Salvo!'); document.getElementById('cont').value = "";
                 document.getElementById('edit-tag').style.display = "none";
-                idEdicaoAtual = null;
+                idEdicaoAtual = null; isEdicaoAntiga = false;
             });
         }
 
@@ -312,9 +303,7 @@
                     let h = '<table>';
                     lista.forEach((n, i) => {
                         const nota = notas[i] || "";
-                        h += `<tr><td>${n}</td><td style="text-align:right">
-                        <input type="text" class="nota-rec" data-id="${i}" value="${nota}" placeholder="Nota" style="width:60px; text-align:center;">
-                        </td></tr>`;
+                        h += `<tr><td>${n}</td><td style="text-align:right"><input type="text" class="nota-rec" data-id="${i}" value="${nota}" style="width:60px; text-align:center;"></td></tr>`;
                     });
                     document.getElementById('lista-rec').innerHTML = h + '</table>';
                 });
@@ -329,26 +318,18 @@
             db.ref('recuperacao/'+t+'/'+b).set(notas).then(() => alert('Notas salvas!'));
         }
 
-        // FUNÇÃO DE LIMPEZA DE LISTA TURBINADA
+        // IMPORTAÇÃO 2.0: LIMPEZA AUTOMÁTICA DE NOMES
         function importar() {
             const t = document.getElementById('turma').value;
-            if(!t) return alert('Selecione a turma primeiro!');
-            
+            if(!t) return alert('Selecione a turma!');
             const raw = document.getElementById('imp').value;
-            const nomes = raw.split('\n')
-                .map(n => {
-                    // Remove números, pontos, hífens e parênteses do início
-                    let limpo = n.replace(/^[0-9\s.\-_()]+/, '').trim();
-                    // Capitaliza apenas a primeira letra de cada nome
-                    return limpo.toLowerCase().replace(/(^\w|\s\w)/g, m => m.toUpperCase());
-                })
-                .filter(n => n.length > 2); // Remove linhas vazias ou muito curtas
+            const nomes = raw.split('\n').map(n => {
+                return n.replace(/^[0-9\s.\-_()]+/, '').trim().toLowerCase().replace(/(^\w|\s\w)/g, m => m.toUpperCase());
+            }).filter(n => n.length > 2);
 
-            if(nomes.length === 0) return alert('Nenhum nome válido encontrado.');
-            
-            if(confirm(`Deseja importar ${nomes.length} alunos para a turma ${t}? Isso substituirá a lista atual.`)) {
+            if(confirm(`Importar ${nomes.length} alunos?`)) {
                 db.ref('turmas/'+t).set(nomes).then(() => {
-                    alert('Lista atualizada com sucesso!');
+                    alert('Lista Atualizada!');
                     document.getElementById('imp').value = "";
                     carregarAlunos();
                 });
