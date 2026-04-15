@@ -73,7 +73,7 @@
                         <option value="2ºC Sociologia">2º C (Sociologia)</option>
                         <option value="2ºD Sociologia">2º D (Sociologia)</option>
                     </optgroup>
-                    <optgroup label="ITINERÁRIOS (DG)">
+                    <optgroup label="TÉCNICOS (DG)">
                         <option value="2ºA DG História">2º A DG (História)</option>
                         <option value="2ºB DG História">2º B DG (História)</option>
                         <option value="2ºA DG Filosofia">2º A DG (Filosofia)</option>
@@ -128,7 +128,6 @@
     </div>
 
     <script>
-        // Configuração conforme seu banco exportado
         const config = { databaseURL: "https://connect-escolar-fdef0-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(config);
         const db = firebase.database();
@@ -170,7 +169,6 @@
                 const alunos = sA.val() || [];
                 db.ref(`vistos/${t}`).once('value', sV => {
                     const totalV = sV.val() || {};
-                    // Busca híbrida: tenta na pasta do bimestre, senão na raiz da data
                     const salvos = (totalV[b] && totalV[b][d]) ? totalV[b][d] : (totalV[d] || {});
                     let h = '<table>';
                     alunos.forEach((n, i) => {
@@ -197,7 +195,6 @@
                     if(["1B", "2B", "3B", "4B"].includes(id)) return;
                     const it = base[id];
                     const dataFormat = it.data ? it.data.split('-').reverse().join('/') : id.split('-').reverse().join('/');
-                    // Suporta tanto 'conteudo' quanto 'conteúdo' (com acento)
                     html += `<div class="hist-item"><strong>${dataFormat}</strong><p>${it.conteudo || it.conteúdo}</p></div>`;
                 });
                 document.getElementById('historico-lista').innerHTML = html || "Nenhum registro encontrado.";
@@ -210,7 +207,7 @@
             let dados = {}; document.querySelectorAll('#lista tr').forEach((tr, i) => {
                 dados[i] = {}; tr.querySelectorAll('input').forEach(chk => { dados[i][chk.dataset.v] = chk.checked; });
             });
-            db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => alert('Salvo no Firebase!'));
+            db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => alert('Salvo!'));
         }
 
         function salvarD() {
