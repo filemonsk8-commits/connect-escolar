@@ -8,28 +8,94 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6; --white: #fff; --edit: #f39c12; --success: #27ae60; --rec: #e74c3c; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding-bottom: 50px; }
-        button, select, input, .tab-btn { cursor: pointer; }
-        .hidden { display: none !important; }
-        #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: var(--primary); }
-        .login-box { background: white; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        header { background: white; padding: 15px; border-bottom: 2px solid #ddd; position: sticky; top: 0; z-index: 10; }
-        .tabs { display: flex; background: #eee; padding: 5px; gap: 3px; justify-content: center; flex-wrap: wrap; }
-        .tab-btn { padding: 8px 12px; border: none; background: none; font-weight: bold; color: #7f8c8d; font-size: 0.85rem; }
-        .tab-btn.active { background: white; color: var(--accent); border-radius: 5px; }
+        :root { 
+            --primary: #1e293b; 
+            --accent: #3b82f6; 
+            --bg: #f8fafc; 
+            --card: #ffffff; 
+            --text: #334155;
+            --success: #10b981; 
+            --rec: #ef4444;
+            --edit: #f59e0b;
+        }
+        
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 40px; }
+        
+        /* LOGIN MODERNO */
+        #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
+        .login-box { background: white; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); width: 85%; max-width: 350px; }
+        .login-box h2 { color: var(--primary); margin-bottom: 25px; font-weight: 800; letter-spacing: -1px; }
+
+        /* HEADER E NAVEGAÇÃO INVERTIDA */
+        nav.tabs { 
+            display: flex; 
+            background: var(--primary); 
+            padding: 8px; 
+            gap: 5px; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        .tab-btn { 
+            flex: 1; 
+            padding: 12px 5px; 
+            border: none; 
+            background: transparent; 
+            color: #94a3b8; 
+            font-weight: 600; 
+            font-size: 0.8rem; 
+            border-radius: 10px;
+            transition: 0.3s;
+        }
+        .tab-btn.active { background: rgba(255,255,255,0.1); color: white; }
+
+        header { background: white; padding: 15px; border-bottom: 1px solid #e2e8f0; }
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 900px; margin: auto; }
+        
+        select, input, textarea { 
+            border: 1px solid #e2e8f0; 
+            border-radius: 10px; 
+            padding: 12px; 
+            font-size: 0.95rem; 
+            outline: none; 
+            transition: 0.2s;
+            background: #fff;
+        }
+        select:focus, input:focus { border-color: var(--accent); ring: 2px var(--accent); }
+
+        /* CONTEÚDO */
         .container { padding: 15px; max-width: 900px; margin: auto; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        td { padding: 8px; border-bottom: 1px solid #eee; }
-        .nome-aluno { cursor: pointer; transition: 0.2s; }
-        .nome-aluno:hover { color: var(--accent); font-weight: bold; }
-        .ativ-header { display: flex; gap: 2px; margin-bottom: 10px; background: #f8f9fa; padding: 10px; border-radius: 8px; }
-        .ativ-header input { width: 100%; border: 1px solid #ddd; padding: 8px 2px; text-align: center; font-size: 0.7rem; border-radius: 4px; }
-        textarea { width: 100%; height: 120px; border-radius: 8px; border: 1px solid #ddd; padding: 12px; font-size: 1rem; resize: none; box-sizing: border-box; }
-        .hist-item { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 10px; border-left: 4px solid var(--accent); position: relative; }
-        .btn-edit { position: absolute; right: 10px; top: 10px; background: #eee; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.7rem; color: var(--edit); font-weight: bold; }
-        #edit-info { color: var(--edit); display: none; font-weight: bold; margin-bottom: 10px; text-align: center; border: 1px solid var(--edit); padding: 5px; border-radius: 5px; }
+        .card { background: var(--card); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; margin-bottom: 20px; }
+        .hidden { display: none !important; }
+
+        /* TABELA DE VISTOS */
+        table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+        tr { background: #fdfdfd; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
+        td:first-child { border-radius: 10px 0 0 10px; font-weight: 500; }
+        td:last-child { border-radius: 0 10px 10px 0; }
+        
+        .nome-aluno { cursor: pointer; color: var(--primary); }
+        .nome-aluno:hover { color: var(--accent); }
+
+        /* CHECKBOXES ESTILIZADOS */
+        input[type="checkbox"] { transform: scale(1.3); accent-color: var(--accent); }
+
+        .ativ-header { display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
+        .ativ-header input { font-size: 0.75rem; text-align: center; padding: 8px; min-width: 60px; background: #f8fafc; font-weight: bold; }
+
+        /* BOTÕES */
+        .btn-main { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: 700; font-size: 1rem; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .btn-main:active { transform: scale(0.98); }
+        .btn-blue { background: var(--accent); color: white; }
+        .btn-green { background: var(--success); color: white; }
+        .btn-red { background: var(--rec); color: white; }
+
+        /* HISTÓRICO */
+        .hist-item { background: #f8fafc; padding: 15px; border-radius: 12px; margin-top: 10px; border-left: 5px solid var(--accent); position: relative; }
+        .btn-edit-small { position: absolute; right: 10px; top: 10px; background: #fff; border: 1px solid #e2e8f0; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; color: var(--edit); font-weight: bold; }
+        #edit-tag { background: #fffbeb; color: var(--edit); padding: 10px; border-radius: 8px; border: 1px solid #fef3c7; margin-bottom: 10px; display: none; font-size: 0.9rem; font-weight: 600; text-align: center; }
     </style>
 </head>
 <body>
@@ -37,69 +103,70 @@
     <div id="login-screen">
         <div class="login-box">
             <h2>Connect Escolar</h2>
-            <input type="password" id="pass" placeholder="Senha" style="padding:12px; width:80%;" onkeydown="if(event.key==='Enter') logar()">
-            <button onclick="logar()" style="margin-top:15px; width:88%; padding:12px; border-radius:8px; background:var(--accent); color:white; border:none; font-weight:bold;">Entrar</button>
+            <input type="password" id="pass" placeholder="Senha de Acesso" style="width:100%; box-sizing:border-box;" onkeydown="if(event.key==='Enter') logar()">
+            <button onclick="logar()" class="btn-main btn-blue">Entrar no Sistema</button>
         </div>
     </div>
 
     <div id="app" class="hidden">
+        <nav class="tabs">
+            <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
+            <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
+            <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
+            <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
+        </nav>
+
         <header>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <select id="turma" onchange="atualizarTudo()" style="padding:10px; grid-column: span 2;">
+            <div class="controls-grid">
+                <select id="turma" onchange="atualizarTudo()" style="grid-column: span 2;">
                     <option value="">Selecione a Turma...</option>
                     <option>9ºA Letramento Digital</option><option>9ºB Pensamento Comp.</option><option>9ºC Letramento Digital</option>
                     <option>9ºD Letramento Digital</option><option>1ºB Sociologia</option><option>1ºB IFA</option>
                     <option>2ºA DG História</option><option>2ºA DG Filosofia</option><option>2ºB Sociologia</option>
                     <option>2ºB DG História</option><option>2ºB DG Filosofia</option><option>2ºC Sociologia</option><option>2ºD Sociologia</option>
                 </select>
-                <select id="bimestre" onchange="atualizarTudo()" style="padding:8px;">
+                <select id="bimestre" onchange="atualizarTudo()">
                     <option value="1B">1º Bimestre</option>
                     <option value="2B">2º Bimestre</option>
                     <option value="3B">3º Bimestre</option>
                     <option value="4B">4º Bimestre</option>
                 </select>
-                <input type="date" id="data" style="padding:8px;">
+                <input type="date" id="data" onchange="atualizarTudo()">
             </div>
         </header>
 
-        <nav class="tabs">
-            <button class="tab-btn active" onclick="aba('v')">Vistos</button>
-            <button class="tab-btn" onclick="aba('r')">Recuperação</button>
-            <button class="tab-btn" onclick="aba('d')">Diário</button>
-            <button class="tab-btn" onclick="aba('c')">Config</button>
-        </nav>
-
         <div class="container">
             <div id="aba-v" class="card">
-                <div class="ativ-header" id="header-vistos">
-                    <input type="text" id="h1" value="Ativ 1" onchange="salvarHeader()">
-                    <input type="text" id="h2" value="Ativ 2" onchange="salvarHeader()">
-                    <input type="text" id="h3" value="Ativ 3" onchange="salvarHeader()">
-                    <input type="text" id="h4" value="Ativ 4" onchange="salvarHeader()">
-                    <input type="text" id="h5" value="Ativ 5" onchange="salvarHeader()">
+                <div class="ativ-header">
+                    <input type="text" id="h1" placeholder="Ativ 1" onchange="salvarHeader()">
+                    <input type="text" id="h2" placeholder="Ativ 2" onchange="salvarHeader()">
+                    <input type="text" id="h3" placeholder="Ativ 3" onchange="salvarHeader()">
+                    <input type="text" id="h4" placeholder="Ativ 4" onchange="salvarHeader()">
+                    <input type="text" id="h5" placeholder="Ativ 5" onchange="salvarHeader()">
                 </div>
-                <div id="lista">Aguardando turma...</div>
-                <button onclick="salvarVistos()" style="width:100%; margin-top:20px; background:var(--accent); color:white; border:none; padding:15px; border-radius:8px; font-weight:bold;">Salvar Vistos</button>
+                <div id="lista">Selecione uma turma para começar...</div>
+                <button onclick="salvarVistos()" class="btn-main btn-blue">Salvar Frequência e Vistos</button>
             </div>
 
             <div id="aba-r" class="card hidden">
-                <h3>Recuperação Bimestral</h3>
-                <div id="lista-rec">Aguardando turma...</div>
-                <button onclick="salvarRec()" style="width:100%; margin-top:20px; background:var(--rec); color:white; border:none; padding:15px; border-radius:8px; font-weight:bold;">Salvar Notas</button>
+                <h3 style="margin-top:0">Recuperação Paralela</h3>
+                <div id="lista-rec">Aguardando dados...</div>
+                <button onclick="salvarRec()" class="btn-main btn-red">Salvar Notas de Rec.</button>
             </div>
 
             <div id="aba-d" class="card hidden">
-                <h3>Diário de Aula</h3>
-                <div id="edit-info">✎ Você está editando um registro existente!</div>
-                <textarea id="cont" placeholder="Descreva o conteúdo da aula..."></textarea>
-                <button onclick="salvarD()" style="width:100%; margin-top:10px; background: var(--success); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">Salvar no Diário</button>
-                <div id="historico-lista" style="margin-top:20px;"></div>
+                <h3 style="margin-top:0">Registro de Conteúdo</h3>
+                <div id="edit-tag">✎ Modo Edição: Alterando registro existente</div>
+                <textarea id="cont" placeholder="O que foi trabalhado nesta aula?"></textarea>
+                <button onclick="salvarD()" class="btn-main btn-green">Salvar Diário de Aula</button>
+                <div id="historico-lista" style="margin-top:25px;"></div>
             </div>
 
             <div id="aba-c" class="card hidden">
-                <h3>Configurações</h3>
-                <textarea id="imp" placeholder="Importar alunos..."></textarea>
-                <button onclick="importar()" style="width:100%; margin-top:10px; padding:15px; border-radius:8px; background:var(--primary); color:white; border:none; font-weight:bold;">Importar Lista</button>
+                <h3 style="margin-top:0">Gerenciar Alunos</h3>
+                <p style="font-size:0.85rem; color:#64748b">Cole a lista completa. O sistema removerá números e símbolos automaticamente.</p>
+                <textarea id="imp" placeholder="Ex: 1. João Silva&#10;2. Maria Souza..." style="height:200px"></textarea>
+                <button onclick="importar()" class="btn-main btn-blue" style="background: var(--primary)">Limpar e Atualizar Lista</button>
             </div>
         </div>
     </div>
@@ -108,7 +175,7 @@
         const config = { databaseURL: "https://connect-escolar-fdef0-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(config);
         const db = firebase.database();
-        let idEdicaoAtual = null; // Controla se estamos editando algo específico
+        let idEdicaoAtual = null;
 
         function logar() {
             if(document.getElementById('pass').value === '2203') {
@@ -121,10 +188,14 @@
             document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('aba-'+a).classList.remove('hidden');
-            event.target.classList.add('active');
+            event.currentTarget.classList.add('active');
         }
 
-        function atualizarTudo() { carregarHeaders(); carregarAlunos(); carregarHistorico(); carregarRec(); }
+        function atualizarTudo() { 
+            carregarHeaders(); carregarAlunos(); carregarHistorico(); carregarRec(); 
+            idEdicaoAtual = null; 
+            document.getElementById('edit-tag').style.display = "none";
+        }
 
         function carregarHeaders() {
             const t = document.getElementById('turma').value;
@@ -155,10 +226,10 @@
                     const salvos = vsnap.val() || {};
                     let h = '<table>';
                     lista.forEach((n, i) => {
-                        h += `<tr><td class="nome-aluno" onclick="editarNome(${i},'${n}')">${n}</td><td style="text-align:right; white-space:nowrap;">`;
+                        h += `<tr><td class="nome-aluno" onclick="editarNomeIndividual(${i},'${n}')">${n}</td><td style="text-align:right; white-space:nowrap;">`;
                         for(let v=1; v<=5; v++) {
                             const ck = (salvos[i] && salvos[i][v]) ? 'checked' : '';
-                            h += `<input type="checkbox" class="aluno-${i}" data-v="${v}" ${ck} style="width:18px; height:18px; margin-left:6px;">`;
+                            h += `<input type="checkbox" class="aluno-${i}" data-v="${v}" ${ck} style="margin-left:8px;">`;
                         }
                         h += `</td></tr>`;
                     });
@@ -167,49 +238,51 @@
             });
         }
 
+        function editarNomeIndividual(id, nomeAntigo) {
+            const novo = prompt("Novo nome para este aluno:", nomeAntigo);
+            if(novo && novo !== nomeAntigo) {
+                const t = document.getElementById('turma').value;
+                db.ref('turmas/'+t+'/'+id).set(novo);
+            }
+        }
+
         function salvarVistos() {
             const t = document.getElementById('turma').value;
             const b = document.getElementById('bimestre').value;
             const d = document.getElementById('data').value;
+            if(!t) return alert('Selecione a turma!');
             let dados = {};
             document.querySelectorAll('#lista tr').forEach((tr, i) => {
                 dados[i] = {};
                 tr.querySelectorAll('input').forEach(chk => { dados[i][chk.dataset.v] = chk.checked; });
             });
-            db.ref('vistos/'+t+'/'+b+'/'+d).set(dados).then(() => alert('Vistos salvos!'));
+            db.ref('vistos/'+t+'/'+b+'/'+d).set(dados).then(() => alert('Salvo com sucesso!'));
         }
 
         function carregarHistorico() {
             const t = document.getElementById('turma').value;
             const b = document.getElementById('bimestre').value;
             if(!t) return;
-            
-            db.ref('diario/'+t).on('value', s => {
+            db.ref('diario/'+t+'/'+b).on('value', s => {
                 const total = s.val();
                 let html = '<h4>Histórico de Aulas</h4>';
-                if(!total) { document.getElementById('historico-lista').innerHTML = "Nenhum registro."; return; }
-
-                // Pega dados da pasta do bimestre (Novo Sistema com IDs)
-                if(total[b]) {
-                    Object.keys(total[b]).reverse().forEach(id => {
-                        const item = total[b][id];
-                        // Se for o formato novo (com ID e data interna), ou formato antigo (data como chave)
-                        const dataExibir = item.data ? item.data.split('-').reverse().join('/') : id.split('-').reverse().join('/');
-                        html += `<div class="hist-item"><strong>${dataExibir}</strong>
-                        <button class="btn-edit" onclick="prepararEdicao('${id}','${item.conteudo}', '${item.data || id}')">Editar</button>
-                        <p>${item.conteudo}</p></div>`;
-                    });
-                }
+                if(!total) { document.getElementById('historico-lista').innerHTML = "Sem registros neste bimestre."; return; }
+                Object.keys(total).reverse().forEach(id => {
+                    const item = total[id];
+                    const dataFormat = item.data.split('-').reverse().join('/');
+                    html += `<div class="hist-item"><strong>${dataFormat}</strong>
+                    <button class="btn-edit-small" onclick="prepararEdicao('${id}','${item.conteudo}', '${item.data}')">Editar</button>
+                    <p>${item.conteudo}</p></div>`;
+                });
                 document.getElementById('historico-lista').innerHTML = html;
             });
         }
 
-        function prepararEdicao(id, texto, dataOriginal) {
+        function prepararEdicao(id, texto, dataOrig) {
             idEdicaoAtual = id;
-            document.getElementById('data').value = dataOriginal;
+            document.getElementById('data').value = dataOrig;
             document.getElementById('cont').value = texto;
-            document.getElementById('edit-info').style.display = "block";
-            aba('d');
+            document.getElementById('edit-tag').style.display = "block";
             window.scrollTo(0,0);
         }
 
@@ -218,18 +291,12 @@
             const b = document.getElementById('bimestre').value;
             const d = document.getElementById('data').value;
             const txt = document.getElementById('cont').value;
-            if(!t || !txt) return alert('Preencha os campos!');
-
-            // Se não for edição, cria um ID novo baseado no tempo (permite vários no mesmo dia)
+            if(!t || !txt) return alert('Preencha a turma e o conteúdo!');
             const id = idEdicaoAtual || Date.now();
-            
-            db.ref(`diario/${t}/${b}/${id}`).set({
-                conteudo: txt,
-                data: d
-            }).then(() => {
-                alert('Diário salvo!');
+            db.ref(`diario/${t}/${b}/${id}`).set({ conteudo: txt, data: d }).then(() => {
+                alert('Diário atualizado!');
                 document.getElementById('cont').value = "";
-                document.getElementById('edit-info').style.display = "none";
+                document.getElementById('edit-tag').style.display = "none";
                 idEdicaoAtual = null;
             });
         }
@@ -246,7 +313,7 @@
                     lista.forEach((n, i) => {
                         const nota = notas[i] || "";
                         h += `<tr><td>${n}</td><td style="text-align:right">
-                        <input type="text" class="nota-rec" data-id="${i}" value="${nota}" placeholder="0.0" style="width:50px; text-align:center; padding:5px; border-radius:4px; border:1px solid #ddd;">
+                        <input type="text" class="nota-rec" data-id="${i}" value="${nota}" placeholder="Nota" style="width:60px; text-align:center;">
                         </td></tr>`;
                     });
                     document.getElementById('lista-rec').innerHTML = h + '</table>';
@@ -262,14 +329,30 @@
             db.ref('recuperacao/'+t+'/'+b).set(notas).then(() => alert('Notas salvas!'));
         }
 
+        // FUNÇÃO DE LIMPEZA DE LISTA TURBINADA
         function importar() {
             const t = document.getElementById('turma').value;
-            if(!t) return alert('Selecione a turma!');
-            const nomes = document.getElementById('imp').value.split('\n')
-                .map(n => n.replace(/^[0-9\s.\-_]+/, '').trim())
-                .filter(n => n.length > 2)
-                .map(n => n.toLowerCase().replace(/(^\w|\s\w)/g, m => m.toUpperCase()));
-            db.ref('turmas/'+t).set(nomes).then(() => { alert('Lista importada!'); document.getElementById('imp').value = ""; });
+            if(!t) return alert('Selecione a turma primeiro!');
+            
+            const raw = document.getElementById('imp').value;
+            const nomes = raw.split('\n')
+                .map(n => {
+                    // Remove números, pontos, hífens e parênteses do início
+                    let limpo = n.replace(/^[0-9\s.\-_()]+/, '').trim();
+                    // Capitaliza apenas a primeira letra de cada nome
+                    return limpo.toLowerCase().replace(/(^\w|\s\w)/g, m => m.toUpperCase());
+                })
+                .filter(n => n.length > 2); // Remove linhas vazias ou muito curtas
+
+            if(nomes.length === 0) return alert('Nenhum nome válido encontrado.');
+            
+            if(confirm(`Deseja importar ${nomes.length} alunos para a turma ${t}? Isso substituirá a lista atual.`)) {
+                db.ref('turmas/'+t).set(nomes).then(() => {
+                    alert('Lista atualizada com sucesso!');
+                    document.getElementById('imp').value = "";
+                    carregarAlunos();
+                });
+            }
         }
 
         document.getElementById('data').valueAsDate = new Date();
