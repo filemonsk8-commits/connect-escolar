@@ -32,10 +32,8 @@
         .btn-blue { background: var(--accent); color: white; }
         .btn-green { background: var(--success); color: white; }
         .btn-red { background: var(--rec); color: white; }
-        .hist-item { background: #f8fafc; padding: 15px; border-radius: 12px; margin-top: 10px; border-left: 5px solid var(--accent); }
-        /* Notas em vermelho na aba de recuperação */
+        .hist-item { background: #f8fafc; padding: 15px; border-radius: 12px; margin-top: 10px; border-left: 5px solid var(--accent); position: relative; }
         .nota-rec { color: var(--rec); font-weight: bold; border-color: var(--rec) !important; }
-        /* Estilo para colunas do relatório */
         .relatorio-row { display: grid; grid-template-columns: 1fr 100px 100px; align-items: center; padding: 12px; border-bottom: 1px solid #f1f5f9; }
         .rel-header { font-weight: bold; background: #f1f5f9; border-radius: 8px; }
         .badge-rec { color: var(--rec); font-weight: bold; text-align: center; }
@@ -43,7 +41,6 @@
     </style>
 </head>
 <body>
-
     <div id="login-screen">
         <div class="login-box">
             <h2>Connect Escolar 3.2</h2>
@@ -65,10 +62,8 @@
             <div class="controls-grid">
                 <select id="turma" onchange="atualizarTudo()" style="grid-column: span 2;">
                     <option value="">Selecione a Turma...</option>
-                    <option>9ºA Letramento Digital</option><option>9ºB Pensamento Comp.</option><option>9ºC Letramento Digital</option>
-                    <option>9ºD Letramento Digital</option><option>1ºB Sociologia</option><option>1ºB IFA</option>
-                    <option>2ºA DG História</option><option>2ºA DG Filosofia</option><option>2ºB Sociologia</option>
-                    <option>2ºB DG História</option><option>2ºB DG Filosofia</option><option>2ºC Sociologia</option><option>2ºD Sociologia</option>
+                    <option>9ºA Letramento Digital</option><option>9ºB Pensamento Comp.</option><option>1ºB Sociologia</option><option>1ºB IFA</option>
+                    <option>2º B (Soc)</option><option>2ºB DG Filosofia</option><option>2ºB Sociologia</option><option>2ºC Sociologia</option><option>2ºD Sociologia</option>
                 </select>
                 <select id="bimestre" onchange="atualizarTudo()">
                     <option value="1B">1º Bimestre</option><option value="2B" selected>2º Bimestre</option>
@@ -84,29 +79,23 @@
                 <div id="lista">Selecione uma turma...</div>
                 <button onclick="salvarVistos()" class="btn-main btn-blue">Salvar Alterações</button>
             </div>
-
             <div id="aba-r" class="card hidden">
                 <h3>Recuperação</h3>
                 <div id="lista-rec">Aguardando dados...</div>
                 <button onclick="salvarRec()" class="btn-main btn-red">Salvar Notas de Rec.</button>
             </div>
-
             <div id="aba-l" class="card hidden">
                 <h3>Resumo de Notas e Vistos</h3>
                 <div id="relatorio-header" class="relatorio-row rel-header">
-                    <span>Aluno</span>
-                    <span style="text-align:center">Vistos</span>
-                    <span style="text-align:center">Recup.</span>
+                    <span>Aluno</span><span style="text-align:center">Vistos</span><span style="text-align:center">Recup.</span>
                 </div>
                 <div id="relatorio-lista">Aguardando...</div>
             </div>
-
             <div id="aba-d" class="card hidden">
                 <textarea id="cont" placeholder="Conteúdo da aula..." style="width:100%; height:120px; box-sizing:border-box;"></textarea>
                 <button onclick="salvarD()" class="btn-main btn-green">Salvar no Diário</button>
                 <div id="historico-lista" style="margin-top:20px;"></div>
             </div>
-
             <div id="aba-c" class="card hidden">
                 <h3>Ajustes</h3>
                 <textarea id="imp" placeholder="Cole a lista aqui..." style="width:100%; height:150px; box-sizing:border-box;"></textarea>
@@ -121,69 +110,40 @@
         const db = firebase.database();
         let numColunas = 5;
 
-        function logar() {
-            if(document.getElementById('pass').value === '2203') {
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('app').classList.remove('hidden');
-            } else alert('Senha Incorreta!');
-        }
-
-        function aba(a) {
+        function logar() { if(document.getElementById('pass').value === '2203') { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); } else alert('Incorreta!'); }
+        function aba(a) { 
             document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('aba-'+a).classList.remove('hidden');
             event.currentTarget.classList.add('active');
-            if(a === 'l') gerarRelatorio();
-            if(a === 'r') carregarRec();
+            if(a === 'l') gerarRelatorio(); if(a === 'r') carregarRec();
         }
 
         function atualizarTudo() { carregarHeaders(); carregarAlunos(); carregarHistorico(); if(!document.getElementById('aba-r').classList.contains('hidden')) carregarRec(); }
 
         function carregarHeaders() {
-            const t = document.getElementById('turma').value;
-            const b = document.getElementById('bimestre').value;
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
             if(!t) return;
-            db.ref(`headers/${t}/${b}`).once('value', s => {
-                const h = s.val() || { h1:'Ativ 1', h2:'Ativ 2', h3:'Ativ 3', h4:'Ativ 4', h5:'Ativ 5' };
-                numColunas = Object.keys(h).length;
+            db.ref(`headers/${t}`).once('value', s => {
+                const hT = s.val() || {};
+                const h = hT[b] || hT; // Puxa do bimestre ou da raiz
+                numColunas = Object.keys(h).filter(k => k.startsWith('h')).length || 5;
                 let html = '';
-                for(let i=1; i<=numColunas; i++) {
-                    html += `<input type="text" id="h${i}" value="${h['h'+i] || 'Ativ '+i}" onchange="salvarHeader()">`;
-                }
+                for(let i=1; i<=numColunas; i++) html += `<input type="text" id="h${i}" value="${h['h'+i] || 'Ativ '+i}" onchange="salvarHeader()">`;
                 html += `<button class="btn-col btn-add" onclick="addColuna()">+</button>`;
                 if(numColunas > 1) html += `<button class="btn-col btn-del" onclick="removerColuna()">-</button>`;
                 document.getElementById('header-container').innerHTML = html;
             });
         }
 
-        function addColuna() { numColunas++; salvarHeader(); }
-        function removerColuna() {
-            if(numColunas <= 1) return;
-            if(confirm("Apagar última coluna?")) {
-                const t = document.getElementById('turma').value;
-                const b = document.getElementById('bimestre').value;
-                db.ref(`headers/${t}/${b}/h${numColunas}`).remove().then(() => { numColunas--; carregarHeaders(); });
-            }
-        }
-
-        function salvarHeader() {
-            const t = document.getElementById('turma').value;
-            const b = document.getElementById('bimestre').value;
-            if(!t) return;
-            let h = {};
-            for(let i=1; i<=numColunas; i++) h['h'+i] = document.getElementById('h'+i).value;
-            db.ref(`headers/${t}/${b}`).set(h).then(() => carregarHeaders());
-        }
-
         function carregarAlunos() {
-            const t = document.getElementById('turma').value;
-            const b = document.getElementById('bimestre').value;
-            const d = document.getElementById('data').value;
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
             db.ref('turmas/'+t).once('value', sA => {
                 const alunos = sA.val() || [];
-                db.ref(`vistos/${t}/${b}/${d}`).once('value', sV => {
-                    const salvos = sV.val() || {};
+                db.ref(`vistos/${t}`).once('value', sV => {
+                    const vT = sV.val() || {};
+                    const salvos = (vT[b] && vT[b][d]) ? vT[b][d] : (vT[d] || {});
                     let h = '<table>';
                     alunos.forEach((n, i) => {
                         h += `<tr><td class="nome-aluno">${n}</td><td style="text-align:right; white-space:nowrap;">`;
@@ -198,111 +158,79 @@
             });
         }
 
-        function salvarVistos() {
-            const t = document.getElementById('turma').value;
-            const b = document.getElementById('bimestre').value;
-            const d = document.getElementById('data').value;
+        function carregarHistorico() {
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
             if(!t) return;
-            let dados = {};
-            document.querySelectorAll('#lista tr').forEach((tr, i) => {
-                dados[i] = {};
-                tr.querySelectorAll('input').forEach(chk => { dados[i][chk.dataset.v] = chk.checked; });
+            db.ref(`diario/${t}`).on('value', s => {
+                const total = s.val() || {};
+                let html = '';
+                const base = total[b] || total; // Se não tiver bimestre, pega o total (raiz)
+                Object.keys(base).reverse().forEach(id => {
+                    if(id === '1B' || id === '2B' || id === '3B' || id === '4B') return;
+                    const it = base[id];
+                    const dataFormat = it.data ? it.data.split('-').reverse().join('/') : id.split('-').reverse().join('/');
+                    html += `<div class="hist-item"><strong>${dataFormat}</strong><p>${it.conteudo || it.conteúdo}</p></div>`;
+                });
+                document.getElementById('historico-lista').innerHTML = html || "Sem registros.";
+            });
+        }
+
+        // Funções de salvamento permanecem iguais para manter a estrutura de bimestres nova
+        function salvarVistos() {
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
+            let dados = {}; document.querySelectorAll('#lista tr').forEach((tr, i) => {
+                dados[i] = {}; tr.querySelectorAll('input').forEach(chk => { dados[i][chk.dataset.v] = chk.checked; });
             });
             db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => alert('Salvo!'));
         }
 
+        function salvarD() {
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
+            const txt = document.getElementById('cont').value;
+            db.ref(`diario/${t}/${b}/${Date.now()}`).set({ conteudo: txt, data: d }).then(() => { alert('Salvo!'); document.getElementById('cont').value = ""; });
+        }
+        
+        function addColuna() { numColunas++; salvarHeader(); }
+        function removerColuna() { numColunas--; salvarHeader(); }
+        function salvarHeader() {
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
+            let h = {}; for(let i=1; i<=numColunas; i++) h['h'+i] = document.getElementById('h'+i).value;
+            db.ref(`headers/${t}/${b}`).set(h).then(() => carregarHeaders());
+        }
         function carregarRec() {
-            const t = document.getElementById('turma').value;
-            const b = document.getElementById('bimestre').value;
-            if(!t) return;
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
             db.ref('turmas/'+t).once('value', sA => {
                 const alunos = sA.val() || [];
                 db.ref(`recuperacao/${t}/${b}`).once('value', sR => {
                     const notas = sR.val() || {};
                     let h = '<table>';
-                    alunos.forEach((n, i) => {
-                        h += `<tr><td class="nome-aluno">${n}</td><td style="text-align:right">
-                            <input type="text" class="nota-rec" data-idx="${i}" value="${notas[i] || ''}" style="width:60px; text-align:center;">
-                            </td></tr>`;
-                    });
+                    alunos.forEach((n, i) => { h += `<tr><td class="nome-aluno">${n}</td><td style="text-align:right"><input type="text" class="nota-rec" data-idx="${i}" value="${notas[i] || ''}" style="width:60px; text-align:center;"></td></tr>`; });
                     document.getElementById('lista-rec').innerHTML = h + '</table>';
                 });
             });
         }
-
         function salvarRec() {
-            const t = document.getElementById('turma').value;
-            const b = document.getElementById('bimestre').value;
-            let r = {};
-            document.querySelectorAll('.nota-rec').forEach(inp => { if(inp.value) r[inp.dataset.idx] = inp.value; });
-            db.ref(`recuperacao/${t}/${b}`).set(r).then(() => alert('Recuperação salva!'));
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
+            let r = {}; document.querySelectorAll('.nota-rec').forEach(inp => { if(inp.value) r[inp.dataset.idx] = inp.value; });
+            db.ref(`recuperacao/${t}/${b}`).set(r).then(() => alert('Salvo!'));
         }
-
         function gerarRelatorio() {
-            const t = document.getElementById('turma').value;
-            const b = document.getElementById('bimestre').value;
-            if(!t) return;
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
             db.ref('turmas/'+t).once('value', sA => {
                 const alunos = sA.val() || [];
-                // Puxa vistos e notas de recuperação ao mesmo tempo
                 db.ref(`vistos/${t}/${b}`).once('value', sV => {
                     db.ref(`recuperacao/${t}/${b}`).once('value', sR => {
-                        const dias = sV.val() || {};
-                        const notasRec = sR.val() || {};
+                        const dias = sV.val() || {}; const notasRec = sR.val() || {};
                         let cont = alunos.map(n => ({ n, total: 0 }));
-                        
-                        Object.values(dias).forEach(dia => {
-                            Object.keys(dia).forEach(idx => {
-                                Object.values(dia[idx]).forEach(v => { if(v === true) cont[idx].total++; });
-                            });
-                        });
-                        
-                        let html = '';
-                        cont.forEach((it, i) => { 
-                            const nota = notasRec[i] || '-';
-                            html += `
-                            <div class="relatorio-row">
-                                <span class="nome-aluno">${it.n}</span>
-                                <span class="badge-vistos">${it.total} vistos</span>
-                                <span class="badge-rec">${nota}</span>
-                            </div>`; 
-                        });
+                        Object.values(dias).forEach(dia => { Object.keys(dia).forEach(idx => { Object.values(dia[idx]).forEach(v => { if(v === true) cont[idx].total++; }); }); });
+                        let html = ''; cont.forEach((it, i) => { html += `<div class="relatorio-row"><span class="nome-aluno">${it.n}</span><span class="badge-vistos">${it.total} vistos</span><span class="badge-rec">${notasRec[i] || '-'}</span></div>`; });
                         document.getElementById('relatorio-lista').innerHTML = html;
                     });
                 });
             });
         }
-
-        function carregarHistorico() {
-            const t = document.getElementById('turma').value;
-            const b = document.getElementById('bimestre').value;
-            if(!t) return;
-            db.ref(`diario/${t}`).on('value', s => {
-                const total = s.val() || {};
-                let html = '';
-                if(total[b]) {
-                    Object.keys(total[b]).reverse().forEach(id => {
-                        const it = total[b][id];
-                        html += `<div class="hist-item"><strong>${it.data.split('-').reverse().join('/')}</strong><p>${it.conteudo || it.conteúdo}</p></div>`;
-                    });
-                }
-                document.getElementById('historico-lista').innerHTML = html || "Sem registros.";
-            });
-        }
-
-        function salvarD() {
-            const t = document.getElementById('turma').value;
-            const b = document.getElementById('bimestre').value;
-            const d = document.getElementById('data').value;
-            const txt = document.getElementById('cont').value;
-            if(!t || !txt) return;
-            db.ref(`diario/${t}/${b}/${Date.now()}`).set({ conteudo: txt, data: d }).then(() => { alert('Salvo!'); document.getElementById('cont').value = ""; });
-        }
-
         function importar() {
-            const t = document.getElementById('turma').value;
-            const raw = document.getElementById('imp').value;
-            if(!t || !raw) return;
+            const t = document.getElementById('turma').value; const raw = document.getElementById('imp').value;
             const nomes = raw.split('\n').map(n => n.replace(/^[0-9\s.\-_()]+/, '').trim().toLowerCase().replace(/(^\w|\s\w)/g, m => m.toUpperCase())).filter(n => n.length > 2);
             db.ref('turmas/'+t).set(nomes).then(() => { alert('Importado!'); carregarAlunos(); });
         }
