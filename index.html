@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar 3.0 | Prof. Eduardo</title>
+    <title>Connect Escolar 3.1 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -50,7 +50,7 @@
 
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar 3.0</h2>
+            <h2>Connect Escolar 3.1</h2>
             <input type="password" id="pass" placeholder="Senha" style="width:100%; box-sizing:border-box;" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -83,8 +83,7 @@
 
         <div class="container">
             <div id="aba-v" class="card">
-                <div class="ativ-header" id="header-container">
-                    </div>
+                <div class="ativ-header" id="header-container"></div>
                 <div class="table-container" id="lista">Aguardando...</div>
                 <button onclick="salvarVistos()" class="btn-main btn-blue">Salvar Vistos</button>
             </div>
@@ -101,8 +100,10 @@
             </div>
 
             <div id="aba-c" class="card hidden">
-                <textarea id="imp" placeholder="Cole a lista de alunos aqui..." style="width:100%; height:150px; box-sizing:border-box;"></textarea>
-                <button onclick="importar()" class="btn-main" style="background:var(--primary); color:white">Importar Lista</button>
+                <h3>Importar Alunos</h3>
+                <p style="font-size:0.8rem; color:#64748b">Cole a lista. O sistema removerá números e símbolos automaticamente.</p>
+                <textarea id="imp" placeholder="Ex: 1. JOÃO SILVA" style="width:100%; height:150px; box-sizing:border-box;"></textarea>
+                <button onclick="importar()" class="btn-main" style="background:var(--primary); color:white">Limpar e Importar</button>
             </div>
         </div>
     </div>
@@ -130,15 +131,16 @@
 
         function atualizarTudo() { carregarConfigVistos(); carregarAlunos(); carregarHistorico(); }
 
-        // GERENCIA COLUNAS DINÂMICAS
         function carregarConfigVistos() {
             const t = document.getElementById('turma').value;
             const b = document.getElementById('bimestre').value;
             if(!t) return;
-            db.ref(`headers/${t}/${b}`).once('value', s => {
-                const h = s.val() || { h1:'Ativ 1', h2:'Ativ 2', h3:'Ativ 3', h4:'Ativ 4', h5:'Ativ 5' };
-                const keys = Object.keys(h);
-                numColunas = keys.length;
+            // Tenta carregar do bimestre, senão tenta do nível raiz (dados antigos)
+            db.ref(`headers/${t}`).once('value', s => {
+                const total = s.val() || {};
+                const h = total[b] || total || { h1:'Ativ 1', h2:'Ativ 2', h3:'Ativ 3', h4:'Ativ 4', h5:'Ativ 5' };
+                const keys = Object.keys(h).filter(k => k.startsWith('h'));
+                numColunas = keys.length > 0 ? keys.length : 5;
                 renderizarHeaders(h);
             });
         }
@@ -152,14 +154,12 @@
             document.getElementById('header-container').innerHTML = html;
         }
 
-        function addColuna() {
-            numColunas++;
-            salvarHeader();
-        }
+        function addColuna() { numColunas++; salvarHeader(); }
 
         function salvarHeader() {
             const t = document.getElementById('turma').value;
             const b = document.getElementById('bimestre').value;
+            if(!t) return;
             let h = {};
             for(let i=1; i<=numColunas; i++) {
                 const val = document.getElementById('h'+i) ? document.getElementById('h'+i).value : 'Ativ '+i;
@@ -175,8 +175,10 @@
             if(!t) return;
             db.ref('turmas/'+t).once('value', s => {
                 const alunos = s.val() || [];
-                db.ref(`vistos/${t}/${b}/${d}`).once('value', vsnap => {
-                    const salvos = vsnap.val() || {};
+                // Busca vistos no bimestre ou na raiz (antigo)
+                db.ref(`vistos/${t}`).once('value', sV => {
+                    const totalV = sV.val() || {};
+                    const salvos = (totalV[b] && totalV[b][d]) ? totalV[b][d] : (totalV[d] || {});
                     let h = '<table>';
                     alunos.forEach((n, i) => {
                         h += `<tr><td class="nome-aluno">${n}</td><td style="text-align:right; white-space:nowrap;">`;
@@ -195,6 +197,7 @@
             const t = document.getElementById('turma').value;
             const b = document.getElementById('bimestre').value;
             const d = document.getElementById('data').value;
+            if(!t) return;
             let dados = {};
             document.querySelectorAll('#lista tr').forEach((tr, i) => {
                 dados[i] = {};
@@ -203,44 +206,27 @@
             db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => alert('Salvo!'));
         }
 
-        // RELATÓRIO CONSOLIDADO
-        function gerarRelatorio() {
-            const t = document.getElementById('turma').value;
-            const b = document.getElementById('bimestre').value;
-            if(!t) return;
-            
-            db.ref('turmas/'+t).once('value', sAlunos => {
-                const alunos = sAlunos.val() || [];
-                db.ref(`vistos/${t}/${b}`).once('value', sVistos => {
-                    const datas = sVistos.val() || {};
-                    let contagem = alunos.map(nome => ({ nome, total: 0 }));
-                    
-                    Object.values(datas).forEach(dia => {
-                        Object.keys(dia).forEach(alunoIdx => {
-                            const vistosDoDia = dia[alunoIdx];
-                            Object.values(vistosDoDia).forEach(v => { if(v === true) contagem[alunoIdx].total++; });
-                        });
-                    });
-
-                    let html = '';
-                    contagem.forEach(item => {
-                        html += `<div class="relatorio-item"><span>${item.nome}</span><span class="badge-vistos">${item.total} vistos</span></div>`;
-                    });
-                    document.getElementById('relatorio-lista').innerHTML = html || 'Nenhum visto registrado.';
-                });
-            });
-        }
-
         function carregarHistorico() {
             const t = document.getElementById('turma').value;
             const b = document.getElementById('bimestre').value;
             if(!t) return;
-            db.ref(`diario/${t}/${b}`).on('value', s => {
-                const registros = s.val() || {};
-                let html = '';
-                Object.keys(registros).reverse().forEach(id => {
-                    const item = registros[id];
-                    html += `<div class="hist-item"><strong>${item.data.split('-').reverse().join('/')}</strong><p>${item.conteudo}</p></div>`;
+            db.ref(`diario/${t}`).on('value', s => {
+                const total = s.val() || {};
+                let html = '<h4>Histórico</h4>';
+                // 1. Novos registros (Bimestre)
+                if(total[b]) {
+                    Object.keys(total[b]).reverse().forEach(id => {
+                        const item = total[b][id];
+                        const dt = item.data ? item.data.split('-').reverse().join('/') : id.split('-').reverse().join('/');
+                        html += `<div class="hist-item"><strong>${dt}</strong><p>${item.conteudo || item.conteúdo}</p></div>`;
+                    });
+                }
+                // 2. Legados (Raiz)
+                Object.keys(total).forEach(id => {
+                    if(id.includes('202')) {
+                        const item = total[id];
+                        html += `<div class="hist-item" style="border-left-color:#94a3b8"><strong>${id.split('-').reverse().join('/')} (Antigo)</strong><p>${item.conteudo || item.conteúdo}</p></div>`;
+                    }
                 });
                 document.getElementById('historico-lista').innerHTML = html;
             });
@@ -257,13 +243,47 @@
             });
         }
 
-        function importar() {
+        function gerarRelatorio() {
             const t = document.getElementById('turma').value;
-            const raw = document.getElementById('imp').value;
-            const nomes = raw.split('\n').map(n => n.replace(/^[0-9\s.\-_()]+/, '').trim().toLowerCase().replace(/(^\w|\s\w)/g, m => m.toUpperCase())).filter(n => n.length > 2);
-            if(t && nomes.length > 0) db.ref('turmas/'+t).set(nomes).then(() => { alert('Importado!'); atualizarTudo(); });
+            const b = document.getElementById('bimestre').value;
+            if(!t) return;
+            db.ref('turmas/'+t).once('value', sA => {
+                const alunos = sA.val() || [];
+                db.ref(`vistos/${t}/${b}`).once('value', sV => {
+                    const dias = sV.val() || {};
+                    let cont = alunos.map(n => ({ n, total: 0 }));
+                    Object.values(dias).forEach(dia => {
+                        Object.keys(dia).forEach(idx => {
+                            Object.values(dia[idx]).forEach(v => { if(v === true) cont[idx].total++; });
+                        });
+                    });
+                    let html = '';
+                    cont.forEach(it => { html += `<div class="relatorio-item"><span>${it.n}</span><span class="badge-vistos">${it.total} vistos</span></div>`; });
+                    document.getElementById('relatorio-lista').innerHTML = html;
+                });
+            });
         }
 
+        function importar() {
+            const t = document.getElementById('turma').value;
+            if(!t) return alert('Selecione a turma!');
+            const raw = document.getElementById('imp').value;
+            // LIMPEZA POTENTE: Remove números iniciais, símbolos e padroniza Maiúsculas
+            const nomes = raw.split('\n').map(n => {
+                return n.replace(/^[0-9\s.\-_()]+/, '') // Remove números e símbolos do início
+                        .trim()
+                        .toLowerCase()
+                        .replace(/(^\w|\s\w)/g, m => m.toUpperCase()); // Primeira letra maiúscula
+            }).filter(n => n.length > 2);
+
+            if(confirm(`Importar ${nomes.length} alunos?`)) {
+                db.ref('turmas/'+t).set(nomes).then(() => {
+                    alert('Lista Limpa e Importada!');
+                    document.getElementById('imp').value = "";
+                    carregarAlunos();
+                });
+            }
+        }
         document.getElementById('data').valueAsDate = new Date();
     </script>
 </body>
