@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar 3.6.6 | Prof. Eduardo</title>
+    <title>Connect Escolar 3.6.7 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -22,22 +22,17 @@
         .hidden { display: none !important; }
         .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; }
         .btn-blue { background: var(--accent); color: white; }
+        .multi-select-box { height: 130px; background: #f0f7ff; border: 1px solid #3b82f633; font-size: 0.75rem; margin-top: 5px; }
         .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .report-table th { text-align: left; font-size: 0.75rem; color: #64748b; border-bottom: 2px solid #e2e8f0; padding: 8px; }
         .report-table td { padding: 10px 8px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
-        .badge-vistos { background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: bold; }
-        .badge-rec { color: var(--danger); font-weight: bold; }
-        @media print { 
-            .no-print, nav, header, .btn-main { display: none !important; } 
-            .card { box-shadow: none; border: none; padding: 0; }
-            body { background: white; }
-        }
+        .hist-item { background: #f8fafc; padding: 12px; margin-bottom: 10px; border-radius: 10px; border-left: 4px solid var(--accent); }
+        @media print { .no-print, nav, header, .btn-main { display: none !important; } body { background: white; } }
     </style>
 </head>
 <body>
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v3.6.6</h2>
+            <h2>Connect Escolar v3.6.7</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -89,36 +84,33 @@
         <div class="container">
             <div id="aba-v" class="card">
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px;" class="no-print"></div>
-                <div id="lista-container">Selecione uma turma para carregar...</div>
+                <div id="lista-container">Aguardando...</div>
                 <button onclick="salvarVistos()" class="btn-main btn-blue no-print">Salvar Vistos</button>
-            </div>
-
-            <div id="aba-l" class="card hidden">
-                <div id="print-header">
-                    <h2 id="rel-titulo" style="margin:0;">Fechamento de Notas</h2>
-                    <p id="rel-sub" style="margin:5px 0 15px 0; color:#64748b;"></p>
-                </div>
-                <div id="relatorio-lista"></div>
-                <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir Relatório</button>
             </div>
 
             <div id="aba-d" class="card hidden">
                 <textarea id="cont" onblur="corrigirTexto(this)" placeholder="Conteúdo da aula..." style="height:120px;"></textarea>
+                <div style="margin-top:12px;">
+                    <small><b>Replicar para:</b></small>
+                    <select id="replica-multi" multiple class="multi-select-box">
+                        <option value="9ºA Pensamento Comp.">9ºA Pensamento Comp.</option>
+                        <option value="9ºB Pensamento Comp.">9ºB Pensamento Comp.</option>
+                        <option value="9ºC Letramento Digital">9ºC Letramento Digital</option>
+                        <option value="9ºD Letramento Digital">9ºD Letramento Digital</option>
+                        <option value="1ºB IFA">1ºB IFA</option>
+                        <option value="1ºB Sociologia">1ºB Sociologia</option>
+                        <option value="2ºB Sociologia">2ºB Sociologia</option>
+                        <option value="2ºC Sociologia">2ºC Sociologia</option>
+                        <option value="2ºD Sociologia">2ºD Sociologia</option>
+                    </select>
+                </div>
                 <button onclick="salvarD()" class="btn-main btn-blue">Gravar Diário</button>
                 <div id="historico-lista" style="margin-top:20px;"></div>
             </div>
-            
-            <div id="aba-r" class="card hidden">
-                <h3>Notas de Recuperação</h3>
-                <div id="lista-rec"></div>
-                <button onclick="salvarRec()" class="btn-main btn-blue no-print">Salvar Notas</button>
-            </div>
 
-            <div id="aba-c" class="card hidden">
-                <h3>Ajustes Alunos</h3>
-                <textarea id="imp" style="height:250px;" placeholder="Cole a lista de alunos aqui..."></textarea>
-                <button onclick="importar()" class="btn-main btn-blue">Salvar Alunos</button>
-            </div>
+            <div id="aba-r" class="card hidden"><h3>Notas Recuperação</h3><div id="lista-rec"></div><button onclick="salvarRec()" class="btn-main btn-blue no-print">Salvar Notas</button></div>
+            <div id="aba-l" class="card hidden"><h3>Fechamento Bimestral</h3><div id="relatorio-lista"></div><button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir</button></div>
+            <div id="aba-c" class="card hidden"><h3>Ajustes</h3><textarea id="imp" style="height:250px;"></textarea><button onclick="importar()" class="btn-main btn-blue">Salvar Alunos</button></div>
         </div>
     </div>
 
@@ -128,7 +120,7 @@
         const db = firebase.database();
 
         function logar() { if(document.getElementById('pass').value === '2203') { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); } }
-
+        
         function aba(a) {
             document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -139,76 +131,70 @@
             if(a === 'c') carregarParaEdicao();
         }
 
+        async function salvarD() {
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
+            const txt = document.getElementById('cont').value; const d = document.getElementById('data').value;
+            if(!t || !txt) return alert("Selecione a turma e escreva.");
+            const sel = document.getElementById('replica-multi');
+            const alvos = Array.from(sel.selectedOptions).map(o => o.value);
+            if(!alvos.includes(t)) alvos.push(t);
+            const ts = Date.now();
+            await Promise.all(alvos.map(turma => db.ref(`diario/${turma}/${b}/${ts}`).set({ conteudo: txt, data: d })));
+            alert("Salvo!"); document.getElementById('cont').value = ""; carregarHistorico();
+        }
+
         async function gerarRelatorio() {
-            const t = document.getElementById('turma').value;
-            const b = document.getElementById('bimestre').value;
-            if(!t) return document.getElementById('relatorio-lista').innerHTML = "Selecione uma turma.";
-            
-            document.getElementById('rel-sub').innerText = `${t} - ${b.replace('B', 'º Bimestre')}`;
-            document.getElementById('relatorio-lista').innerHTML = "Gerando fechamento...";
-
-            const [sA, sV, sR] = await Promise.all([
-                db.ref('turmas/'+t).once('value'),
-                db.ref(`vistos/${t}/${b}`).once('value'),
-                db.ref(`recuperacao/${t}/${b}`).once('value')
-            ]);
-
-            const alunos = sA.val() || [];
-            const diasVistos = sV.val() || {};
-            const notasRec = sR.val() || {};
-
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
+            if(!t) return;
+            const [sA, sV, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}`).once('value'), db.ref(`recuperacao/${t}/${b}`).once('value')]);
+            const alunos = sA.val() || []; const dias = sV.val() || {}; const recs = sR.val() || {};
             let res = alunos.map(n => ({ n, total: 0 }));
-            
-            // Somar todos os vistos de todos os dias do bimestre
-            Object.values(diasVistos).forEach(dia => {
-                Object.keys(dia).forEach(idx => {
-                    if(res[idx]) {
-                        Object.values(dia[idx]).forEach(v => { if(v === true) res[idx].total++; });
-                    }
-                });
-            });
-
-            let html = `<table class="report-table"><thead><tr><th>NOME DO ALUNO</th><th style="text-align:center">VISTOS</th><th style="text-align:right">REC.</th></tr></thead><tbody>`;
-            res.forEach((it, i) => {
-                html += `<tr><td>${it.n}</td><td style="text-align:center"><span class="badge-vistos">${it.total}</span></td><td style="text-align:right" class="badge-rec">${notasRec[i] || '-'}</td></tr>`;
-            });
-            document.getElementById('relatorio-lista').innerHTML = html + `</tbody></table>`;
+            Object.values(dias).forEach(dia => { Object.keys(dia).forEach(idx => { if(res[idx]) Object.values(dia[idx]).forEach(v => { if(v === true) res[idx].total++; }); }); });
+            let h = `<table class="report-table"><thead><tr><th>Aluno</th><th style="text-align:center">Vistos</th><th style="text-align:right">Rec.</th></tr></thead><tbody>`;
+            res.forEach((it, i) => { h += `<tr><td>${it.n}</td><td style="text-align:center">${it.total}</td><td style="text-align:right">${recs[i] || '-'}</td></tr>`; });
+            document.getElementById('relatorio-lista').innerHTML = h + `</tbody></table>`;
         }
 
         async function carregarAlunos() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
-            const sA = await db.ref('turmas/'+t).once('value');
-            const alunos = sA.val() || [];
-            const sV = await db.ref(`vistos/${t}/${b}/${d}`).once('value');
-            const salvos = sV.val() || {};
-            let html = `<table style="width:100%; border-collapse:collapse;">`;
+            const sA = await db.ref('turmas/'+t).once('value'); const alunos = sA.val() || [];
+            const sV = await db.ref(`vistos/${t}/${b}/${d}`).once('value'); const salvos = sV.val() || {};
+            let html = `<table style="width:100%">`;
             alunos.forEach((n, idx) => {
-                html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0; font-size:0.85rem;">${n}</td><td style="text-align:right">`;
+                html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0">${n}</td><td style="text-align:right">`;
                 for(let v=1; v<=5; v++) {
                     const chk = (salvos[idx] && salvos[idx][v] === true);
-                    html += `<input type="checkbox" class="chk-v" data-idx="${idx}" data-v="${v}" ${chk ? 'checked' : ''} style="width:24px;height:24px;margin-left:5px;">`;
+                    html += `<input type="checkbox" class="chk-v" data-idx="${idx}" data-v="${v}" ${chk ? 'checked' : ''} style="width:22px;height:22px;margin-left:4px;">`;
                 }
                 html += `</td></tr>`;
             });
             document.getElementById('lista-container').innerHTML = html + `</table>`;
         }
 
+        function carregarHistorico() {
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
+            if(!t) return;
+            db.ref(`diario/${t}/${b}`).once('value', s => {
+                const regs = s.val() || {}; let html = '';
+                Object.keys(regs).reverse().forEach(k => { html += `<div class="hist-item"><strong>${regs[k].data}</strong>: ${regs[k].conteudo}</div>`; });
+                document.getElementById('historico-lista').innerHTML = html || "<small>Vazio.</small>";
+            });
+        }
+
         async function carregarRec() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
             if(!t) return;
-            const sA = await db.ref('turmas/'+t).once('value');
-            const alunos = sA.val() || [];
-            const sR = await db.ref(`recuperacao/${t}/${b}`).once('value');
-            const notas = sR.val() || {};
+            const sA = await db.ref('turmas/'+t).once('value'); const alunos = sA.val() || [];
+            const sR = await db.ref(`recuperacao/${t}/${b}`).once('value'); const notas = sR.val() || {};
             let h = '<table style="width:100%">';
-            alunos.forEach((n, i) => { h += `<tr><td style="padding:6px 0">${n}</td><td style="text-align:right"><input type="text" class="input-nota-rec" data-idx="${i}" value="${notas[i] || ''}" style="width:60px; text-align:center; color:red; border:1px solid #ddd; border-radius:5px;"></td></tr>`; });
+            alunos.forEach((n, i) => { h += `<tr><td>${n}</td><td style="text-align:right"><input type="text" class="input-nota-rec" data-idx="${i}" value="${notas[i] || ''}" style="width:50px;color:red;text-align:center;"></td></tr>`; });
             document.getElementById('lista-rec').innerHTML = h + '</table>';
         }
 
-        function salvarVistos() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => alert('Vistos Salvos!')); }
-        function salvarRec() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; let r = {}; document.querySelectorAll('.input-nota-rec').forEach(inp => { if(inp.value) r[inp.dataset.idx] = inp.value; }); db.ref(`recuperacao/${t}/${b}`).set(r).then(() => alert('Notas Salvas!')); }
-        function importar() { const t = document.getElementById('turma').value; const l = document.getElementById('imp').value.split('\n').map(n => n.replace(/^[0-9\s.\-_]+/, '').trim()).filter(n => n.length > 2).sort(); db.ref('turmas/'+t).set(l).then(() => { alert('Alunos Importados!'); carregarAlunos(); }); }
+        function salvarVistos() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => alert('OK!')); }
+        function salvarRec() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; let r = {}; document.querySelectorAll('.input-nota-rec').forEach(inp => { if(inp.value) r[inp.dataset.idx] = inp.value; }); db.ref(`recuperacao/${t}/${b}`).set(r).then(() => alert('OK!')); }
+        function importar() { const t = document.getElementById('turma').value; const l = document.getElementById('imp').value.split('\n').map(n => n.replace(/^[0-9\s.\-_]+/, '').trim()).filter(n => n.length > 2).sort(); db.ref('turmas/'+t).set(l).then(() => alert('OK!')); }
         function atualizarTudo() { carregarAlunos(); carregarHistorico(); }
         function corrigirTexto(el) { let t = el.value.replace(/\s\s+/g, ' '); t = t.replace(/(\.|\?|\!)\s*([a-z])/g, (m, p1, p2) => p1 + " " + p2.toUpperCase()); if(t.length > 0) t = t.charAt(0).toUpperCase() + t.slice(1); el.value = t; }
         document.getElementById('data').valueAsDate = new Date();
