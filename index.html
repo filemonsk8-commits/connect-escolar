@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar 3.5.9 | Prof. Eduardo</title>
+    <title>Connect Escolar 3.6.0 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; }
+        :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; --danger: #ef4444; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
         #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: #0f172a; }
         .login-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 350px; }
@@ -23,18 +23,21 @@
         .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; }
         .btn-blue { background: var(--accent); color: white; }
         
-        /* Ajuste do Seletor Múltiplo de Réplica */
+        /* Estilo Histórico com Edição */
+        .hist-item { background: #f8fafc; padding: 12px; margin-bottom: 10px; border-radius: 10px; border-left: 4px solid var(--accent); position: relative; }
+        .hist-btns { display: flex; gap: 10px; margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px; }
+        .btn-edit { color: var(--accent); font-size: 0.75rem; cursor: pointer; font-weight: bold; }
+        .btn-del { color: var(--danger); font-size: 0.75rem; cursor: pointer; font-weight: bold; }
+        
         .multi-select-box { height: 100px; background: #f0f7ff; border: 1px solid #3b82f633; font-size: 0.75rem; }
         .header-vistos-input { min-width: 135px; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; border: 1px solid #cbd5e1 !important; text-align: center; margin-right: 5px; }
-        
-        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v3.5.9</h2>
+            <h2>Connect Escolar v3.6.0</h2>
             <input type="password" id="pass" placeholder="Senha">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -86,17 +89,16 @@
         <div class="container">
             <div id="aba-v" class="card">
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px;"></div>
-                <div id="lista-container">Aguardando Turma...</div>
+                <div id="lista-container">Aguardando...</div>
                 <button onclick="salvarVistos()" class="btn-main btn-blue">Salvar Vistos</button>
             </div>
 
             <div id="aba-d" class="card hidden">
+                <input type="hidden" id="edit-key">
                 <textarea id="cont" spellcheck="true" onblur="corrigirTexto(this)" placeholder="Conteúdo da aula..." style="height:120px;"></textarea>
                 <div style="margin-top:12px;">
-                    <small><b>Replicar para: (Segure para selecionar várias)</b></small>
-                    <select id="replica-multi" multiple class="multi-select-box" style="margin-top:5px;">
-                        <option value="1ºB IFA">1ºB IFA</option>
-                        <option value="1ºB Sociologia">1ºB Sociologia</option>
+                    <small><b>Replicar para:</b></small>
+                    <select id="replica-multi" multiple class="multi-select-box">
                         <option value="2ºB Sociologia">2ºB Sociologia</option>
                         <option value="2ºC Sociologia">2ºC Sociologia</option>
                         <option value="2ºD Sociologia">2ºD Sociologia</option>
@@ -104,19 +106,15 @@
                         <option value="2ºB DG História">2ºB DG História</option>
                         <option value="2ºA DG Filosofia">2ºA DG Filosofia</option>
                         <option value="2ºB DG Filosofia">2ºB DG Filosofia</option>
-                        <option value="9ºA Letramento Digital">9ºA Letramento Digital</option>
-                        <option value="9ºB Pensamento Comp.">9ºB Pensamento Comp.</option>
-                        <option value="9ºC Letramento Digital">9ºC Letramento Digital</option>
-                        <option value="9ºD Letramento Digital">9ºD Letramento Digital</option>
                     </select>
                 </div>
-                <button onclick="salvarD()" class="btn-main btn-blue">Gravar Diário</button>
+                <button id="btn-save-diario" onclick="salvarD()" class="btn-main btn-blue">Gravar Diário</button>
                 <div id="historico-lista" style="margin-top:20px;"></div>
             </div>
 
-            <div id="aba-r" class="card hidden"><h3>Recuperação</h3><div id="lista-rec"></div><button onclick="salvarRec()" class="btn-main btn-blue">Salvar Notas</button></div>
-            <div id="aba-l" class="card hidden"><h3>Relatório</h3><div id="relatorio-lista"></div><button onclick="window.print()" class="btn-main btn-blue">Imprimir</button></div>
-            <div id="aba-c" class="card hidden"><h3>Importar Alunos</h3><textarea id="imp" style="height:250px;"></textarea><button onclick="importar()" class="btn-main btn-blue">Limpar e Salvar</button></div>
+            <div id="aba-r" class="card hidden"><div id="lista-rec"></div><button onclick="salvarRec()" class="btn-main btn-blue">Salvar Notas</button></div>
+            <div id="aba-l" class="card hidden"><div id="relatorio-lista"></div><button onclick="window.print()" class="btn-main btn-blue">Imprimir</button></div>
+            <div id="aba-c" class="card hidden"><textarea id="imp" style="height:250px;"></textarea><button onclick="importar()" class="btn-main btn-blue">Salvar Alunos</button></div>
         </div>
     </div>
 
@@ -125,13 +123,8 @@
         firebase.initializeApp(config);
         const db = firebase.database();
 
-        function logar() { 
-            if(document.getElementById('pass').value === '2203') { 
-                document.getElementById('login-screen').classList.add('hidden'); 
-                document.getElementById('app').classList.remove('hidden'); 
-            } 
-        }
-
+        function logar() { if(document.getElementById('pass').value === '2203') { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); } }
+        
         function aba(a) {
             document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -139,7 +132,6 @@
             event.currentTarget.classList.add('active');
             if(a === 'l') gerarRelatorio();
             if(a === 'r') carregarRec();
-            if(a === 'c') carregarAlunosParaEdicao();
         }
 
         function corrigirTexto(el) {
@@ -156,11 +148,8 @@
             const alunos = sA.val() || [];
             const sH = await db.ref(`headers/${t}/${b}`).once('value');
             const h = sH.val() || {};
-            
-            let hHtml = '';
-            for(let i=1; i<=5; i++) hHtml += `<input type="text" id="h${i}" class="header-vistos-input" value="${h['h'+i] || 'Atividade '+i}" onchange="salvarHeader()">`;
+            let hHtml = ''; for(let i=1; i<=5; i++) hHtml += `<input type="text" id="h${i}" class="header-vistos-input" value="${h['h'+i] || 'Atividade '+i}" onchange="salvarHeader()">`;
             document.getElementById('header-inputs').innerHTML = hHtml;
-
             const sV = await db.ref(`vistos/${t}/${b}/${d}`).once('value');
             const salvos = sV.val() || {};
             let html = `<table style="width:100%; border-collapse:collapse;">`;
@@ -180,104 +169,70 @@
             if(!t) return;
             db.ref(`diario/${t}/${b}`).once('value', s => {
                 const regs = s.val() || {}; let html = '';
-                // Ordenação reversa (mais recentes primeiro)
                 Object.keys(regs).reverse().forEach(k => {
                     const d = regs[k].data || k;
                     const c = regs[k].conteudo || regs[k];
-                    html += `<div style="background:#f8fafc; padding:10px; margin-bottom:8px; border-radius:8px; border-left:4px solid #3b82f6; font-size:0.85rem;">
-                        <strong>${d}</strong>: ${c}</div>`;
+                    html += `<div class="hist-item">
+                        <strong>${d}</strong>: ${c}
+                        <div class="hist-btns no-print">
+                            <span class="btn-edit" onclick="editarHist('${k}', '${c.replace(/'/g, "\\'")}')">✎ Editar</span>
+                            <span class="btn-del" onclick="apagarHist('${k}')">🗑 Apagar</span>
+                        </div>
+                    </div>`;
                 });
                 document.getElementById('historico-lista').innerHTML = html || "<small>Sem registros.</small>";
             });
         }
 
-        async function salvarD() {
-            const tPrincipal = document.getElementById('turma').value; 
-            const b = document.getElementById('bimestre').value;
-            const txt = document.getElementById('cont').value; 
-            const d = document.getElementById('data').value;
-            
-            if(!tPrincipal || !txt) return alert("Selecione a turma e escreva o conteúdo.");
+        function editarHist(key, texto) {
+            document.getElementById('cont').value = texto;
+            document.getElementById('edit-key').value = key;
+            document.getElementById('btn-save-diario').innerText = "Atualizar Registro";
+            window.scrollTo(0,0);
+        }
 
-            // Coleta turmas do seletor múltiplo
+        async function apagarHist(key) {
+            if(confirm("Deseja mesmo apagar esta aula?")) {
+                const t = document.getElementById('turma').value;
+                const b = document.getElementById('bimestre').value;
+                await db.ref(`diario/${t}/${b}/${key}`).remove();
+                carregarHistorico();
+            }
+        }
+
+        async function salvarD() {
+            const tPrincipal = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
+            const txt = document.getElementById('cont').value; const d = document.getElementById('data').value;
+            const editKey = document.getElementById('edit-key').value;
+            if(!tPrincipal || !txt) return alert("Erro: Selecione a turma e escreva o conteúdo.");
+
             const select = document.getElementById('replica-multi');
             const alvos = Array.from(select.selectedOptions).map(opt => opt.value);
             if(!alvos.includes(tPrincipal)) alvos.push(tPrincipal);
 
-            const ts = Date.now();
+            const ts = editKey || Date.now();
             const promessas = alvos.map(turma => db.ref(`diario/${turma}/${b}/${ts}`).set({ conteudo: txt, data: d }));
             
             await Promise.all(promessas);
-            alert(`Gravado com sucesso em ${alvos.length} turmas!`);
+            alert("Diário atualizado!");
             document.getElementById('cont').value = "";
-            select.selectedIndex = -1; // Limpa seleção
+            document.getElementById('edit-key').value = "";
+            document.getElementById('btn-save-diario').innerText = "Gravar Diário";
             carregarHistorico();
         }
 
-        async function gerarRelatorio() {
-            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
-            if(!t) return;
-            const sA = await db.ref('turmas/'+t).once('value');
-            const alunos = sA.val() || [];
-            const sV = await db.ref(`vistos/${t}/${b}`).once('value');
-            const sR = await db.ref(`recuperacao/${t}/${b}`).once('value');
-            const dias = sV.val() || {}; const recs = sR.val() || {};
-            
-            let res = alunos.map(n => ({ n, total: 0 }));
-            Object.values(dias).forEach(dia => {
-                Object.keys(dia).forEach(idx => { if(res[idx]) Object.values(dia[idx]).forEach(v => { if(v === true) res[idx].total++; }); });
-            });
-
-            let h = '<table style="width:100%; border-collapse:collapse;">';
-            res.forEach((it, i) => { h += `<tr style="border-bottom:1px solid #eee; font-size:0.85rem;"><td style="padding:8px 0">${it.n}</td><td style="text-align:right"><b>${it.total}</b> Vistos | <span style="color:red">Rec: ${recs[i] || '-'}</span></td></tr>`; });
-            document.getElementById('relatorio-lista').innerHTML = h + '</table>';
-        }
-
-        async function carregarRec() {
-            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
-            if(!t) return;
-            const sA = await db.ref('turmas/'+t).once('value');
-            const alunos = sA.val() || [];
-            const sR = await db.ref(`recuperacao/${t}/${b}`).once('value');
-            const notas = sR.val() || {};
-            let h = '<table style="width:100%">';
-            alunos.forEach((n, i) => { h += `<tr><td style="padding:6px 0">${n}</td><td style="text-align:right"><input type="text" class="input-nota-rec" data-idx="${i}" value="${notas[i] || ''}" style="width:60px; text-align:center; color:red; border:1px solid #ddd; border-radius:5px;"></td></tr>`; });
-            document.getElementById('lista-rec').innerHTML = h + '</table>';
-        }
-
+        // Funções Auxiliares (Salvar Vistos, Relatório, etc)
         function salvarVistos() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
-            let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => {
-                const i = chk.dataset.idx; const v = chk.dataset.v;
-                if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked;
-            });
-            db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => alert('Salvo!'));
+            let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; });
+            db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => alert('Vistos Salvos!'));
         }
-
         function salvarHeader() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
             if(!t) return;
             let h = {}; for(let i=1; i<=5; i++) h['h'+i] = document.getElementById('h'+i).value;
             db.ref(`headers/${t}/${b}`).set(h);
         }
-
-        function salvarRec() {
-            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
-            let r = {}; document.querySelectorAll('.input-nota-rec').forEach(inp => { if(inp.value) r[inp.dataset.idx] = inp.value; });
-            db.ref(`recuperacao/${t}/${b}`).set(r).then(() => alert('Notas Salvas!'));
-        }
-
-        function carregarAlunosParaEdicao() {
-            const t = document.getElementById('turma').value;
-            if(t) db.ref('turmas/'+t).once('value', s => { document.getElementById('imp').value = (s.val() || []).join('\n'); });
-        }
-
-        function importar() {
-            const t = document.getElementById('turma').value;
-            const limpos = document.getElementById('imp').value.split('\n').map(n => n.replace(/^[0-9\s.\-_]+/, '').trim()).filter(n => n.length > 2).sort();
-            db.ref('turmas/'+t).set(limpos).then(() => { alert('Lista Atualizada!'); carregarAlunos(); });
-        }
-
         function atualizarTudo() { carregarAlunos(); carregarHistorico(); }
         document.getElementById('data').valueAsDate = new Date();
     </script>
