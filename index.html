@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar 3.5.5 | Prof. Eduardo</title>
+    <title>Connect Escolar 3.5.6 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -24,19 +24,18 @@
         .btn-blue { background: var(--accent); color: white; }
         .btn-add { background: #f1f5f9; color: var(--primary); font-size: 0.7rem; padding: 8px; border: 1px solid #cbd5e1; flex: 1; border-radius: 6px; cursor: pointer; }
         
-        /* Estilo da Tabela de Relatório */
-        .tabela-relatorio { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .tabela-relatorio th { text-align: left; border-bottom: 2px solid #eee; padding: 10px 5px; font-size: 0.75rem; color: #64748b; }
-        .tabela-relatorio td { padding: 8px 5px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
+        /* Ajuste no campo de nomes das atividades (Vistos) */
+        .header-vistos-input { min-width: 100px; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; border: 1px solid #cbd5e1 !important; text-align: center; }
+        
+        /* Caixa de réplica múltipla */
+        .replica-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; background: white; padding: 10px; border-radius: 8px; border: 1px solid #d1e2ff; }
+        .replica-item { font-size: 0.7rem; display: flex; align-items: center; gap: 5px; }
 
-        /* Estilo de Impressão */
         @media print {
-            nav.tabs, header, .btn-main, .btn-add, .tab-btn { display: none !important; }
+            nav.tabs, header, .btn-main, .btn-add, .tab-btn, .no-print { display: none !important; }
             .card { box-shadow: none; border: none; padding: 0; }
-            body { background: white; }
-            .tabela-relatorio td { font-size: 10pt; }
-            .container { padding: 0; }
-            .no-print { display: none !important; }
+            .tabela-relatorio { width: 100%; border-collapse: collapse; }
+            .tabela-relatorio td, .tabela-relatorio th { border-bottom: 1px solid #ddd; padding: 5px; font-size: 10pt; }
         }
     </style>
 </head>
@@ -44,7 +43,7 @@
 
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v3.5.5</h2>
+            <h2>Connect Escolar v3.5.6</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -95,50 +94,35 @@
 
         <div class="container">
             <div id="aba-v" class="card">
-                <div id="header-inputs" style="display:flex; gap:5px; overflow-x:auto; margin-bottom:10px;"></div>
+                <div id="header-inputs" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:10px;"></div>
                 <div style="display:flex; gap:5px; margin-bottom:10px;">
-                    <button class="btn-add" onclick="alterarColunas(1)">+ Coluna</button>
-                    <button class="btn-add" onclick="alterarColunas(-1)">- Coluna</button>
+                    <button class="btn-add" onclick="alterarColunas(1)">+ Atividade</button>
+                    <button class="btn-add" onclick="alterarColunas(-1)">- Remover</button>
                 </div>
-                <div id="lista-container">Aguardando...</div>
+                <div id="lista-container">Escolha uma turma...</div>
                 <button onclick="salvarVistos()" class="btn-main btn-blue">Salvar Vistos</button>
             </div>
 
             <div id="aba-d" class="card hidden">
-                <textarea id="cont" placeholder="Conteúdo da aula..." style="height:100px;"></textarea>
-                <div style="margin-top:10px; padding:10px; background:#eff6ff; border-radius:8px; border:1px dashed var(--accent);">
-                    <small><b>Replicar também para:</b></small>
-                    <select id="replica-turma" style="margin-top:5px; padding:5px; font-size:0.75rem; width:100%;">
-                        <option value="">Nenhuma outra turma</option>
-                        <option value="2ºB Sociologia">2º B (Soc)</option>
-                        <option value="2ºC Sociologia">2º C (Soc)</option>
-                        <option value="2ºD Sociologia">2º D (Soc)</option>
-                    </select>
+                <textarea id="cont" placeholder="Conteúdo da aula..." style="height:120px;"></textarea>
+                <div style="margin-top:10px; padding:12px; background:#eff6ff; border-radius:10px; border:1px solid var(--accent);">
+                    <small><b>Replicar para estas turmas também:</b></small>
+                    <div class="replica-grid" id="replica-check-list">
+                        </div>
                 </div>
-                <button onclick="salvarD()" class="btn-main btn-blue">Gravar Conteúdo</button>
+                <button onclick="salvarD()" class="btn-main btn-blue">Gravar em Todas Selecionadas</button>
                 <div id="historico-lista" style="margin-top:15px;"></div>
             </div>
 
-            <div id="aba-r" class="card hidden">
-                <h3>Notas de Recuperação</h3>
-                <div id="lista-rec"></div>
-                <button onclick="salvarRec()" class="btn-main btn-blue">Salvar Notas</button>
-            </div>
-
-            <div id="aba-l" class="card">
+            <div id="aba-r" class="card hidden"><h3>Recuperação</h3><div id="lista-rec"></div><button onclick="salvarRec()" class="btn-main btn-blue">Salvar Notas</button></div>
+            <div id="aba-l" class="card hidden">
                 <div id="print-area">
-                    <h3 id="relatorio-titulo" style="margin-bottom:5px;">Relatório de Desempenho</h3>
-                    <p id="relatorio-subtitulo" style="font-size:0.8rem; color:#666; margin-bottom:15px;"></p>
+                    <h3 id="rel-t">Relatório</h3>
                     <div id="relatorio-lista"></div>
                 </div>
-                <button onclick="window.print()" class="btn-main btn-blue no-print" style="background:#1e293b;">Imprimir Relatório</button>
+                <button onclick="window.print()" class="btn-main btn-blue no-print" style="background:#1e293b">Imprimir Relatório</button>
             </div>
-
-            <div id="aba-c" class="card hidden">
-                <h3>Ajustar Alunos</h3>
-                <textarea id="imp" style="height:300px; font-family: monospace;"></textarea>
-                <button onclick="importar()" class="btn-main btn-blue">Salvar e Organizar A-Z</button>
-            </div>
+            <div id="aba-c" class="card hidden"><textarea id="imp" style="height:300px;"></textarea><button onclick="importar()" class="btn-main btn-blue">Salvar Alunos</button></div>
         </div>
     </div>
 
@@ -148,10 +132,18 @@
         const db = firebase.database();
         let colAtivas = 5;
 
+        // Lista de turmas para o seletor de réplica
+        const turmasDisponiveis = [
+            "1ºB IFA", "1ºB Sociologia", "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia",
+            "2ºA DG História", "2ºB DG História", "2ºA DG Filosofia", "2ºB DG Filosofia",
+            "9ºA Letramento Digital", "9ºB Pensamento Comp.", "9ºC Letramento Digital", "9ºD Letramento Digital"
+        ];
+
         function logar() { 
             if(document.getElementById('pass').value === '2203') { 
                 document.getElementById('login-screen').classList.add('hidden'); 
                 document.getElementById('app').classList.remove('hidden'); 
+                gerarCheckboxesReplica();
             } else alert('Senha Incorreta'); 
         }
 
@@ -163,6 +155,14 @@
             if(a === 'l') gerarRelatorio();
             if(a === 'r') carregarRec();
             if(a === 'c') carregarAlunosParaEdicao();
+        }
+
+        function gerarCheckboxesReplica() {
+            let html = '';
+            turmasDisponiveis.forEach(t => {
+                html += `<label class="replica-item"><input type="checkbox" class="rep-target" value="${t}"> ${t}</label>`;
+            });
+            document.getElementById('replica-check-list').innerHTML = html;
         }
 
         function atualizarTudo() { carregarAlunos(); carregarHistorico(); }
@@ -177,17 +177,17 @@
             colAtivas = Object.keys(h).filter(k => k.startsWith('h')).length || 5;
             
             let hHtml = '';
-            for(let i=1; i<=colAtivas; i++) hHtml += `<input type="text" id="h${i}" value="${h['h'+i] || 'V'+i}" onchange="salvarHeader()" style="width:60px; font-size:0.7rem;">`;
+            for(let i=1; i<=colAtivas; i++) hHtml += `<input type="text" id="h${i}" class="header-vistos-input" value="${h['h'+i] || 'V'+i}" onchange="salvarHeader()">`;
             document.getElementById('header-inputs').innerHTML = hHtml;
 
             const sV = await db.ref(`vistos/${t}/${b}/${d}`).once('value');
             const salvos = sV.val() || {};
             let html = `<table style="width:100%; border-collapse:collapse;">`;
             alunos.forEach((n, idx) => {
-                html += `<tr style="border-bottom:1px solid #eee"><td>${n}</td><td style="text-align:right">`;
+                html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0">${n}</td><td style="text-align:right">`;
                 for(let v=1; v<=colAtivas; v++) {
                     const chk = (salvos[idx] && salvos[idx][v] === true);
-                    html += `<input type="checkbox" class="chk-v" data-idx="${idx}" data-v="${v}" ${chk ? 'checked' : ''} style="width:18px;height:18px;margin-left:4px;">`;
+                    html += `<input type="checkbox" class="chk-v" data-idx="${idx}" data-v="${v}" ${chk ? 'checked' : ''} style="width:22px;height:22px;margin-left:6px;">`;
                 }
                 html += `</td></tr>`;
             });
@@ -195,10 +195,11 @@
         }
 
         function alterarColunas(n) { colAtivas = Math.max(1, colAtivas + n); salvarHeader(); carregarAlunos(); }
+        
         function salvarHeader() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
             if(!t) return;
-            let h = {}; for(let i=1; i<=colAtivas; i++) h['h'+i] = document.getElementById('h'+i)?.value || 'V'+i;
+            let h = {}; for(let i=1; i<=colAtivas; i++) h['h'+i] = document.getElementById('h'+i)?.value || 'Ativ '+i;
             db.ref(`headers/${t}/${b}`).set(h);
         }
 
@@ -208,20 +209,29 @@
                 const i = chk.dataset.idx; const v = chk.dataset.v;
                 if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked;
             });
-            db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => alert('Salvo!'));
+            db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => alert('Vistos salvos com sucesso!'));
         }
 
-        function salvarD() {
-            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
-            const txt = document.getElementById('cont').value; const d = document.getElementById('data').value;
-            const tReplica = document.getElementById('replica-turma').value;
-            if(!t || !txt) return;
-            const payload = { conteudo: txt, data: d };
+        // SALVAR DIÁRIO COM RÉPLICA MÚLTIPLA
+        async function salvarD() {
+            const tPrincipal = document.getElementById('turma').value;
+            const b = document.getElementById('bimestre').value;
+            const txt = document.getElementById('cont').value;
+            const d = document.getElementById('data').value;
+            
+            if(!tPrincipal || !txt) return alert("Selecione a turma e escreva o conteúdo.");
+
+            const alvos = Array.from(document.querySelectorAll('.rep-target:checked')).map(cb => cb.value);
+            if(!alvos.includes(tPrincipal)) alvos.push(tPrincipal);
+
             const ts = Date.now();
-            db.ref(`diario/${t}/${b}/${ts}`).set(payload).then(() => {
-                if(tReplica) db.ref(`diario/${tReplica}/${b}/${ts}`).set(payload);
-                document.getElementById('cont').value = ""; alert('Gravado!'); carregarHistorico();
-            });
+            const promessas = alvos.map(turma => db.ref(`diario/${turma}/${b}/${ts}`).set({ conteudo: txt, data: d }));
+
+            await Promise.all(promessas);
+            alert(`Sucesso! Conteúdo gravado em ${alvos.length} turmas.`);
+            document.getElementById('cont').value = "";
+            document.querySelectorAll('.rep-target').forEach(cb => cb.checked = false);
+            carregarHistorico();
         }
 
         function carregarHistorico() {
@@ -229,7 +239,7 @@
             if(!t) return;
             db.ref(`diario/${t}/${b}`).once('value', s => {
                 const regs = s.val() || {}; let html = '';
-                Object.keys(regs).reverse().forEach(k => { html += `<div style="background:#f1f5f9; padding:8px; margin-bottom:5px; border-radius:8px; font-size:0.75rem;"><strong>${regs[k].data}</strong>: ${regs[k].conteudo}</div>`; });
+                Object.keys(regs).reverse().forEach(k => { html += `<div style="background:#f1f5f9; padding:10px; margin-bottom:5px; border-radius:8px; font-size:0.8rem; border-left:4px solid var(--accent)"><strong>${regs[k].data}</strong>: ${regs[k].conteudo}</div>`; });
                 document.getElementById('historico-lista').innerHTML = html;
             });
         }
@@ -237,9 +247,7 @@
         async function gerarRelatorio() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
             if(!t) return;
-            
-            document.getElementById('relatorio-subtitulo').innerText = `Turma: ${t} | ${b}`;
-            
+            document.getElementById('rel-t').innerText = `Relatório: ${t} (${b})`;
             const sA = await db.ref('turmas/'+t).once('value');
             const alunos = sA.val() || [];
             const sV = await db.ref(`vistos/${t}/${b}`).once('value');
@@ -248,15 +256,11 @@
             
             let res = alunos.map(n => ({ n, total: 0 }));
             Object.values(dias).forEach(dia => {
-                Object.keys(dia).forEach(idx => { 
-                    if(res[idx]) Object.values(dia[idx]).forEach(v => { if(v === true) res[idx].total++; });
-                });
+                Object.keys(dia).forEach(idx => { if(res[idx]) Object.values(dia[idx]).forEach(v => { if(v === true) res[idx].total++; }); });
             });
 
-            let h = '<table class="tabela-relatorio"><thead><tr><th>Nome do Aluno</th><th style="text-align:right">Vistos</th><th style="text-align:right">Recuperação</th></tr></thead><tbody>';
-            res.forEach((it, i) => { 
-                h += `<tr><td>${it.n}</td><td style="text-align:right">${it.total}</td><td style="text-align:right; font-weight:bold; color:red;">${recs[i] || '-'}</td></tr>`; 
-            });
+            let h = '<table style="width:100%; border-collapse:collapse; font-size:0.85rem;"><thead><tr style="border-bottom:2px solid #ddd"><th>Aluno</th><th style="text-align:right">Vistos</th><th style="text-align:right">Rec</th></tr></thead><tbody>';
+            res.forEach((it, i) => { h += `<tr style="border-bottom:1px solid #eee"><td>${it.n}</td><td style="text-align:right">${it.total}</td><td style="text-align:right; color:red; font-weight:bold">${recs[i] || '-'}</td></tr>`; });
             document.getElementById('relatorio-lista').innerHTML = h + '</tbody></table>';
         }
 
@@ -268,7 +272,7 @@
                 db.ref(`recuperacao/${t}/${b}`).once('value', sR => {
                     const notas = sR.val() || {};
                     let h = '<table style="width:100%">';
-                    alunos.forEach((n, i) => { h += `<tr><td>${n}</td><td><input type="text" class="input-nota-rec" data-idx="${i}" value="${notas[i] || ''}" style="width:50px; color:red; border:1px solid #ddd;"></td></tr>`; });
+                    alunos.forEach((n, i) => { h += `<tr><td style="padding:5px 0">${n}</td><td style="text-align:right"><input type="text" class="input-nota-rec" data-idx="${i}" value="${notas[i] || ''}" style="width:50px; color:red; text-align:center"></td></tr>`; });
                     document.getElementById('lista-rec').innerHTML = h + '</table>';
                 });
             });
