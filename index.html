@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar 3.8.5 | Inteligente</title>
+    <title>Connect Escolar 3.8.6 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; --success: #22c55e; }
+        :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; --danger: #ef4444; --success: #22c55e; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
         #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: #0f172a; }
         .login-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 350px; }
@@ -22,20 +22,22 @@
         .hidden { display: none !important; }
         .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; }
         .btn-blue { background: var(--accent); color: white; }
+        .header-vistos-input { min-width: 130px; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; border: 1px solid #cbd5e1 !important; text-align: center; margin-right: 5px; }
         .visto-container { display: inline-flex; flex-direction: column; align-items: center; margin-left: 6px; width: 28px; }
-        .check-indicator { color: var(--success); font-size: 0.65rem; font-weight: bold; height: 12px; }
-        .hist-item { background: #f8fafc; padding: 10px; margin-bottom: 8px; border-left: 4px solid var(--accent); border-radius: 4px; }
-        .report-table { width: 100%; border-collapse: collapse; }
-        .report-table td, .report-table th { padding: 8px; border: 1px solid #ddd; font-size: 0.85rem; }
-        .multi-select-box { height: 110px; font-size: 0.7rem; width: 100%; border-radius: 8px; margin-top: 5px; }
+        .check-indicator { color: var(--success); font-size: 0.65rem; font-weight: bold; height: 12px; line-height: 12px; }
+        .hist-item { background: #f8fafc; padding: 10px; margin-bottom: 8px; border-left: 4px solid var(--accent); border-radius: 4px; position: relative; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .report-table th { background: #f1f5f9; padding: 8px; border: 1px solid #ddd; font-size: 0.7rem; }
+        .report-table td { padding: 8px; border: 1px solid #ddd; font-size: 0.85rem; }
+        .multi-select-box { height: 120px; font-size: 0.7rem; border: 1px solid #ddd; border-radius: 8px; width: 100%; margin-top: 5px; }
         #status-horario { font-size: 0.7rem; color: var(--accent); font-weight: bold; margin-bottom: 5px; text-align: center; }
-        @media print { .no-print, nav, header, .btn-main { display: none !important; } }
+        @media print { .no-print, nav, header, .btn-main { display: none !important; } .card { box-shadow: none; border: none; } }
     </style>
 </head>
 <body>
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v3.8.5</h2>
+            <h2>Connect Escolar v3.8.6</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -51,10 +53,11 @@
         </nav>
 
         <header class="no-print">
-            <div id="status-horario">Detectando aula atual...</div>
+            <div id="status-horario">Detectando aula...</div>
             <div class="controls-grid">
                 <select id="ano" onchange="atualizarTudo()" style="background: #fffbeb;">
-                    <option value="2026" selected>Ano: 2026</option>
+                    <option value="" selected>Ano: Atual (Raiz)</option>
+                    <option value="2026">Ano: 2026</option>
                     <option value="2027">Ano: 2027</option>
                 </select>
                 <select id="bimestre" onchange="atualizarTudo()">
@@ -91,20 +94,26 @@
 
         <div class="container">
             <div id="aba-v" class="card">
-                <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px;" class="no-print"></div>
-                <div id="lista-container">Aguardando...</div>
+                <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
+                <div id="lista-container">Aguardando seleção...</div>
                 <button onclick="salvarVistos()" class="btn-main btn-blue no-print">Salvar Vistos</button>
             </div>
 
             <div id="aba-d" class="card hidden">
                 <input type="hidden" id="edit-key">
                 <textarea id="cont" onblur="corrigirTexto(this)" placeholder="Conteúdo da aula..." style="height:120px;"></textarea>
-                <div class="no-print"><small>Replicar para:</small>
+                <div class="no-print" style="margin-top:10px;">
+                    <small><b>Replicar conteúdo para:</b></small>
                     <select id="replica-multi" multiple class="multi-select-box">
                         <option value="9ºA Pensamento Comp.">9ºA PC</option>
                         <option value="9ºB Pensamento Comp.">9ºB PC</option>
                         <option value="9ºC Letramento Digital">9ºC LD</option>
                         <option value="9ºD Letramento Digital">9ºD LD</option>
+                        <option value="1ºB IFA">1ºB IFA</option>
+                        <option value="1ºB Sociologia">1ºB Soc</option>
+                        <option value="2ºB Sociologia">2ºB Soc</option>
+                        <option value="2ºC Sociologia">2ºC Soc</option>
+                        <option value="2ºD Sociologia">2ºD Soc</option>
                         <option value="2ºA DG História">2ºA DG Hist</option>
                         <option value="2ºB DG História">2ºB DG Hist</option>
                         <option value="2ºA DG Filosofia">2ºA DG Filo</option>
@@ -115,13 +124,18 @@
                 <div id="historico-lista" style="margin-top:20px;"></div>
             </div>
 
-            <div id="aba-r" class="card hidden"><h3>Recuperação</h3><div id="lista-rec"></div><button onclick="salvarRec()" class="btn-main btn-blue">Salvar Notas</button></div>
+            <div id="aba-r" class="card hidden"><h3>Recuperação</h3><div id="lista-rec"></div><button onclick="salvarRec()" class="btn-main btn-blue no-print">Salvar Notas</button></div>
+            
             <div id="aba-l" class="card hidden">
-                <h2 id="rel-header-info" style="text-align:center; font-size:1rem;"></h2>
+                <div style="text-align:center; border-bottom: 2px solid var(--primary); padding-bottom:10px; margin-bottom:15px;">
+                    <h2 style="margin:0; font-size:1.1rem;">RELATÓRIO DE FECHAMENTO</h2>
+                    <p id="rel-header-info" style="margin:5px 0; font-weight:bold;"></p>
+                </div>
                 <div id="relatorio-lista"></div>
-                <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir</button>
+                <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir Relatório</button>
             </div>
-            <div id="aba-c" class="card hidden"><h3>Ajustes</h3><textarea id="imp" style="height:250px;"></textarea><button onclick="importar()" class="btn-main btn-blue">Importar Turma</button></div>
+
+            <div id="aba-c" class="card hidden"><h3>Ajustes</h3><textarea id="imp" style="height:250px;"></textarea><button onclick="importar()" class="btn-main btn-blue">Salvar Alunos</button></div>
         </div>
     </div>
 
@@ -130,109 +144,127 @@
         firebase.initializeApp(config);
         const db = firebase.database();
 
-        // --- CONFIGURAÇÃO DO SEU HORÁRIO (Exemplo para teste) ---
-        // 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex
-        const gradeHoraria = {
-            1: [ {inicio: "13:00", fim: "14:40", turma: "9ºA Pensamento Comp."}, {inicio: "14:40", fim: "16:20", turma: "9ºB Pensamento Comp."} ],
-            2: [ {inicio: "13:00", fim: "14:40", turma: "2ºA DG História"}, {inicio: "14:40", fim: "16:20", turma: "2ºB DG História"} ],
-            3: [ {inicio: "13:00", fim: "14:40", turma: "1ºB Sociologia"}, {inicio: "14:40", fim: "16:20", turma: "2ºC Sociologia"} ]
-        };
-
-        function aplicarHorarioInteligente() {
-            const agora = new Date();
-            const dia = agora.getDay(); 
-            const horaAtual = agora.getHours().toString().padStart(2, '0') + ":" + agora.getMinutes().toString().padStart(2, '0');
-            
-            if (gradeHoraria[dia]) {
-                const aula = gradeHoraria[dia].find(h => horaAtual >= h.inicio && horaAtual <= h.fim);
-                if (aula) {
-                    document.getElementById('turma').value = aula.turma;
-                    document.getElementById('status-horario').innerText = `📍 Aula detectada: ${aula.turma} (${aula.inicio}-${aula.fim})`;
-                    atualizarTudo();
-                } else {
-                    document.getElementById('status-horario').innerText = "⏱️ Fora do horário de aula.";
-                }
-            } else {
-                document.getElementById('status-horario').innerText = "☕ Final de semana / Sem aulas cadastradas.";
-            }
+        function getPath(tipo) {
+            const ano = document.getElementById('ano').value;
+            const bim = document.getElementById('bimestre').value;
+            return ano ? `${ano}/${tipo}/${bim}` : `${tipo}/${bim}`;
         }
 
-        function getPath() { return `${document.getElementById('ano').value}/${document.getElementById('bimestre').value}`; }
-        function logar() { if(document.getElementById('pass').value === '2203') { 
-            document.getElementById('login-screen').classList.add('hidden'); 
-            document.getElementById('app').classList.remove('hidden');
-            aplicarHorarioInteligente(); 
-        }}
+        function logar() { if(document.getElementById('pass').value === '2203') { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); aplicarHorarioInteligente(); } }
+        
+        function aba(a) {
+            document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('aba-'+a).classList.remove('hidden');
+            event.currentTarget.classList.add('active');
+            if(a === 'l') gerarRelatorio();
+            if(a === 'r') carregarRec();
+            if(a === 'd') carregarHistorico();
+            if(a === 'v') carregarAlunos();
+        }
 
-        // Funções de carregamento (Vistos, Diário, etc) seguem a lógica de Ano/Bimestre/Turma
         async function carregarAlunos() {
-            const t = document.getElementById('turma').value; const d = document.getElementById('data').value;
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
-            const p = getPath();
-            const [sH, sA, sV, sB] = await Promise.all([
-                db.ref(`headers/${p}/${t}`).once('value'),
-                db.ref('turmas/'+t).once('value'),
-                db.ref(`vistos/${p}/${t}/${d}`).once('value'),
-                db.ref(`vistos/${p}/${t}`).once('value')
-            ]);
-            const h = sH.val() || {}; const alunos = sA.val() || []; const salvosDia = sV.val() || {}; const todosB = sB.val() || {};
+            const pVistos = getPath('vistos');
+            const pHeaders = getPath('headers');
             
+            const [sH, sA, sV, sB] = await Promise.all([
+                db.ref(`${pHeaders}/${t}`).once('value'),
+                db.ref('turmas/'+t).once('value'),
+                db.ref(`${pVistos}/${t}/${d}`).once('value'),
+                db.ref(`${pVistos}/${t}`).once('value')
+            ]);
+            
+            const h = sH.val() || {}; const alunos = sA.val() || []; const salvosDia = sV.val() || {}; const todosB = sB.val() || {};
             let hHtml = ''; for(let i=1; i<=5; i++) hHtml += `<input type="text" id="h${i}" class="header-vistos-input" value="${h['h'+i] || 'Ativ '+i}" onchange="salvarHeader()">`;
             document.getElementById('header-inputs').innerHTML = hHtml;
 
             let html = `<table style="width:100%; border-collapse:collapse;">`;
             alunos.forEach((n, idx) => {
-                let status = {1:false,2:false,3:false,4:false,5:false};
-                Object.values(todosB).forEach(dia => { if(dia && dia[idx]) for(let v=1;v<=5;v++) if(dia[idx][v]) status[v]=true; });
+                let statusV = {1:false, 2:false, 3:false, 4:false, 5:false};
+                Object.values(todosB).forEach(dia => { if(dia && dia[idx]) { for(let v=1; v<=5; v++) if(dia[idx][v]) statusV[v] = true; } });
+                
                 html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0;">${n}</td><td style="text-align:right">`;
                 for(let v=1; v<=5; v++) {
-                    const chk = (salvosDia[idx] && salvosDia[idx][v]);
-                    html += `<div class="visto-container"><span class="check-indicator">${status[v]?'✓':''}</span><input type="checkbox" class="chk-v" data-idx="${idx}" data-v="${v}" ${chk?'checked':''}></div>`;
+                    const chk = (salvosDia && salvosDia[idx] && salvosDia[idx][v]);
+                    html += `<div class="visto-container"><span class="check-indicator">${statusV[v] ? '✓' : ''}</span><input type="checkbox" class="chk-v" data-idx="${idx}" data-v="${v}" ${chk ? 'checked' : ''} style="width:22px;height:22px;"></div>`;
                 }
                 html += `</td></tr>`;
             });
             document.getElementById('lista-container').innerHTML = html + `</table>`;
         }
 
-        function atualizarTudo() { carregarAlunos(); carregarHistorico(); }
-        function aba(a) { 
-            document.querySelectorAll('.card').forEach(c => c.classList.add('hidden')); 
-            document.getElementById('aba-'+a).classList.remove('hidden'); 
-            if(a==='l') gerarRelatorio();
-            if(a==='d') carregarHistorico();
-        }
-
-        // Funções de salvar e histórico adaptadas para o novo Path (Ano/Bimestre)
         async function salvarVistos() {
             const t = document.getElementById('turma').value; const d = document.getElementById('data').value;
             let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => {
                 const i = chk.dataset.idx; if(!dados[i]) dados[i] = {}; dados[i][chk.dataset.v] = chk.checked;
             });
-            await db.ref(`vistos/${getPath()}/${t}/${d}`).set(dados);
-            alert('Vistos Salvos!'); carregarAlunos();
+            await db.ref(`${getPath('vistos')}/${t}/${d}`).set(dados);
+            alert('Salvo!'); carregarAlunos();
         }
 
         async function carregarHistorico() {
             const t = document.getElementById('turma').value; if(!t) return;
-            db.ref(`diario/${getPath()}/${t}`).once('value', s => {
+            db.ref(`${getPath('diario')}/${t}`).once('value', s => {
                 const regs = s.val() || {}; let h = '';
                 Object.keys(regs).reverse().forEach(k => {
-                    h += `<div class="hist-item"><strong>${regs[k].data}</strong>: ${regs[k].conteudo}</div>`;
+                    h += `<div class="hist-item"><span style="float:right"><span onclick="editarD('${k}','${regs[k].data}','${regs[k].conteudo}')" style="cursor:pointer;margin-right:10px">✎</span><span onclick="apagarD('${k}')" style="cursor:pointer;color:red">🗑</span></span><strong>${regs[k].data}</strong>: ${regs[k].conteudo}</div>`;
                 });
-                document.getElementById('historico-lista').innerHTML = h;
+                document.getElementById('historico-lista').innerHTML = h || "<small>Sem registros.</small>";
             });
         }
 
         async function salvarD() {
             const t = document.getElementById('turma').value; const txt = document.getElementById('cont').value;
-            if(!t || !txt) return;
+            const editKey = document.getElementById('edit-key').value || Date.now();
             const alvos = Array.from(document.getElementById('replica-multi').selectedOptions).map(o => o.value);
             if(!alvos.includes(t)) alvos.push(t);
-            const ts = Date.now();
-            await Promise.all(alvos.map(turma => db.ref(`diario/${getPath()}/${turma}/${ts}`).set({conteudo: txt, data: document.getElementById('data').value})));
-            alert('Diário Gravado!'); document.getElementById('cont').value = ""; carregarHistorico();
+            await Promise.all(alvos.map(turma => db.ref(`${getPath('diario')}/${turma}/${editKey}`).set({conteudo: txt, data: document.getElementById('data').value})));
+            document.getElementById('cont').value = ""; document.getElementById('edit-key').value = ""; alert('Diário Gravado!'); carregarHistorico();
         }
 
+        async function carregarRec() {
+            const t = document.getElementById('turma').value; if(!t) return;
+            const [sA, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`${getPath('recuperacao')}/${t}`).once('value')]);
+            const alunos = sA.val() || []; const notas = sR.val() || {};
+            let h = '<table style="width:100%">';
+            alunos.forEach((n, i) => { h += `<tr><td>${n}</td><td style="text-align:right"><input type="text" class="input-nota-rec" data-idx="${i}" value="${notas[i] || ''}" style="width:50px;color:red;border:1px solid #ddd;text-align:center;"></td></tr>`; });
+            document.getElementById('lista-rec').innerHTML = h + '</table>';
+        }
+
+        async function gerarRelatorio() {
+            const t = document.getElementById('turma').value; if(!t) return;
+            document.getElementById('rel-header-info').innerText = `${t} - ${document.getElementById('bimestre').value}`;
+            const [sA, sV, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`${getPath('vistos')}/${t}`).once('value'), db.ref(`${getPath('recuperacao')}/${t}`).once('value')]);
+            const alunos = sA.val() || []; const dias = sV.val() || {}; const recs = sR.val() || {};
+            let h = `<table class="report-table"><thead><tr><th>#</th><th>NOME</th><th>VISTOS</th><th>REC</th></tr></thead><tbody>`;
+            alunos.forEach((n, i) => {
+                let total = 0; Object.values(dias).forEach(d => { if(d[i]) Object.values(d[i]).forEach(v => { if(v) total++; })});
+                h += `<tr><td>${i+1}</td><td>${n}</td><td style="text-align:center"><b>${total}</b></td><td style="text-align:center;color:red"><b>${recs[i] || '-'}</b></td></tr>`;
+            });
+            document.getElementById('relatorio-lista').innerHTML = h + '</tbody></table>';
+        }
+
+        function aplicarHorarioInteligente() {
+            const agora = new Date(); const dia = agora.getDay();
+            const hora = agora.getHours().toString().padStart(2,'0')+":"+agora.getMinutes().toString().padStart(2,'0');
+            const grade = { 
+                1: [{i:"13:00", f:"14:40", t:"9ºA Pensamento Comp."}, {i:"14:40", f:"16:20", t:"9ºB Pensamento Comp."}],
+                2: [{i:"13:00", f:"14:40", t:"2ºA DG História"}, {i:"14:40", f:"16:20", t:"2ºB DG História"}]
+            };
+            if(grade[dia]) {
+                const aula = grade[dia].find(a => hora >= a.i && hora <= a.f);
+                if(aula) { document.getElementById('turma').value = aula.t; document.getElementById('status-horario').innerText = "📍 Aula: "+aula.t; atualizarTudo(); }
+            }
+        }
+
+        function editarD(k,d,c) { document.getElementById('edit-key').value = k; document.getElementById('data').value = d; document.getElementById('cont').value = c; aba('d'); }
+        async function apagarD(k) { if(confirm("Apagar?")) { await db.ref(`${getPath('diario')}/${document.getElementById('turma').value}/${k}`).remove(); carregarHistorico(); } }
+        function salvarHeader() { const t = document.getElementById('turma').value; let h = {}; for(let i=1;i<=5;i++) h['h'+i] = document.getElementById('h'+i).value; db.ref(`${getPath('headers')}/${t}`).set(h); }
+        function salvarRec() { let r = {}; document.querySelectorAll('.input-nota-rec').forEach(inp => { if(inp.value) r[inp.dataset.idx] = inp.value; }); db.ref(`${getPath('recuperacao')}/${document.getElementById('turma').value}`).set(r).then(() => alert('Salvo!')); }
+        function atualizarTudo() { carregarAlunos(); carregarHistorico(); }
+        function importar() { const t = document.getElementById('turma').value; const l = document.getElementById('imp').value.split('\n').map(n => n.replace(/^[0-9\s.\-_]+/, '').trim()).filter(n => n.length > 2).sort(); db.ref('turmas/'+t).set(l).then(() => alert('Alunos Salvos!')); }
         function corrigirTexto(el) { let t = el.value.replace(/\s\s+/g, ' '); if(t.length > 0) t = t.charAt(0).toUpperCase() + t.slice(1); el.value = t; }
         document.getElementById('data').valueAsDate = new Date();
     </script>
