@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar 3.7.4 | Prof. Eduardo</title>
+    <title>Connect Escolar 3.7.5 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -30,7 +30,7 @@
         .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .report-table th { background: #f1f5f9; padding: 8px; border: 1px solid #ddd; font-size: 0.7rem; }
         .report-table td { padding: 8px; border: 1px solid #ddd; font-size: 0.85rem; }
-        .multi-select-box { height: 80px; font-size: 0.7rem; border: 1px solid #ddd; border-radius: 8px; width: 100%; margin-top: 5px; }
+        .multi-select-box { height: 110px; font-size: 0.7rem; border: 1px solid #ddd; border-radius: 8px; width: 100%; margin-top: 5px; }
         @media print { 
             .no-print, nav, header, .btn-main { display: none !important; } 
             .card { box-shadow: none; border: none; padding: 0; }
@@ -40,7 +40,7 @@
 <body>
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v3.7.4</h2>
+            <h2>Connect Escolar v3.7.5</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -101,7 +101,7 @@
                 <input type="hidden" id="edit-key">
                 <textarea id="cont" onblur="corrigirTexto(this)" placeholder="Conteúdo da aula..." style="height:120px;"></textarea>
                 <div class="no-print" style="margin-top:10px;">
-                    <small><b>Replicar conteúdo para:</b></small>
+                    <small><b>Replicar conteúdo para:</b> (Segure Ctrl p/ vários)</small>
                     <select id="replica-multi" multiple class="multi-select-box">
                         <option value="9ºA Pensamento Comp.">9ºA PC</option>
                         <option value="9ºB Pensamento Comp.">9ºB PC</option>
@@ -112,6 +112,10 @@
                         <option value="2ºB Sociologia">2ºB Soc</option>
                         <option value="2ºC Sociologia">2ºC Soc</option>
                         <option value="2ºD Sociologia">2ºD Soc</option>
+                        <option value="2ºA DG História">2ºA DG História</option>
+                        <option value="2ºB DG História">2ºB DG História</option>
+                        <option value="2ºA DG Filosofia">2ºA DG Filo</option>
+                        <option value="2ºB DG Filosofia">2ºB DG Filo</option>
                     </select>
                 </div>
                 <button onclick="salvarD()" class="btn-main btn-blue">Gravar Diário</button>
