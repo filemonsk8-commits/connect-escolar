@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar 3.7.0 | Prof. Eduardo</title>
+    <title>Connect Escolar 3.7.1 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; --danger: #ef4444; }
+        :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; --danger: #ef4444; --success: #22c55e; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
         #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: #0f172a; }
         .login-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 350px; }
@@ -23,17 +23,17 @@
         .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; }
         .btn-blue { background: var(--accent); color: white; }
         .header-vistos-input { min-width: 130px; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; border: 1px solid #cbd5e1 !important; text-align: center; margin-right: 5px; }
-        .hist-vistos-box { margin-top: 20px; border-top: 2px dashed #eee; padding-top: 15px; }
+        .check-visto { color: var(--success); font-weight: bold; margin-left: 5px; font-size: 1rem; }
         .hist-vistos-item { display: flex; justify-content: space-between; align-items: center; background: #f0f7ff; padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; font-size: 0.8rem; border-left: 4px solid var(--accent); }
         .report-table { width: 100%; border-collapse: collapse; }
         .report-table td { padding: 8px; border: 1px solid #eee; }
-        @media print { .no-print, nav, header, .btn-main, .hist-vistos-box { display: none !important; } }
+        @media print { .no-print, nav, header, .btn-main { display: none !important; } }
     </style>
 </head>
 <body>
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v3.7.0</h2>
+            <h2>Connect Escolar v3.7.1</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -87,11 +87,7 @@
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
                 <div id="lista-container">Aguardando...</div>
                 <button onclick="salvarVistos()" class="btn-main btn-blue no-print">Salvar Vistos</button>
-                
-                <div class="hist-vistos-box no-print">
-                    <small><b>Histórico de Vistos (Retroativos):</b></small>
-                    <div id="hist-vistos-lista" style="margin-top:10px;"></div>
-                </div>
+                <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
 
             <div id="aba-d" class="card hidden">
@@ -102,7 +98,7 @@
 
             <div id="aba-r" class="card hidden"><h3>Recuperação</h3><div id="lista-rec"></div><button onclick="salvarRec()" class="btn-main btn-blue no-print">Salvar Notas</button></div>
             <div id="aba-l" class="card hidden"><h3>Fechamento</h3><div id="relatorio-lista"></div><button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir</button></div>
-            <div id="aba-c" class="card hidden"><h3>Ajustes Alunos</h3><textarea id="imp" style="height:250px;"></textarea><button onclick="importar()" class="btn-main btn-blue">Salvar Alunos</button></div>
+            <div id="aba-c" class="card hidden"><h3>Ajustes</h3><textarea id="imp" style="height:250px;"></textarea><button onclick="importar()" class="btn-main btn-blue">Salvar Alunos</button></div>
         </div>
     </div>
 
@@ -126,19 +122,36 @@
         async function carregarAlunos() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
-            const [sH, sA, sV] = await Promise.all([
+            
+            const [sH, sA, sV, sB] = await Promise.all([
                 db.ref(`headers/${t}/${b}`).once('value'),
                 db.ref('turmas/'+t).once('value'),
-                db.ref(`vistos/${t}/${b}/${d}`).once('value')
+                db.ref(`vistos/${t}/${b}/${d}`).once('value'),
+                db.ref(`vistos/${t}/${b}`).once('value')
             ]);
-            const h = sH.val() || {}; const alunos = sA.val() || []; const salvos = sV.val() || {};
+
+            const h = sH.val() || {}; const alunos = sA.val() || []; const salvosDia = sV.val() || {}; const todosBimestre = sB.val() || {};
+            
             let hHtml = ''; for(let i=1; i<=5; i++) hHtml += `<input type="text" id="h${i}" class="header-vistos-input" value="${h['h'+i] || 'Ativ. '+i}" onchange="salvarHeader()">`;
             document.getElementById('header-inputs').innerHTML = hHtml;
+
             let html = `<table style="width:100%; border-collapse:collapse;">`;
             alunos.forEach((n, idx) => {
-                html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0; font-size:0.85rem;">${n}</td><td style="text-align:right">`;
+                // Checar se o aluno tem QUALQUER visto no bimestre para mostrar o check verde
+                let temVistoNoBimestre = false;
+                Object.values(todosBimestre).forEach(dia => {
+                    if(dia[idx]) {
+                        Object.values(dia[idx]).forEach(v => { if(v === true) temVistoNoBimestre = true; });
+                    }
+                });
+
+                html += `<tr style="border-bottom:1px solid #eee">
+                            <td style="padding:10px 0; font-size:0.85rem;">
+                                ${n} ${temVistoNoBimestre ? '<span class="check-visto">✓</span>' : ''}
+                            </td>
+                            <td style="text-align:right">`;
                 for(let v=1; v<=5; v++) {
-                    const chk = (salvos[idx] && salvos[idx][v] === true);
+                    const chk = (salvosDia[idx] && salvosDia[idx][v] === true);
                     html += `<input type="checkbox" class="chk-v" data-idx="${idx}" data-v="${v}" ${chk ? 'checked' : ''} style="width:24px;height:24px;margin-left:5px;">`;
                 }
                 html += `</td></tr>`;
@@ -152,16 +165,15 @@
             db.ref(`vistos/${t}/${b}`).once('value', s => {
                 const dias = s.val() || {}; let html = '';
                 Object.keys(dias).sort().reverse().forEach(data => {
-                    html += `<div class="hist-vistos-item"><span>📅 ${data.split('-').reverse().join('/')}</span><button onclick="setarData('${data}')" style="background:var(--accent);color:white;border:none;padding:4px 8px;border-radius:5px;cursor:pointer;font-size:0.7rem;">✎ Abrir dia...</button></div>`;
+                    html += `<div class="hist-vistos-item"><span>📅 ${data.split('-').reverse().join('/')}</span><button onclick="setarData('${data}')" style="background:var(--accent);color:white;border:none;padding:4px 8px;border-radius:5px;cursor:pointer;font-size:0.7rem;">✎ Abrir</button></div>`;
                 });
-                document.getElementById('hist-vistos-lista').innerHTML = html || "<small>Nenhum visto lançado.</small>";
+                document.getElementById('hist-vistos-lista').innerHTML = html;
             });
         }
 
-        function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); window.scrollTo(0,0); }
-
+        function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); }
         function salvarHeader() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; let h = {}; for(let i=1; i<=5; i++) h['h'+i] = document.getElementById('h'+i).value; db.ref(`headers/${t}/${b}`).set(h); }
-        function salvarVistos() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Vistos Atualizados!'); carregarHistoricoVistos(); }); }
+        function salvarVistos() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Salvo!'); carregarAlunos(); }); }
         
         async function gerarRelatorio() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
