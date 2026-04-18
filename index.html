@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar 3.7.1 | Prof. Eduardo</title>
+    <title>Connect Escolar 3.7.2 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -23,7 +23,8 @@
         .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; }
         .btn-blue { background: var(--accent); color: white; }
         .header-vistos-input { min-width: 130px; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; border: 1px solid #cbd5e1 !important; text-align: center; margin-right: 5px; }
-        .check-visto { color: var(--success); font-weight: bold; margin-left: 5px; font-size: 1rem; }
+        .visto-container { display: inline-flex; flex-direction: column; align-items: center; margin-left: 6px; width: 28px; }
+        .check-indicator { color: var(--success); font-size: 0.65rem; font-weight: bold; height: 12px; line-height: 12px; }
         .hist-vistos-item { display: flex; justify-content: space-between; align-items: center; background: #f0f7ff; padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; font-size: 0.8rem; border-left: 4px solid var(--accent); }
         .report-table { width: 100%; border-collapse: collapse; }
         .report-table td { padding: 8px; border: 1px solid #eee; }
@@ -33,7 +34,7 @@
 <body>
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v3.7.1</h2>
+            <h2>Connect Escolar v3.7.2</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -137,22 +138,23 @@
 
             let html = `<table style="width:100%; border-collapse:collapse;">`;
             alunos.forEach((n, idx) => {
-                // Checar se o aluno tem QUALQUER visto no bimestre para mostrar o check verde
-                let temVistoNoBimestre = false;
+                // Descobrir quais das 5 atividades o aluno já tem no bimestre
+                let statusVistos = {1:false, 2:false, 3:false, 4:false, 5:false};
                 Object.values(todosBimestre).forEach(dia => {
                     if(dia[idx]) {
-                        Object.values(dia[idx]).forEach(v => { if(v === true) temVistoNoBimestre = true; });
+                        for(let v=1; v<=5; v++) { if(dia[idx][v] === true) statusVistos[v] = true; }
                     }
                 });
 
                 html += `<tr style="border-bottom:1px solid #eee">
-                            <td style="padding:10px 0; font-size:0.85rem;">
-                                ${n} ${temVistoNoBimestre ? '<span class="check-visto">✓</span>' : ''}
-                            </td>
+                            <td style="padding:10px 0; font-size:0.85rem;">${n}</td>
                             <td style="text-align:right">`;
                 for(let v=1; v<=5; v++) {
                     const chk = (salvosDia[idx] && salvosDia[idx][v] === true);
-                    html += `<input type="checkbox" class="chk-v" data-idx="${idx}" data-v="${v}" ${chk ? 'checked' : ''} style="width:24px;height:24px;margin-left:5px;">`;
+                    html += `<div class="visto-container">
+                                <span class="check-indicator">${statusVistos[v] ? '✓' : ''}</span>
+                                <input type="checkbox" class="chk-v" data-idx="${idx}" data-v="${v}" ${chk ? 'checked' : ''} style="width:24px;height:24px;margin:0;">
+                             </div>`;
                 }
                 html += `</td></tr>`;
             });
@@ -173,7 +175,7 @@
 
         function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); }
         function salvarHeader() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; let h = {}; for(let i=1; i<=5; i++) h['h'+i] = document.getElementById('h'+i).value; db.ref(`headers/${t}/${b}`).set(h); }
-        function salvarVistos() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Salvo!'); carregarAlunos(); }); }
+        function salvarVistos() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Vistos Salvos!'); carregarAlunos(); }); }
         
         async function gerarRelatorio() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
