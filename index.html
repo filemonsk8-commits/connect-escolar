@@ -101,7 +101,7 @@
                 <input type="hidden" id="edit-key">
                 <textarea id="cont" onblur="corrigirTexto(this)" placeholder="Conteúdo da aula..." style="height:120px;"></textarea>
                 <div class="no-print" style="margin-top:10px;">
-                    <small><b>Replicar conteúdo para:</b> (Segure Ctrl p/ vários)</small>
+                    <small><b>Replicar conteúdo para:</b></small>
                     <select id="replica-multi" multiple class="multi-select-box">
                         <option value="9ºA Pensamento Comp.">9ºA PC</option>
                         <option value="9ºB Pensamento Comp.">9ºB PC</option>
@@ -133,7 +133,12 @@
                 <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir Relatório</button>
             </div>
 
-            <div id="aba-c" class="card hidden"><h3>Ajustes</h3><textarea id="imp" style="height:250px;"></textarea><button onclick="importar()" class="btn-main btn-blue">Salvar Alunos</button></div>
+            <div id="aba-c" class="card hidden">
+                <h3>Ajustes - Cadastrar Alunos</h3>
+                <p><small>Selecione a turma em cima, cole a lista abaixo e clique em Salvar.</small></p>
+                <textarea id="imp" style="height:250px;" placeholder="Cole a lista de alunos aqui..."></textarea>
+                <button onclick="importar()" class="btn-main btn-blue">Salvar Alunos</button>
+            </div>
         </div>
     </div>
 
@@ -256,8 +261,24 @@
         function editarD(k, d, c) { document.getElementById('edit-key').value = k; document.getElementById('data').value = d; document.getElementById('cont').value = c; window.scrollTo(0,0); }
         async function apagarD(k) { if(confirm("Apagar este registro?")) { await db.ref(`diario/${document.getElementById('turma').value}/${document.getElementById('bimestre').value}/${k}`).remove(); carregarHistorico(); } }
         function salvarRec() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; let r = {}; document.querySelectorAll('.input-nota-rec').forEach(inp => { if(inp.value) r[inp.dataset.idx] = inp.value; }); db.ref(`recuperacao/${t}/${b}`).set(r).then(() => alert('Notas Salvas!')); }
-        function importar() { const t = document.getElementById('turma').value; const l = document.getElementById('imp').value.split('\n').map(n => n.replace(/^[0-9\s.\-_]+/, '').trim()).filter(n => n.length > 2).sort(); db.ref('turmas/'+t).set(l).then(() => alert('Alunos Salvos!')); }
-        function atualizarTudo() { carregarAlunos(); carregarHistorico(); }
+        
+        async function importar() { 
+            const t = document.getElementById('turma').value; 
+            const campo = document.getElementById('imp');
+            if(!t) return alert('Selecione a turma antes!');
+            const l = campo.value.split('\n').map(n => n.replace(/^[0-9\s.\-_]+/, '').trim()).filter(n => n.length > 2).sort(); 
+            if(l.length === 0) return alert('Lista vazia ou inválida!');
+            await db.ref('turmas/'+t).set(l);
+            alert('Alunos Salvos!'); 
+            campo.value = ""; // Limpa a lista após salvar
+            carregarAlunos(); 
+        }
+
+        function atualizarTudo() { 
+            document.getElementById('lista-container').innerHTML = "Carregando...";
+            carregarAlunos(); 
+            carregarHistorico(); 
+        }
         function corrigirTexto(el) { let t = el.value.replace(/\s\s+/g, ' '); t = t.replace(/(\.|\?|\!)\s*([a-z])/g, (m, p1, p2) => p1 + " " + p2.toUpperCase()); if(t.length > 0) t = t.charAt(0).toUpperCase() + t.slice(1); el.value = t; }
         document.getElementById('data').valueAsDate = new Date();
     </script>
