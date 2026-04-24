@@ -92,7 +92,7 @@
         <div class="container">
             <div id="aba-v" class="card">
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
-                <div id="lista-container">Aguardando...</div>
+                <div id="lista-container">Selecione uma turma no topo...</div>
                 <button onclick="salvarVistos()" class="btn-main btn-blue no-print">Salvar Vistos</button>
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
@@ -134,9 +134,14 @@
             </div>
 
             <div id="aba-c" class="card hidden">
-                <h3>Ajustes - Cadastrar Alunos</h3>
-                <p><small>Selecione a turma em cima, cole a lista abaixo e clique em Salvar.</small></p>
-                <textarea id="imp" style="height:250px;" placeholder="Cole a lista de alunos aqui..."></textarea>
+                <h3 style="color:var(--accent)">Ajustes - Gerenciar Alunos</h3>
+                <div style="background:#fff3cd; padding:10px; border-radius:8px; margin-bottom:10px; font-size:0.8rem; border-left:4px solid #ffc107;">
+                    <b>⚠️ Instrução Importante:</b><br>
+                    1. Selecione a <b>Turma</b> lá no topo da página.<br>
+                    2. Cole a lista de nomes abaixo.<br>
+                    3. Clique em "Salvar Alunos". O campo será limpo automaticamente após o sucesso.
+                </div>
+                <textarea id="imp" style="height:250px;" placeholder="Exemplo:&#10;01 Eduardo&#10;02 Maria..."></textarea>
                 <button onclick="importar()" class="btn-main btn-blue">Salvar Alunos</button>
             </div>
         </div>
@@ -202,7 +207,7 @@
 
         function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); window.scrollTo(0,0); }
         function salvarHeader() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; let h = {}; for(let i=1; i<=5; i++) h['h'+i] = document.getElementById('h'+i).value; db.ref(`headers/${t}/${b}`).set(h); }
-        function salvarVistos() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Salvo!'); carregarAlunos(); }); }
+        function salvarVistos() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Vistos Salvos!'); carregarAlunos(); }); }
         
         async function gerarRelatorio() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
@@ -265,17 +270,21 @@
         async function importar() { 
             const t = document.getElementById('turma').value; 
             const campo = document.getElementById('imp');
-            if(!t) return alert('Selecione a turma antes!');
+            if(!t) return alert('ERRO: Você não selecionou a turma lá no topo!');
+            if(!campo.value.trim()) return alert('ERRO: Cole a lista de alunos primeiro!');
+            
             const l = campo.value.split('\n').map(n => n.replace(/^[0-9\s.\-_]+/, '').trim()).filter(n => n.length > 2).sort(); 
-            if(l.length === 0) return alert('Lista vazia ou inválida!');
+            
+            if(l.length === 0) return alert('ERRO: Nenhum nome válido encontrado na lista!');
+            
             await db.ref('turmas/'+t).set(l);
-            alert('Alunos Salvos!'); 
-            campo.value = ""; // Limpa a lista após salvar
+            alert('Sucesso! Alunos salvos na turma ' + t); 
+            campo.value = ""; // LIMPA O CAMPO APÓS SALVAR
             carregarAlunos(); 
         }
 
         function atualizarTudo() { 
-            document.getElementById('lista-container').innerHTML = "Carregando...";
+            document.getElementById('lista-container').innerHTML = "Buscando dados...";
             carregarAlunos(); 
             carregarHistorico(); 
         }
