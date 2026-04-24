@@ -31,10 +31,7 @@
         .report-table th { background: #f1f5f9; padding: 8px; border: 1px solid #ddd; font-size: 0.7rem; }
         .report-table td { padding: 8px; border: 1px solid #ddd; font-size: 0.85rem; }
         .multi-select-box { height: 110px; font-size: 0.7rem; border: 1px solid #ddd; border-radius: 8px; width: 100%; margin-top: 5px; }
-        @media print { 
-            .no-print, nav, header, .btn-main { display: none !important; } 
-            .card { box-shadow: none; border: none; padding: 0; }
-        }
+        @media print { .no-print, nav, header, .btn-main { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } }
     </style>
 </head>
 <body>
@@ -60,8 +57,8 @@
                 <select id="turma" onchange="atualizarTudo()" style="grid-column: span 2;">
                     <option value="">Selecione a Turma...</option>
                     <optgroup label="9º ANOS">
-                        <option value="9ºA Pensamento Comp.">9º A (PC)</option>
-                        <option value="9ºB Pensamento Comp.">9º B (PC)</option>
+                        <option value="9ºA Pensamento Comp">9º A (PC)</option>
+                        <option value="9ºB Pensamento Comp">9º B (PC)</option>
                         <option value="9ºC Letramento Digital">9º C (LD)</option>
                         <option value="9ºD Letramento Digital">9º D (LD)</option>
                     </optgroup>
@@ -92,7 +89,7 @@
         <div class="container">
             <div id="aba-v" class="card">
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
-                <div id="lista-container">Aguardando dados...</div>
+                <div id="lista-container">Escolha a turma acima...</div>
                 <button onclick="salvarVistos()" class="btn-main btn-blue no-print">Salvar Vistos</button>
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
@@ -103,8 +100,8 @@
                 <div class="no-print" style="margin-top:10px;">
                     <small><b>Replicar conteúdo para:</b></small>
                     <select id="replica-multi" multiple class="multi-select-box">
-                        <option value="9ºA Pensamento Comp.">9ºA PC</option>
-                        <option value="9ºB Pensamento Comp.">9ºB PC</option>
+                        <option value="9ºA Pensamento Comp">9ºA PC</option>
+                        <option value="9ºB Pensamento Comp">9ºB PC</option>
                         <option value="9ºC Letramento Digital">9ºC LD</option>
                         <option value="9ºD Letramento Digital">9ºD LD</option>
                         <option value="1ºB IFA">1ºB IFA</option>
@@ -135,10 +132,7 @@
 
             <div id="aba-c" class="card hidden">
                 <h3 style="color:var(--accent)">Ajustes - Cadastrar Alunos</h3>
-                <div style="background:#fff3cd; padding:10px; border-radius:8px; margin-bottom:10px; font-size:0.8rem; border-left:4px solid #ffc107;">
-                    <b>⚠️ Atenção Eduardo:</b> Verifique se a turma está selecionada no topo antes de salvar novos nomes.
-                </div>
-                <textarea id="imp" style="height:250px;" placeholder="Cole a lista aqui..."></textarea>
+                <textarea id="imp" style="height:250px;" placeholder="Cole a lista de alunos aqui..."></textarea>
                 <button onclick="importar()" class="btn-main btn-blue">Salvar Alunos</button>
             </div>
         </div>
@@ -148,6 +142,9 @@
         const config = { databaseURL: "https://connect-escolar-fdef0-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(config);
         const db = firebase.database();
+
+        // Limpa nomes de turmas para evitar erro de caracteres especiais no Firebase (como o ponto final)
+        const limparT = (t) => t.replace(/[.#$\[\]]/g, "").trim();
 
         function logar() { if(document.getElementById('pass').value === '2203') { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); } }
         
@@ -162,7 +159,7 @@
         }
 
         async function carregarAlunos() {
-            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
             const [sH, sA, sV, sB] = await Promise.all([
                 db.ref(`headers/${t}/${b}`).once('value'),
@@ -184,12 +181,12 @@
                 }
                 html += `</td></tr>`;
             });
-            document.getElementById('lista-container').innerHTML = html + `</table>`;
+            document.getElementById('lista-container').innerHTML = (alunos.length > 0) ? html + `</table>` : "Nenhum aluno cadastrado.";
             carregarHistoricoVistos();
         }
 
         function carregarHistoricoVistos() {
-            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             db.ref(`vistos/${t}/${b}`).once('value', s => {
                 const dias = s.val() || {}; let html = '';
                 Object.keys(dias).sort().reverse().forEach(data => {
@@ -203,11 +200,11 @@
         }
 
         function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); window.scrollTo(0,0); }
-        function salvarHeader() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; let h = {}; for(let i=1; i<=5; i++) h['h'+i] = document.getElementById('h'+i).value; db.ref(`headers/${t}/${b}`).set(h); }
-        function salvarVistos() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Salvo!'); carregarAlunos(); }); }
+        function salvarHeader() { const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; let h = {}; for(let i=1; i<=5; i++) h['h'+i] = document.getElementById('h'+i).value; db.ref(`headers/${t}/${b}`).set(h); }
+        function salvarVistos() { const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Vistos salvos!'); carregarAlunos(); }); }
         
         async function gerarRelatorio() {
-            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             if(!t) return;
             document.getElementById('rel-header-info').innerText = `${t} - ${b.replace('B','º Bimestre')}`;
             const [sA, sV, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}`).once('value'), db.ref(`recuperacao/${t}/${b}`).once('value')]);
@@ -220,7 +217,7 @@
         }
 
         async function carregarRec() {
-            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             if(!t) return;
             const sA = await db.ref('turmas/'+t).once('value'); const alunos = sA.val() || [];
             const sR = await db.ref(`recuperacao/${t}/${b}`).once('value'); const notas = sR.val() || {};
@@ -230,11 +227,11 @@
         }
 
         async function salvarD() { 
-            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; 
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; 
             const txt = document.getElementById('cont').value; const d = document.getElementById('data').value;
             if(!t || !txt) return alert("Erro: Selecione a turma e escreva o conteúdo.");
             const sel = document.getElementById('replica-multi');
-            const alvos = Array.from(sel.selectedOptions).map(o => o.value);
+            const alvos = Array.from(sel.selectedOptions).map(o => limparT(o.value));
             if(!alvos.includes(t)) alvos.push(t);
             const ts = document.getElementById('edit-key').value || Date.now();
             await Promise.all(alvos.map(turma => db.ref(`diario/${turma}/${b}/${ts}`).set({ conteudo: txt, data: d })));
@@ -242,7 +239,7 @@
         }
 
         function carregarHistorico() { 
-            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; 
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; 
             if(!t) return;
             db.ref(`diario/${t}/${b}`).once('value', s => { 
                 const regs = s.val() || {}; let h = ''; 
@@ -254,16 +251,16 @@
         }
 
         function editarD(k, d, c) { document.getElementById('edit-key').value = k; document.getElementById('data').value = d; document.getElementById('cont').value = c; window.scrollTo(0,0); }
-        async function apagarD(k) { if(confirm("Apagar?")) { await db.ref(`diario/${document.getElementById('turma').value}/${document.getElementById('bimestre').value}/${k}`).remove(); carregarHistorico(); } }
-        function salvarRec() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; let r = {}; document.querySelectorAll('.input-nota-rec').forEach(inp => { if(inp.value) r[inp.dataset.idx] = inp.value; }); db.ref(`recuperacao/${t}/${b}`).set(r).then(() => alert('Notas Salvas!')); }
+        async function apagarD(k) { if(confirm("Apagar?")) { await db.ref(`diario/${limparT(document.getElementById('turma').value)}/${document.getElementById('bimestre').value}/${k}`).remove(); carregarHistorico(); } }
+        function salvarRec() { const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; let r = {}; document.querySelectorAll('.input-nota-rec').forEach(inp => { if(inp.value) r[inp.dataset.idx] = inp.value; }); db.ref(`recuperacao/${t}/${b}`).set(r).then(() => alert('Notas Salvas!')); }
         
         async function importar() { 
-            const t = document.getElementById('turma').value; 
+            const t = limparT(document.getElementById('turma').value); 
             const campo = document.getElementById('imp');
             if(!t) return alert('Selecione a turma antes!');
             const l = campo.value.split('\n').map(n => n.replace(/^[0-9\s.\-_]+/, '').trim()).filter(n => n.length > 2).sort(); 
             await db.ref('turmas/'+t).set(l);
-            alert('Alunos Salvos!'); 
+            alert('Alunos Salvos na turma ' + t); 
             campo.value = ""; 
             carregarAlunos(); 
         }
