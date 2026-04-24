@@ -60,23 +60,23 @@
                 <select id="turma" onchange="atualizarTudo()" style="grid-column: span 2;">
                     <option value="">Selecione a Turma...</option>
                     <optgroup label="9º ANOS">
-                        <option value="9A PC">9º A (PC)</option>
-                        <option value="9B PC">9º B (PC)</option>
-                        <option value="9C LD">9º C (LD)</option>
-                        <option value="9D LD">9º D (LD)</option>
+                        <option value="9ºA Pensamento Comp.">9º A (PC)</option>
+                        <option value="9ºB Pensamento Comp.">9º B (PC)</option>
+                        <option value="9ºC Letramento Digital">9º C (LD)</option>
+                        <option value="9ºD Letramento Digital">9º D (LD)</option>
                     </optgroup>
                     <optgroup label="ENSINO MÉDIO">
-                        <option value="1B IFA">1º B (IFA)</option>
-                        <option value="1B Soc">1º B (Soc)</option>
-                        <option value="2B Soc">2º B (Soc)</option>
-                        <option value="2C Soc">2º C (Soc)</option>
-                        <option value="2D Soc">2º D (Soc)</option>
+                        <option value="1ºB IFA">1º B (IFA)</option>
+                        <option value="1ºB Sociologia">1º B (Soc)</option>
+                        <option value="2ºB Sociologia">2º B (Soc)</option>
+                        <option value="2ºC Sociologia">2º C (Soc)</option>
+                        <option value="2ºD Sociologia">2º D (Soc)</option>
                     </optgroup>
                     <optgroup label="TÉCNICOS (DG)">
-                        <option value="2A Hist">2º A (Hist)</option>
-                        <option value="2B Hist">2º B (Hist)</option>
-                        <option value="2A Filo">2º A (Filo)</option>
-                        <option value="2B Filo">2º B (Filo)</option>
+                        <option value="2ºA DG História">2º A (Hist)</option>
+                        <option value="2ºB DG História">2º B (Hist)</option>
+                        <option value="2ºA DG Filosofia">2º A (Filo)</option>
+                        <option value="2ºB DG Filosofia">2º B (Filo)</option>
                     </optgroup>
                 </select>
                 <select id="bimestre" onchange="atualizarTudo()">
@@ -92,7 +92,7 @@
         <div class="container">
             <div id="aba-v" class="card">
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
-                <div id="lista-container">Selecione uma turma no topo...</div>
+                <div id="lista-container">Aguardando dados...</div>
                 <button onclick="salvarVistos()" class="btn-main btn-blue no-print">Salvar Vistos</button>
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
@@ -103,19 +103,19 @@
                 <div class="no-print" style="margin-top:10px;">
                     <small><b>Replicar conteúdo para:</b></small>
                     <select id="replica-multi" multiple class="multi-select-box">
-                        <option value="9A PC">9ºA PC</option>
-                        <option value="9B PC">9ºB PC</option>
-                        <option value="9C LD">9ºC LD</option>
-                        <option value="9D LD">9ºD LD</option>
-                        <option value="1B IFA">1ºB IFA</option>
-                        <option value="1B Soc">1ºB Soc</option>
-                        <option value="2B Soc">2ºB Soc</option>
-                        <option value="2C Soc">2ºC Soc</option>
-                        <option value="2D Soc">2ºD Soc</option>
-                        <option value="2A Hist">2ºA Hist</option>
-                        <option value="2B Hist">2ºB Hist</option>
-                        <option value="2A Filo">2ºA Filo</option>
-                        <option value="2B Filo">2ºB Filo</option>
+                        <option value="9ºA Pensamento Comp.">9ºA PC</option>
+                        <option value="9ºB Pensamento Comp.">9ºB PC</option>
+                        <option value="9ºC Letramento Digital">9ºC LD</option>
+                        <option value="9ºD Letramento Digital">9ºD LD</option>
+                        <option value="1ºB IFA">1ºB IFA</option>
+                        <option value="1ºB Sociologia">1ºB Soc</option>
+                        <option value="2ºB Sociologia">2ºB Soc</option>
+                        <option value="2ºC Sociologia">2ºC Soc</option>
+                        <option value="2ºD Sociologia">2ºD Soc</option>
+                        <option value="2ºA DG História">2ºA DG História</option>
+                        <option value="2ºB DG História">2ºB DG História</option>
+                        <option value="2ºA DG Filosofia">2ºA DG Filo</option>
+                        <option value="2ºB DG Filosofia">2ºB DG Filo</option>
                     </select>
                 </div>
                 <button onclick="salvarD()" class="btn-main btn-blue">Gravar Diário</button>
@@ -134,9 +134,9 @@
             </div>
 
             <div id="aba-c" class="card hidden">
-                <h3 style="color:var(--accent)">Ajustes - Gerenciar Alunos</h3>
+                <h3 style="color:var(--accent)">Ajustes - Cadastrar Alunos</h3>
                 <div style="background:#fff3cd; padding:10px; border-radius:8px; margin-bottom:10px; font-size:0.8rem; border-left:4px solid #ffc107;">
-                    <b>⚠️ Instrução:</b> Selecione a <b>Turma</b> lá no topo ANTES de colar os nomes e salvar.
+                    <b>⚠️ Atenção Eduardo:</b> Verifique se a turma está selecionada no topo antes de salvar novos nomes.
                 </div>
                 <textarea id="imp" style="height:250px;" placeholder="Cole a lista aqui..."></textarea>
                 <button onclick="importar()" class="btn-main btn-blue">Salvar Alunos</button>
@@ -184,7 +184,7 @@
                 }
                 html += `</td></tr>`;
             });
-            document.getElementById('lista-container').innerHTML = (alunos.length > 0) ? html + `</table>` : "Nenhum aluno cadastrado para esta turma.";
+            document.getElementById('lista-container').innerHTML = html + `</table>`;
             carregarHistoricoVistos();
         }
 
@@ -204,11 +204,12 @@
 
         function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); window.scrollTo(0,0); }
         function salvarHeader() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; let h = {}; for(let i=1; i<=5; i++) h['h'+i] = document.getElementById('h'+i).value; db.ref(`headers/${t}/${b}`).set(h); }
-        function salvarVistos() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; if(!t || !d) return alert("Selecione turma e data!"); let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Vistos Salvos!'); carregarAlunos(); }); }
+        function salvarVistos() { const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Salvo!'); carregarAlunos(); }); }
         
         async function gerarRelatorio() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
             if(!t) return;
+            document.getElementById('rel-header-info').innerText = `${t} - ${b.replace('B','º Bimestre')}`;
             const [sA, sV, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}`).once('value'), db.ref(`recuperacao/${t}/${b}`).once('value')]);
             const alunos = sA.val() || []; const dias = sV.val() || {}; const recs = sR.val() || {};
             let res = alunos.map(n => ({ n, total: 0 }));
@@ -259,11 +260,10 @@
         async function importar() { 
             const t = document.getElementById('turma').value; 
             const campo = document.getElementById('imp');
-            if(!t) return alert('ERRO: Selecione a turma no topo da página!');
-            if(!campo.value.trim()) return alert('ERRO: Cole a lista de alunos!');
+            if(!t) return alert('Selecione a turma antes!');
             const l = campo.value.split('\n').map(n => n.replace(/^[0-9\s.\-_]+/, '').trim()).filter(n => n.length > 2).sort(); 
             await db.ref('turmas/'+t).set(l);
-            alert('Sucesso: ' + t); 
+            alert('Alunos Salvos!'); 
             campo.value = ""; 
             carregarAlunos(); 
         }
