@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.5 | Prof. Bernard SK8</title>
+    <title>Connect Escolar v3.9.6 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -36,7 +36,7 @@
 <body>
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.5</h2>
+            <h2>Connect Escolar v3.9.6</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -102,10 +102,8 @@
                 <h3 style="color:var(--accent)">Cadastrar Alunos</h3>
                 <textarea id="imp" style="height:250px;" placeholder="Cole a lista de alunos aqui..."></textarea>
                 <button onclick="importar()" class="btn-main btn-blue">Salvar Alunos na Turma</button>
-
                 <hr style="margin: 30px 0; border: 0; border-top: 2px solid #eee;">
-                <h3 style="color:var(--danger)">Zerar Sistema (Novo Ano Letivo)</h3>
-                <p style="font-size: 0.75rem; color: #666;">Isso apagará ALUNOS, VISTOS e DIÁRIOS de todas as turmas permanentemente.</p>
+                <h3 style="color:var(--danger)">Zerar Sistema</h3>
                 <button onclick="limparTudoFirebase()" class="btn-main" style="background: #000; color: #fff; border: 2px solid var(--danger);">LIMPEZA TOTAL DO FIREBASE</button>
             </div>
         </div>
@@ -121,32 +119,17 @@
         function popularMenus() {
             const selectTurma = document.getElementById('turma');
             const selectReplica = document.getElementById('replica-multi');
-
             const categorias = [
-                {
-                    label: "ENSINO FUNDAMENTAL",
-                    turmas: ["9ºA Pensamento Comp", "9ºB Pensamento Comp", "9ºC Letramento Digital", "9ºD Letramento Digital"]
-                },
-                {
-                    label: "ENSINO MÉDIO",
-                    turmas: ["1ºB IFA", "1ºB Sociologia", "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia"]
-                },
-                {
-                    label: "TÉCNICO (DG)",
-                    turmas: ["2ºA DG História", "2ºB DG História", "2ºA DG Filosofia", "2ºB DG Filosofia"]
-                }
+                { label: "ENSINO FUNDAMENTAL", turmas: ["9ºA Pensamento Comp", "9ºB Pensamento Comp", "9ºC Letramento Digital", "9ºD Letramento Digital"] },
+                { label: "ENSINO MÉDIO", turmas: ["1ºB IFA", "1ºB Sociologia", "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia"] },
+                { label: "TÉCNICO (DG)", turmas: ["2ºA DG História", "2ºB DG História", "2ºA DG Filosofia", "2ºB DG Filosofia"] }
             ];
-
             categorias.forEach(cat => {
                 const grupo = document.createElement('optgroup');
                 grupo.label = cat.label;
                 cat.turmas.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t; opt.textContent = t;
-                    grupo.appendChild(opt);
-                    const optR = document.createElement('option');
-                    optR.value = t; optR.textContent = t;
-                    selectReplica.appendChild(optR);
+                    const opt = document.createElement('option'); opt.value = t; opt.textContent = t; grupo.appendChild(opt);
+                    const optR = document.createElement('option'); optR.value = t; optR.textContent = t; selectReplica.appendChild(optR);
                 });
                 selectTurma.appendChild(grupo);
             });
@@ -168,10 +151,8 @@
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
             const [sH, sA, sV, sB] = await Promise.all([
-                db.ref(`headers/${t}/${b}`).once('value'),
-                db.ref('turmas/'+t).once('value'),
-                db.ref(`vistos/${t}/${b}/${d}`).once('value'),
-                db.ref(`vistos/${t}/${b}`).once('value')
+                db.ref(`headers/${t}/${b}`).once('value'), db.ref('turmas/'+t).once('value'),
+                db.ref(`vistos/${t}/${b}/${d}`).once('value'), db.ref(`vistos/${t}/${b}`).once('value')
             ]);
             const h = sH.val() || {}; const alunos = sA.val() || []; const salvosDia = sV.val() || {}; const todosBimestre = sB.val() || {};
             let hHtml = ''; for(let i=1; i<=5; i++) hHtml += `<input type="text" id="h${i}" class="header-vistos-input" value="${h['h'+i] || 'Ativ. '+i}" onchange="salvarHeader()">`;
@@ -187,7 +168,7 @@
                 }
                 html += `</td></tr>`;
             });
-            document.getElementById('lista-container').innerHTML = (alunos.length > 0) ? html + `</table>` : "⚠️ Sem alunos cadastrados.";
+            document.getElementById('lista-container').innerHTML = (alunos.length > 0) ? html + `</table>` : "⚠️ Sem alunos.";
             carregarHistoricoVistos();
         }
 
@@ -198,11 +179,25 @@
                 Object.keys(dias).sort().reverse().forEach(data => {
                     if(data && data !== "undefined") {
                         const df = data.includes('-') ? data.split('-').reverse().join('/') : data;
-                        html += `<div style="display:flex; justify-content:space-between; background:#f0f7ff; padding:8px; border-radius:8px; margin-bottom:6px; font-size:0.8rem; border-left:4px solid var(--accent);"><span>📅 ${df}</span><button onclick="setarData('${data}')" style="background:var(--accent);color:white;border:none;padding:4px 8px;border-radius:5px;cursor:pointer;">✎ Abrir</button></div>`;
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#f0f7ff; padding:8px; border-radius:8px; margin-bottom:6px; font-size:0.8rem; border-left:4px solid var(--accent);">
+                            <span>📅 ${df}</span>
+                            <div>
+                                <button onclick="setarData('${data}')" style="background:var(--accent);color:white;border:none;padding:4px 8px;border-radius:5px;cursor:pointer;margin-right:5px;">✎ Abrir</button>
+                                <button onclick="apagarVistoDia('${data}')" style="background:var(--danger);color:white;border:none;padding:4px 8px;border-radius:5px;cursor:pointer;">🗑</button>
+                            </div>
+                        </div>`;
                     }
                 });
                 document.getElementById('hist-vistos-lista').innerHTML = html;
             });
+        }
+
+        async function apagarVistoDia(d) {
+            if(confirm("Deseja apagar TODOS os vistos do dia " + d + "?")) {
+                const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+                await db.ref(`vistos/${t}/${b}/${d}`).remove();
+                carregarAlunos();
+            }
         }
 
         function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); window.scrollTo(0,0); }
@@ -257,7 +252,7 @@
         }
 
         function editarD(k, d, c) { document.getElementById('edit-key').value = k; document.getElementById('data').value = d; document.getElementById('cont').value = c; window.scrollTo(0,0); }
-        async function apagarD(k) { if(confirm("Apagar?")) { await db.ref(`diario/${limparT(document.getElementById('turma').value)}/${document.getElementById('bimestre').value}/${k}`).remove(); carregarHistorico(); } }
+        async function apagarD(k) { if(confirm("Apagar diário?")) { await db.ref(`diario/${limparT(document.getElementById('turma').value)}/${document.getElementById('bimestre').value}/${k}`).remove(); carregarHistorico(); } }
         function salvarRec() { const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; let r = {}; document.querySelectorAll('.input-nota-rec').forEach(inp => { if(inp.value) r[inp.dataset.idx] = inp.value; }); db.ref(`recuperacao/${t}/${b}`).set(r).then(() => alert('Notas Salvas!')); }
         
         async function importar() { 
@@ -269,12 +264,7 @@
         }
 
         async function limparTudoFirebase() {
-            if(prompt("Digite a SENHA para LIMPEZA TOTAL:") === '2203') {
-                if(confirm("ATENÇÃO: Isso apagará absolutamente TUDO (Alunos, Diários, Vistos). Confirma?")) {
-                    await db.ref('/').remove();
-                    alert("Firebase zerado!"); location.reload();
-                }
-            }
+            if(prompt("Senha:") === '2203') { if(confirm("Apagar TUDO?")) { await db.ref('/').remove(); location.reload(); } }
         }
 
         function atualizarTudo() { carregarAlunos(); carregarHistorico(); }
