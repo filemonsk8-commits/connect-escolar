@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.6 | Prof. Eduardo</title>
+    <title>Connect Escolar v3.9.7 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -11,32 +11,46 @@
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
         #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: #0f172a; }
         .login-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 350px; }
+        
+        /* Cursor mãozinha em elementos interativos */
+        button, .tab-btn, .chk-v, select, input[type="checkbox"], .btn-edit-small { cursor: pointer; }
+        
         nav.tabs { display: flex; background: var(--primary); padding: 5px; position: sticky; top: 0; z-index: 100; }
-        .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; color: #94a3b8; font-size: 0.7rem; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        .tab-btn { flex: 1; padding: 12px 5px; border: none; background: transparent; color: #94a3b8; font-size: 0.7rem; font-weight: bold; border-radius: 8px; }
         .tab-btn.active { background: rgba(255,255,255,0.1); color: white; }
+        
         header { background: white; padding: 10px; border-bottom: 1px solid #e2e8f0; }
         .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         select, input, textarea { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-size: 0.85rem; width: 100%; box-sizing: border-box; outline: none; }
+        
         .container { padding: 10px; }
         .card { background: var(--card); padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .hidden { display: none !important; }
-        .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; }
+        
+        .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; font-weight: 700; margin-top: 10px; transition: opacity 0.2s; }
+        .btn-main:active { opacity: 0.8; }
         .btn-blue { background: var(--accent); color: white; }
+        
         .header-vistos-input { min-width: 130px; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; border: 1px solid #cbd5e1 !important; text-align: center; margin-right: 5px; }
         .visto-container { display: inline-flex; flex-direction: column; align-items: center; margin-left: 6px; width: 28px; }
         .check-indicator { color: var(--success); font-size: 0.65rem; font-weight: bold; height: 12px; line-height: 12px; }
+        
         .hist-item { background: #f8fafc; padding: 10px; margin-bottom: 8px; border-left: 4px solid var(--accent); border-radius: 4px; position: relative; }
         .multi-select-box { height: 150px; font-size: 0.75rem; border: 1px solid #ddd; border-radius: 8px; width: 100%; margin-top: 5px; }
+        
         .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .report-table th { background: #f1f5f9; padding: 8px; border: 1px solid #ddd; font-size: 0.7rem; }
         .report-table td { padding: 8px; border: 1px solid #ddd; font-size: 0.85rem; }
+
+        .btn-edit-small { border: none; padding: 4px 8px; border-radius: 4px; color: white; font-size: 0.7rem; margin-left: 4px; }
+
         @media print { .no-print, nav, header, .btn-main { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } }
     </style>
 </head>
 <body>
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.6</h2>
+            <h2>Connect Escolar v3.9.7</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -99,9 +113,15 @@
             </div>
 
             <div id="aba-c" class="card hidden">
-                <h3 style="color:var(--accent)">Cadastrar Alunos</h3>
-                <textarea id="imp" style="height:250px;" placeholder="Cole a lista de alunos aqui..."></textarea>
-                <button onclick="importar()" class="btn-main btn-blue">Salvar Alunos na Turma</button>
+                <h3 style="color:var(--accent)">Gerenciar Alunos</h3>
+                <div id="editor-alunos-lista" style="margin-bottom: 20px; max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 10px;">
+                    Selecione uma turma para editar alunos individualmente.
+                </div>
+                
+                <h3 style="color:var(--accent)">Importar Nova Lista</h3>
+                <textarea id="imp" style="height:150px;" placeholder="Cole a lista completa aqui (substitui a atual)..."></textarea>
+                <button onclick="importar()" class="btn-main btn-blue">Importar/Substituir Lista</button>
+
                 <hr style="margin: 30px 0; border: 0; border-top: 2px solid #eee;">
                 <h3 style="color:var(--danger)">Zerar Sistema</h3>
                 <button onclick="limparTudoFirebase()" class="btn-main" style="background: #000; color: #fff; border: 2px solid var(--danger);">LIMPEZA TOTAL DO FIREBASE</button>
@@ -145,6 +165,7 @@
             if(a === 'l') gerarRelatorio();
             if(a === 'r') carregarRec();
             if(a === 'd') carregarHistorico();
+            if(a === 'c') renderizarEditorAlunos();
         }
 
         async function carregarAlunos() {
@@ -172,6 +193,50 @@
             carregarHistoricoVistos();
         }
 
+        // --- FUNÇÕES DE EDIÇÃO DE ALUNO INDIVIDUAL ---
+        async function renderizarEditorAlunos() {
+            const t = limparT(document.getElementById('turma').value);
+            const container = document.getElementById('editor-alunos-lista');
+            if(!t) { container.innerHTML = "Selecione uma turma no topo."; return; }
+            const snap = await db.ref('turmas/'+t).once('value');
+            const alunos = snap.val() || [];
+            if(alunos.length === 0) { container.innerHTML = "Nenhum aluno nesta turma."; return; }
+            let html = '<table style="width:100%; border-collapse:collapse;">';
+            alunos.forEach((nome, i) => {
+                html += `<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:8px; font-size:0.8rem">${nome}</td><td style="text-align:right">
+                    <button onclick="editarNomeAluno(${i}, '${nome}')" class="btn-edit-small" style="background:var(--accent)">✎</button>
+                    <button onclick="removerAluno(${i}, '${nome}')" class="btn-edit-small" style="background:var(--danger)">🗑</button>
+                </td></tr>`;
+            });
+            container.innerHTML = html + '</table>';
+        }
+
+        async function editarNomeAluno(index, nomeAntigo) {
+            const novoNome = prompt("Editar nome do aluno:", nomeAntigo);
+            if(novoNome && novoNome !== nomeAntigo) {
+                const t = limparT(document.getElementById('turma').value);
+                const snap = await db.ref('turmas/'+t).once('value');
+                let alunos = snap.val() || [];
+                alunos[index] = novoNome.trim();
+                await db.ref('turmas/'+t).set(alunos);
+                renderizarEditorAlunos();
+                carregarAlunos();
+            }
+        }
+
+        async function removerAluno(index, nome) {
+            if(confirm(`Remover ${nome} desta turma permanentemente?`)) {
+                const t = limparT(document.getElementById('turma').value);
+                const snap = await db.ref('turmas/'+t).once('value');
+                let alunos = snap.val() || [];
+                alunos.splice(index, 1);
+                await db.ref('turmas/'+t).set(alunos);
+                renderizarEditorAlunos();
+                carregarAlunos();
+            }
+        }
+        // --------------------------------------------
+
         function carregarHistoricoVistos() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             db.ref(`vistos/${t}/${b}`).once('value', s => {
@@ -182,8 +247,8 @@
                         html += `<div style="display:flex; justify-content:space-between; align-items:center; background:#f0f7ff; padding:8px; border-radius:8px; margin-bottom:6px; font-size:0.8rem; border-left:4px solid var(--accent);">
                             <span>📅 ${df}</span>
                             <div>
-                                <button onclick="setarData('${data}')" style="background:var(--accent);color:white;border:none;padding:4px 8px;border-radius:5px;cursor:pointer;margin-right:5px;">✎ Abrir</button>
-                                <button onclick="apagarVistoDia('${data}')" style="background:var(--danger);color:white;border:none;padding:4px 8px;border-radius:5px;cursor:pointer;">🗑</button>
+                                <button onclick="setarData('${data}')" style="background:var(--accent);color:white;border:none;padding:4px 8px;border-radius:5px;margin-right:5px;">✎ Abrir</button>
+                                <button onclick="apagarVistoDia('${data}')" style="background:var(--danger);color:white;border:none;padding:4px 8px;border-radius:5px;">🗑</button>
                             </div>
                         </div>`;
                     }
@@ -193,7 +258,7 @@
         }
 
         async function apagarVistoDia(d) {
-            if(confirm("Deseja apagar TODOS os vistos do dia " + d + "?")) {
+            if(confirm("Apagar vistos do dia " + d + "?")) {
                 const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
                 await db.ref(`vistos/${t}/${b}/${d}`).remove();
                 carregarAlunos();
@@ -257,17 +322,17 @@
         
         async function importar() { 
             const t = limparT(document.getElementById('turma').value); const campo = document.getElementById('imp');
-            if(!t) return alert('Selecione a turma!');
+            if(!t) return alert('Selecione a turma no topo primeiro!');
             const l = campo.value.split('\n').map(n => n.replace(/^[0-9\s.\-_]+/, '').trim()).filter(n => n.length > 2).sort(); 
             await db.ref('turmas/'+t).set(l);
-            alert('Alunos cadastrados!'); campo.value = ""; carregarAlunos(); 
+            alert('Lista importada!'); campo.value = ""; renderizarEditorAlunos(); carregarAlunos(); 
         }
 
         async function limparTudoFirebase() {
             if(prompt("Senha:") === '2203') { if(confirm("Apagar TUDO?")) { await db.ref('/').remove(); location.reload(); } }
         }
 
-        function atualizarTudo() { carregarAlunos(); carregarHistorico(); }
+        function atualizarTudo() { carregarAlunos(); carregarHistorico(); if(document.getElementById('aba-c').classList.contains('hidden') === false) renderizarEditorAlunos(); }
         function corrigirTexto(el) { let t = el.value.replace(/\s\s+/g, ' '); t = t.replace(/(\.|\?|\!)\s*([a-z])/g, (m, p1, p2) => p1 + " " + p2.toUpperCase()); if(t.length > 0) t = t.charAt(0).toUpperCase() + t.slice(1); el.value = t; }
         
         document.getElementById('data').valueAsDate = new Date();
