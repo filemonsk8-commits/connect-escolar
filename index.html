@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v4.0 | Prof. Bernard SK8</title>
+    <title>Connect Escolar v3.9.11 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -39,7 +39,7 @@
 <body>
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v4.0</h2>
+            <h2>Connect Escolar v3.9.11</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -71,20 +71,31 @@
         </header>
 
         <div class="container">
-            <!-- ABAS ANTERIORES MANTIDAS -->
             <div id="aba-v" class="card">
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
                 <div id="lista-container">Escolha a turma...</div>
                 <button onclick="salvarVistos()" class="btn-main btn-blue no-print">Salvar Vistos</button>
+                <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
 
             <div id="aba-d" class="card hidden">
                 <textarea id="cont" onblur="corrigirTexto(this)" placeholder="Conteúdo da aula..." style="height:120px;"></textarea>
+                <div class="no-print" style="margin-top:10px;">
+                    <small><b>Replicar para:</b></small>
+                    <select id="replica-multi" multiple style="height:120px; margin-top:5px;"></select>
+                </div>
                 <button onclick="salvarD()" class="btn-main btn-blue">Gravar Diário</button>
+                <div id="historico-lista" style="margin-top:20px;"></div>
             </div>
 
             <div id="aba-rd" class="card hidden">
-                <div id="lista-rel-diario"></div>
+                <div id="print-diario-area">
+                    <div style="text-align:center; border-bottom: 2px solid var(--primary); padding-bottom:10px; margin-bottom:15px;">
+                        <h2 style="margin:0; font-size:1.1rem; text-transform:uppercase;">Relatório de Conteúdos</h2>
+                        <p id="rel-diario-header" style="margin:5px 0; font-weight:bold;"></p>
+                    </div>
+                    <div id="lista-rel-diario"></div>
+                </div>
                 <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir Diário</button>
             </div>
 
@@ -95,7 +106,9 @@
             </div>
             
             <div id="aba-l" class="card hidden">
-                <div id="relatorio-lista"></div>
+                <div id="relatorio-print-area">
+                    <div id="relatorio-lista"></div>
+                </div>
                 <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir Relatório</button>
             </div>
 
@@ -104,11 +117,9 @@
                 <div id="editor-alunos-lista" style="max-height:200px; overflow-y:auto; margin-bottom:15px; border:1px solid #eee; padding:10px;"></div>
                 <textarea id="imp" style="height:80px;" placeholder="Colar lista de alunos..."></textarea>
                 <button onclick="importar()" class="btn-main btn-blue">Importar/Atualizar Lista</button>
-                
-                <hr style="margin:30px 0; border: 1px dashed var(--danger);">
-                <h3 style="color:var(--danger)">CONFIGURAÇÃO DE ANO NOVO</h3>
-                <p style="font-size: 0.8rem; color: #666;">Atenção: Esta ação é irreversível. Ela apagará TODOS os dados do sistema (Alunos, Vistos, Diários e Notas) de todas as turmas para começar um ano do zero.</p>
-                <button onclick="limparSistemaTotal()" class="btn-main btn-danger">LIMPAR TUDO (RESET ANUAL)</button>
+                <hr style="margin:20px 0;">
+                <h3 style="color:var(--danger)">Zona de Perigo</h3>
+                <button onclick="limparSistema()" class="btn-main btn-danger">LIMPAR TODOS OS ALUNOS DESTA TURMA</button>
             </div>
         </div>
     </div>
@@ -122,6 +133,7 @@
 
         function popularMenus() {
             const st = document.getElementById('turma');
+            const sr = document.getElementById('replica-multi');
             const cats = [
                 { l: "ENSINO FUNDAMENTAL", t: ["9ºA Pensamento Comp", "9ºB Pensamento Comp", "9ºC Letramento Digital", "9ºD Letramento Digital", "9ºA Geografia", "9ºB Geografia", "9ºC Geografia"] },
                 { l: "ENSINO MÉDIO", t: ["1ºB IFA", "1ºB Sociologia", "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia"] },
@@ -129,7 +141,10 @@
             ];
             cats.forEach(c => {
                 const g = document.createElement('optgroup'); g.label = c.l;
-                c.t.forEach(nome => { g.appendChild(new Option(nome, nome)); });
+                c.t.forEach(nome => {
+                    const o = new Option(nome, nome); g.appendChild(o);
+                    sr.add(new Option(nome, nome));
+                });
                 st.add(g);
             });
         }
@@ -141,21 +156,20 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('aba-'+a).classList.remove('hidden');
             if(event) event.currentTarget.classList.add('active');
+            if(a === 'rd') gerarRelatorioDiario();
             if(a === 'r') carregarRec();
+            if(a === 'l') gerarRelatorio();
             if(a === 'c') renderizarEditorAlunos();
         }
 
-        async function limparSistemaTotal() {
-            const confirmacao1 = confirm("VOCÊ TEM CERTEZA? Isso apagará os dados de TODAS as turmas para o Ano Novo.");
-            if(confirmacao1) {
-                const confirmacao2 = prompt("Para confirmar a exclusão total, digite: APAGAR TUDO");
-                if(confirmacao2 === "APAGAR TUDO") {
-                    await db.ref().remove();
-                    alert("Sistema resetado com sucesso! Comece importando suas novas listas.");
-                    location.reload();
-                } else {
-                    alert("Operação cancelada. A frase de confirmação estava incorreta.");
-                }
+        async function limparSistema() {
+            const t = limparT(document.getElementById('turma').value);
+            if(!t) return alert("Selecione uma turma!");
+            if(confirm(`ATENÇÃO: Isso apagará TODOS os alunos da turma ${t}. Os vistos salvos não serão apagados, mas não aparecerão sem os nomes. Deseja continuar?`)) {
+                await db.ref('turmas/'+t).remove();
+                alert("Turma limpa!");
+                renderizarEditorAlunos();
+                carregarAlunos();
             }
         }
 
@@ -202,13 +216,23 @@
             document.getElementById('editor-alunos-lista').innerHTML = h + '</table>';
         }
 
+        async function removerAluno(i) {
+            const t = limparT(document.getElementById('turma').value);
+            const s = await db.ref('turmas/'+t).once('value');
+            let l = s.val(); l.splice(i,1); await db.ref('turmas/'+t).set(l); renderizarEditorAlunos();
+        }
+
         async function importar() {
             const t = limparT(document.getElementById('turma').value); const c = document.getElementById('imp');
-            if(!t || !c.value) return alert('Selecione a turma!');
+            if(!t || !c.value) return alert('Selecione a turma e cole a lista!');
             const l = c.value.split('\n').map(n => n.replace(/^[0-9\s.\-_]+/, '').trim()).filter(n => n.length > 2).sort();
             await db.ref('turmas/'+t).set(l); c.value = ""; renderizarEditorAlunos(); alert("Lista importada!");
         }
 
+        // Demais funções mantidas para funcionamento pleno (vistos, diário, relatório)
+        async function salvarVistos() { const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; }); await db.ref(`vistos/${t}/${b}/${d}`).set(dados); alert('Salvo!'); carregarAlunos(); }
+        function salvarHeader() { const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; let h = {}; for(let i=1; i<=5; i++) h['h'+i] = document.getElementById('h'+i).value; db.ref(`headers/${t}/${b}`).set(h); }
+        async function salvarD() { const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const txt = document.getElementById('cont').value; const d = document.getElementById('data').value; if(!t || !txt) return alert("Erro!"); const alvos = Array.from(document.getElementById('replica-multi').selectedOptions).map(o => limparT(o.value)); if(!alvos.includes(t)) alvos.push(t); const ts = Date.now(); await Promise.all(alvos.map(turma => db.ref(`diario/${turma}/${b}/${ts}`).set({ conteudo: txt, data: d }))); document.getElementById('cont').value = ""; alert("Diário Gravado!"); }
         function atualizarTudo() { carregarAlunos(); }
         function corrigirTexto(el) { let t = el.value.replace(/\s\s+/g, ' '); t = t.replace(/(\.|\?|\!)\s*([a-z])/g, (m, p1, p2) => p1 + " " + p2.toUpperCase()); if(t.length > 0) t = t.charAt(0).toUpperCase() + t.slice(1); el.value = t; }
 
