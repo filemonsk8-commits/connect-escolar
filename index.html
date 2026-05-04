@@ -3,37 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v4.2 | Prof. Eduardo</title>
+    <title>Connect Escolar v4.3 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; --danger: #ef4444; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
-        #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: #0f172a; }
-        .login-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 350px; }
-        nav.tabs { display: flex; background: var(--primary); padding: 5px; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
-        .tab-btn { flex: 0 0 auto; padding: 12px 15px; border: none; background: transparent; color: #94a3b8; font-size: 0.7rem; font-weight: bold; border-radius: 8px; cursor: pointer; }
-        .tab-btn.active { background: rgba(255,255,255,0.1); color: white; }
-        header { background: white; padding: 10px; border-bottom: 1px solid #e2e8f0; }
-        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        select, input, textarea { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-size: 0.85rem; width: 100%; box-sizing: border-box; }
-        .container { padding: 10px; }
-        .card { background: var(--card); padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        :root { --primary: #0f172a; --accent: #2563eb; --bg: #f1f5f9; --card: #ffffff; --text: #1e293b; --danger: #dc2626; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 60px; font-size: 16px; }
+        
+        /* Login Profissional */
+        #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: var(--primary); }
+        .login-box { background: white; padding: 40px; border-radius: 24px; text-align: center; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        
+        /* Navegação e Abas */
+        nav.tabs { display: flex; background: var(--primary); padding: 8px; position: sticky; top: 0; z-index: 100; overflow-x: auto; gap: 8px; }
+        .tab-btn { flex: 0 0 auto; padding: 12px 20px; border: none; background: rgba(255,255,255,0.05); color: #cbd5e1; font-size: 0.85rem; font-weight: 600; border-radius: 10px; cursor: pointer; transition: 0.2s; }
+        .tab-btn.active { background: var(--accent); color: white; }
+        
+        /* Cabeçalho e Controles */
+        header { background: white; padding: 15px; border-bottom: 2px solid #e2e8f0; }
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        select, input, textarea { border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px; font-size: 1rem; width: 100%; box-sizing: border-box; color: var(--text); }
+        select:focus, input:focus { border-color: var(--accent); outline: none; }
+        
+        /* Container e Cards */
+        .container { padding: 15px; max-width: 800px; margin: auto; }
+        .card { background: var(--card); padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .hidden { display: none !important; }
-        .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; }
-        .btn-blue { background: var(--accent); color: white; }
+        
+        /* Botões */
+        .btn-main { width: 100%; padding: 18px; border-radius: 12px; border: none; font-weight: 700; font-size: 1rem; cursor: pointer; transition: 0.2s; margin-top: 15px; }
+        .btn-blue { background: var(--accent); color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
         .btn-danger { background: var(--danger); color: white; }
+        
+        /* Listagem de Alunos e Vistos */
+        .aluno-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+        .aluno-nome { font-size: 1.05rem; font-weight: 500; }
+        .vistos-group { display: flex; gap: 8px; }
+        .chk-v { width: 26px; height: 26px; accent-color: var(--accent); cursor: pointer; }
+        
+        /* Histórico Clicável */
+        .hist-chip { display: inline-block; background: #e2e8f0; padding: 8px 14px; border-radius: 20px; font-size: 0.85rem; margin: 4px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .hist-chip:hover { background: var(--accent); color: white; }
+
+        /* Recuperação Estilizada */
+        .row-rec { border-bottom: 1px solid #eee; }
         .row-rec:focus-within { background: #eff6ff; }
-        .row-rec:focus-within .nome-aluno-rec { color: var(--accent); font-weight: bold; }
-        .hist-item { font-size: 0.75rem; padding: 8px; border-bottom: 1px solid #eee; background: #fdfdfd; }
+        .row-rec:focus-within .nome-aluno-rec { color: var(--accent); font-weight: bold; font-size: 1.1rem; }
+        .input-nota-rec { width: 70px; text-align: center; font-weight: bold; font-size: 1.1rem; border: 2px solid #cbd5e1; }
+
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body>
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v4.2</h2>
-            <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
-            <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
+            <h1 style="color:var(--primary); margin-bottom:20px;">Connect Escolar v4.3</h1>
+            <input type="password" id="pass" placeholder="Senha de Acesso" onkeydown="if(event.key==='Enter') logar()">
+            <button onclick="logar()" class="btn-main btn-blue">Entrar no Sistema</button>
         </div>
     </div>
 
@@ -42,59 +68,62 @@
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
             <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
             <button class="tab-btn" onclick="aba('rd')">RELAT. DIÁRIO</button>
-            <button class="tab-btn" onclick="aba('r')">RECUPER.</button>
+            <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
             <button class="tab-btn" onclick="aba('l')">FECHAMENTO</button>
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
         </nav>
 
         <header class="no-print">
             <div class="controls-grid">
-                <select id="turma" onchange="atualizarTudo()" style="grid-column: span 2;"></select>
+                <select id="turma" onchange="atualizarTudo()" style="grid-column: span 2; font-weight: bold; border-color: var(--accent);"></select>
                 <select id="bimestre" onchange="atualizarTudo()">
                     <option value="1B">1º Bimestre</option>
                     <option value="2B" selected>2º Bimestre</option>
                     <option value="3B">3º Bimestre</option>
                     <option value="4B">4º Bimestre</option>
                 </select>
-                <input type="date" id="data" onchange="atualizarTudo()">
+                <input type="date" id="data" onchange="carregarAlunos()">
             </div>
         </header>
 
         <div class="container">
             <div id="aba-v" class="card">
-                <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;"></div>
-                <div id="lista-container">Escolha a turma...</div>
-                <button onclick="salvarVistos()" class="btn-main btn-blue">Salvar Vistos</button>
-                <div id="hist-vistos-lista" style="margin-top:20px; border-top:2px solid #eee; padding-top:10px;"></div>
+                <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:15px; margin-bottom: 10px; gap:8px;"></div>
+                <div id="lista-container">Selecione uma turma para carregar os alunos...</div>
+                <button onclick="salvarVistos()" class="btn-main btn-blue no-print">Salvar Chamada/Vistos</button>
+                <div style="margin-top:25px;">
+                    <h4 style="margin-bottom:10px;">Histórico (Clique para abrir):</h4>
+                    <div id="hist-vistos-lista"></div>
+                </div>
             </div>
 
             <div id="aba-d" class="card hidden">
-                <textarea id="cont" onblur="corrigirTexto(this)" placeholder="Conteúdo da aula..." style="height:120px;"></textarea>
-                <div style="margin-top:10px;">
-                    <small><b>Replicar para:</b></small>
-                    <select id="replica-multi" multiple style="height:100px; margin-top:5px;"></select>
+                <textarea id="cont" onblur="corrigirTexto(this)" placeholder="Descreva o conteúdo da aula de hoje..." style="height:150px;"></textarea>
+                <div style="margin-top:15px;">
+                    <label style="font-weight: bold; font-size: 0.9rem;">Replicar este conteúdo para outras turmas:</label>
+                    <select id="replica-multi" multiple style="height:150px; margin-top:8px;"></select>
                 </div>
-                <button onclick="salvarD()" class="btn-main btn-blue">Gravar Diário</button>
-                <div id="historico-lista" style="margin-top:20px; border-top:2px solid #eee;"></div>
-            </div>
-
-            <div id="aba-rd" class="card hidden">
-                <div id="lista-rel-diario"></div>
-                <button onclick="window.print()" class="btn-main btn-blue">Imprimir Diário</button>
+                <button onclick="salvarD()" class="btn-main btn-blue">Gravar no Diário</button>
+                <div id="historico-lista" style="margin-top:25px; border-top: 2px solid #eee; padding-top: 15px;"></div>
             </div>
 
             <div id="aba-r" class="card hidden">
+                <h3 style="margin-top:0;">Lançamento de Recuperação</h3>
                 <div id="lista-rec"></div>
-                <button onclick="salvarRec()" class="btn-main btn-blue">Salvar Notas</button>
+                <button onclick="salvarRec()" class="btn-main btn-blue">Salvar Notas de Recuperação</button>
             </div>
 
             <div id="aba-c" class="card hidden">
-                <h3 style="color:var(--accent)">Gestão de Alunos</h3>
-                <div id="editor-alunos-lista" style="max-height:150px; overflow-y:auto; border:1px solid #eee; margin-bottom:10px;"></div>
-                <textarea id="imp" style="height:80px;" placeholder="Cole a lista de alunos aqui..."></textarea>
-                <button onclick="importar()" class="btn-main btn-blue">Importar Lista</button>
-                <hr style="margin:30px 0;">
-                <button onclick="limparSistemaTotal()" class="btn-main btn-danger">RESET ANUAL (LIMPAR TUDO)</button>
+                <h3>Gestão de Turma</h3>
+                <div id="editor-alunos-lista" style="max-height:200px; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:12px; margin-bottom:15px;"></div>
+                <textarea id="imp" style="height:100px;" placeholder="Cole a lista de nomes aqui para importar..."></textarea>
+                <button onclick="importar()" class="btn-main btn-blue">Importar/Atualizar Lista</button>
+                
+                <div style="margin-top:40px; padding:20px; border: 2px dashed var(--danger); border-radius:16px;">
+                    <h3 style="color:var(--danger); margin-top:0;">Reset de Ano Novo</h3>
+                    <p style="font-size:0.9rem;">Isso apagará permanentemente todos os dados de todas as turmas.</p>
+                    <button onclick="limparSistemaTotal()" class="btn-main btn-danger">APAGAR TUDO E RECOMEÇAR ANO</button>
+                </div>
             </div>
         </div>
     </div>
@@ -113,7 +142,7 @@
                 "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia", "1ºA DG História", "2ºA DG História", 
                 "2ºB DG História", "2ºA DG Filosofia", "2ºB DG Filosofia"
             ];
-            st.add(new Option("Selecione a Turma...", ""));
+            st.add(new Option("Escolha a Turma...", ""));
             turmas.forEach(t => {
                 st.add(new Option(t, t));
                 sr.add(new Option(t, t));
@@ -135,54 +164,105 @@
         async function carregarAlunos() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
-            const [sH, sA, sV, sB] = await Promise.all([db.ref(`headers/${t}/${b}`).once('value'), db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}/${d}`).once('value'), db.ref(`vistos/${t}/${b}`).once('value')]);
-            const h = sH.val() || {}; const alunos = sA.val() || []; const dia = sV.val() || {}; const todos = sB.val() || {};
+            const [sH, sA, sV] = await Promise.all([db.ref(`headers/${t}/${b}`).once('value'), db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}/${d}`).once('value')]);
+            const h = sH.val() || {}; const alunos = sA.val() || []; const dia = sV.val() || {};
             
-            let hH = ''; for(let i=1; i<=5; i++) hH += `<input type="text" id="h${i}" style="min-width:100px; font-size:0.7rem; margin-right:5px;" value="${h['h'+i] || 'Ativ '+i}" onchange="salvarHeader()">`;
+            let hH = ''; for(let i=1; i<=5; i++) hH += `<input type="text" id="h${i}" style="min-width:110px; font-size:0.75rem; font-weight:bold; background:#f8fafc;" value="${h['h'+i] || 'Ativ '+i}" onchange="salvarHeader()">`;
             document.getElementById('header-inputs').innerHTML = hH;
 
-            let html = '<table style="width:100%">';
+            let html = '';
             alunos.forEach((n, idx) => {
-                html += `<tr style="border-bottom:1px solid #eee"><td>${n}</td><td style="text-align:right">`;
-                for(let v=1; v<=5; v++) html += `<input type="checkbox" class="chk-v" data-idx="${idx}" data-v="${v}" ${(dia[idx] && dia[idx][v])?'checked':''} style="width:20px; height:20px; margin-left:4px;">`;
-                html += `</td></tr>`;
+                html += `<div class="aluno-row"><span class="aluno-nome">${n}</span><div class="vistos-group">`;
+                for(let v=1; v<=5; v++) html += `<input type="checkbox" class="chk-v" data-idx="${idx}" data-v="${v}" ${(dia[idx] && dia[idx][v])?'checked':''}>`;
+                html += `</div></div>`;
             });
-            document.getElementById('lista-container').innerHTML = html + '</table>';
+            document.getElementById('lista-container').innerHTML = html || "Nenhum aluno cadastrado nesta turma.";
             carregarHistVistos();
         }
 
         async function carregarHistVistos() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
             const s = await db.ref(`vistos/${t}/${b}`).once('value');
-            const d = s.val() || {};
-            document.getElementById('hist-vistos-lista').innerHTML = "<b>Dias com vistos:</b> " + Object.keys(d).join(', ');
+            const dados = s.val() || {};
+            let html = '';
+            Object.keys(dados).sort().reverse().forEach(data => {
+                html += `<span class="hist-chip" onclick="abrirData('${data}')">${data.split('-').reverse().join('/')}</span>`;
+            });
+            document.getElementById('hist-vistos-lista').innerHTML = html || "Sem histórico.";
         }
+
+        function abrirData(d) { document.getElementById('data').value = d; carregarAlunos(); }
 
         async function carregarHistDiario() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
+            if(!t) return;
             const s = await db.ref(`diario/${t}/${b}`).once('value');
-            let h = ''; Object.values(s.val() || {}).reverse().forEach(i => { h += `<div class="hist-item"><b>${i.data}:</b> ${i.conteudo}</div>`; });
+            let h = ''; Object.values(s.val() || {}).reverse().forEach(i => { h += `<div style="padding:12px; background:#f8fafc; border-radius:10px; margin-bottom:10px; font-size:0.9rem;"><b>${i.data.split('-').reverse().join('/')}:</b> ${i.conteudo}</div>`; });
             document.getElementById('historico-lista').innerHTML = h;
+        }
+
+        async function salvarVistos() {
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
+            if(!t) return alert("Selecione a turma!");
+            let dados = {}; document.querySelectorAll('.chk-v').forEach(chk => { const i = chk.dataset.idx; const v = chk.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = chk.checked; });
+            await db.ref(`vistos/${t}/${b}/${d}`).set(dados); alert('Vistos salvos com sucesso!'); carregarHistVistos();
         }
 
         async function salvarD() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const txt = document.getElementById('cont').value;
+            if(!t || !txt) return alert("Preencha a turma e o conteúdo!");
             const alvos = Array.from(document.getElementById('replica-multi').selectedOptions).map(o => o.value);
             if(!alvos.includes(t)) alvos.push(t);
             const ts = Date.now();
             await Promise.all(alvos.map(turma => db.ref(`diario/${turma}/${b}/${ts}`).set({ conteudo: txt, data: document.getElementById('data').value })));
-            alert("Diário salvo!"); carregarHistDiario();
+            document.getElementById('cont').value = ""; alert("Diário replicado e salvo!"); carregarHistDiario();
+        }
+
+        async function carregarRec() {
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; if(!t) return;
+            const [sA, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`recuperacao/${t}/${b}`).once('value')]);
+            const al = sA.val() || []; const nt = sR.val() || {};
+            let h = ''; al.forEach((n, i) => {
+                h += `<div class="aluno-row row-rec"><span class="aluno-nome nome-aluno-rec">${n}</span><input type="text" class="input-nota-rec" data-idx="${i}" value="${nt[i] || ''}"></div>`;
+            });
+            document.getElementById('lista-rec').innerHTML = h;
+        }
+
+        async function salvarRec() {
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
+            let r = {}; document.querySelectorAll('.input-nota-rec').forEach(inp => { if(inp.value) r[inp.dataset.idx] = inp.value; });
+            await db.ref(`recuperacao/${t}/${b}`).set(r); alert('Notas de recuperação salvas!');
+        }
+
+        async function importar() {
+            const t = document.getElementById('turma').value; const c = document.getElementById('imp'); if(!t || !c.value) return alert('Selecione a turma e cole a lista!');
+            const l = c.value.split('\n').map(n => n.replace(/^[0-9\s.\-_]+/, '').trim()).filter(n => n.length > 2).sort();
+            await db.ref('turmas/'+t).set(l); c.value = ""; renderizarEditorAlunos(); alert("Lista importada!");
+        }
+
+        async function renderizarEditorAlunos() {
+            const t = document.getElementById('turma').value; if(!t) return;
+            const s = await db.ref('turmas/'+t).once('value');
+            let h = ''; (s.val() || []).forEach((n, i) => { h += `<div style="display:flex; justify-content:space-between; padding:5px 0;">${n}</div>`; });
+            document.getElementById('editor-alunos-lista').innerHTML = h || "Vazio";
         }
 
         async function limparSistemaTotal() {
-            if(confirm("Deseja apagar TUDO para o Ano Novo?") && prompt("Digite APAGAR TUDO") === "APAGAR TUDO") {
+            if(confirm("CUIDADO: Isso apagará TODOS os dados de TODOS os anos. Deseja continuar?") && prompt("Para apagar tudo, digite: APAGAR TUDO") === "APAGAR TUDO") {
                 await db.ref().remove();
+                alert("Sistema reiniciado. Recarregando...");
                 location.reload();
             }
         }
 
-        function atualizarTudo() { carregarAlunos(); carregarHistDiario(); }
-        function corrigirTexto(el) { el.value = el.value.trim(); }
+        function salvarHeader() {
+            const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value;
+            let h = {}; for(let i=1; i<=5; i++) h['h'+i] = document.getElementById('h'+i).value;
+            db.ref(`headers/${t}/${b}`).set(h);
+        }
+
+        function atualizarTudo() { carregarAlunos(); carregarHistDiario(); carregarRec(); }
+        function corrigirTexto(el) { if(el.value.length > 0) el.value = el.value.charAt(0).toUpperCase() + el.value.slice(1); }
         document.getElementById('data').valueAsDate = new Date();
         popularMenus();
     </script>
