@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v5.0 | Prof. Eduardo</title>
+    <title>Connect Escolar v5.1 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -28,19 +28,20 @@
         .edit-row { display: flex; gap: 5px; margin-bottom: 8px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
+        optgroup { background: #f1f5f9; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v5.0</h2>
+            <h2>Connect Escolar v5.1</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
     </div>
 
     <div id="app" class="hidden">
-        <nav class="tabs no-print">
+        <nav class="tabs">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
             <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
             <button class="tab-btn" onclick="aba('rd')">RELATÓRIO</button>
@@ -49,20 +50,32 @@
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
         </nav>
 
-        <header class="no-print">
+        <header>
             <div class="controls-grid">
                 <select id="turma" onchange="atualizarTudo()" style="grid-column: span 2; font-weight: bold;">
                     <option value="">Selecione a Turma...</option>
-                    <optgroup label="9º ANO">
+                    <optgroup label="ENSINO FUNDAMENTAL">
                         <option value="9ºA Pensamento Comp">9ºA Pensamento Comp</option>
                         <option value="9ºB Pensamento Comp">9ºB Pensamento Comp</option>
                         <option value="9ºC Letramento Digital">9ºC Letramento Digital</option>
                         <option value="9ºD Letramento Digital">9ºD Letramento Digital</option>
+                        <option value="9ºA Geografia">9ºA Geografia</option>
+                        <option value="9ºB Geografia">9ºB Geografia</option>
+                        <option value="9ºC Geografia">9ºC Geografia</option>
                     </optgroup>
-                    <optgroup label="SOCIOLOGIA / HISTÓRIA">
+                    <optgroup label="ENSINO MÉDIO">
                         <option value="1ºB Sociologia">1ºB Sociologia</option>
                         <option value="2ºB Sociologia">2ºB Sociologia</option>
+                        <option value="2ºC Sociologia">2ºC Sociologia</option>
+                        <option value="2ºD Sociologia">2ºD Sociologia</option>
+                    </optgroup>
+                    <optgroup label="TÉCNICOS / DG">
+                        <option value="1ºB IFA">1ºB IFA</option>
                         <option value="1ºA DG História">1ºA DG História</option>
+                        <option value="2ºA DG História">2ºA DG História</option>
+                        <option value="2ºB DG História">2ºB DG História</option>
+                        <option value="2ºA DG Filosofia">2ºA DG Filosofia</option>
+                        <option value="2ºB DG Filosofia">2ºB DG Filosofia</option>
                     </optgroup>
                 </select>
                 <select id="bimestre" onchange="atualizarTudo()">
@@ -77,22 +90,23 @@
 
         <div class="container">
             <div id="aba-v" class="card tab-content">
-                <div id="header-inputs" style="display:flex; overflow-x:auto; gap:5px; margin-bottom:15px;"></div>
-                <div id="lista-container">Carregando dados...</div>
+                <div id="lista-container">Selecione uma turma para ver os alunos e vistos.</div>
                 <button onclick="salvarVistos()" class="btn-main btn-blue">Salvar Vistos ✓</button>
             </div>
 
             <div id="aba-c" class="card tab-content hidden">
-                <h3>Gerenciar Alunos</h3>
-                <textarea id="lista-massa" placeholder="Cole aqui a lista de nomes (um por linha) para adicionar vários..." style="height: 100px; margin-bottom: 10px;"></textarea>
-                <button onclick="adicionarMassa()" class="btn-main btn-blue" style="background: var(--success); margin-bottom: 20px;">Adicionar Lista Completa</button>
+                <h3>Ajustes de Alunos</h3>
+                <p><b>Adição em Massa:</b> Cole os nomes (um por linha)</p>
+                <textarea id="lista-massa" placeholder="Cole a lista aqui..."></textarea>
+                <button onclick="adicionarMassa()" class="btn-main btn-blue" style="background: var(--success);">Adicionar Todos</button>
+                <hr>
                 <div id="lista-edicao-alunos"></div>
             </div>
 
-            <div id="aba-rd" class="card tab-content hidden"><h3>Relatório Diário</h3><div id="relatorio-diario-corpo"></div></div>
-            <div id="aba-l" class="card tab-content hidden"><h3>Fechamento</h3><div id="lista-fechamento"></div></div>
-            <div id="aba-r" class="card tab-content hidden"><h3>Recuperação</h3><div id="lista-rec"></div><button onclick="salvarRec()" class="btn-main btn-blue">Salvar Notas</button></div>
-            <div id="aba-d" class="card tab-content hidden"><textarea id="cont" placeholder="Conteúdo da aula..." style="height: 150px;"></textarea><button onclick="salvarD()" class="btn-main btn-blue">Gravar Aula</button></div>
+            <div id="aba-rd" class="card tab-content hidden"><div id="relatorio-diario-corpo"></div></div>
+            <div id="aba-l" class="card tab-content hidden"><div id="lista-fechamento"></div></div>
+            <div id="aba-r" class="card tab-content hidden"><div id="lista-rec"></div><button onclick="salvarRec()" class="btn-main btn-blue">Salvar Notas</button></div>
+            <div id="aba-d" class="card tab-content hidden"><textarea id="cont" placeholder="Conteúdo da aula..."></textarea><button onclick="salvarD()" class="btn-main btn-blue">Gravar Aula</button></div>
         </div>
     </div>
 
@@ -114,7 +128,7 @@
 
         async function carregarAlunos() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
-            if(!t) return document.getElementById('lista-container').innerHTML = "Selecione uma turma.";
+            if(!t) return;
             const [sA, sV] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}/${d}`).once('value')]);
             const al = sA.val() || []; const v = sV.val() || {};
             let html = '';
@@ -126,28 +140,18 @@
                 }
                 html += `</div></div>`;
             });
-            document.getElementById('lista-container').innerHTML = html || "Nenhum aluno cadastrado.";
+            document.getElementById('lista-container').innerHTML = html || "Cadastre alunos em Ajustes.";
         }
 
         async function adicionarMassa() {
             const t = document.getElementById('turma').value;
             const nomes = document.getElementById('lista-massa').value.split('\n').map(n => n.trim()).filter(n => n !== "");
-            if(!t || nomes.length === 0) return alert("Selecione a turma e cole os nomes.");
+            if(!t || nomes.length === 0) return alert("Selecione a turma.");
             const s = await db.ref('turmas/'+t).once('value');
             let l = s.val() || []; l = [...l, ...nomes].sort();
             await db.ref('turmas/'+t).set(l);
             document.getElementById('lista-massa').value = "";
-            alert(`${nomes.length} alunos adicionados!`);
             carregarListaEdicao();
-        }
-
-        async function editN(idx) {
-            const t = document.getElementById('turma').value;
-            const novo = document.getElementById(`en-${idx}`).value;
-            const s = await db.ref('turmas/'+t).once('value');
-            let l = s.val(); l[idx] = novo;
-            await db.ref('turmas/'+t).set(l);
-            alert("Nome corrigido!");
         }
 
         async function carregarListaEdicao() {
@@ -157,12 +161,17 @@
             document.getElementById('lista-edicao-alunos').innerHTML = h;
         }
 
+        async function editN(idx) {
+            const t = document.getElementById('turma').value; const novo = document.getElementById(`en-${idx}`).value;
+            const s = await db.ref('turmas/'+t).once('value'); let l = s.val(); l[idx] = novo;
+            await db.ref('turmas/'+t).set(l); alert("Salvo!");
+        }
+
         function toggleVisto(el) { el.classList.toggle('checked'); el.innerText = el.classList.contains('checked') ? '✓' : ''; }
         async function salvarVistos() {
             const t = document.getElementById('turma').value; const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             let dados = {}; document.querySelectorAll('.visto-toggle').forEach(el => { const i = el.dataset.idx; const v = el.dataset.v; if(!dados[i]) dados[i] = {}; dados[i][v] = el.classList.contains('checked'); });
-            await db.ref(`vistos/${t}/${b}/${d}`).set(dados);
-            alert("Vistos salvos com sucesso!");
+            await db.ref(`vistos/${t}/${b}/${d}`).set(dados); alert("Vistos salvos!");
         }
 
         function atualizarTudo() { carregarAlunos(); if(!document.getElementById('aba-c').classList.contains('hidden')) carregarListaEdicao(); }
