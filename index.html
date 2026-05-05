@@ -1,26 +1,124 @@
-// Atualização de Dados: Connect Escolar - 2º Bimestre
-const atualizacaoDiario = {
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Escolar - Prof. Eduardo</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #e67e22;
+            --text: #ecf0f1;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+        .turma-card { background: var(--secondary); color: white; padding: 15px; margin-bottom: 15px; border-radius: 5px; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: var(--primary); color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .badge { background: var(--accent); padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Connect Escolar 2026</h1>
+    <div id="app">
+        <!-- O conteúdo será gerado pelo JavaScript -->
+    </div>
+</div>
+
+<script>
+/**
+ * DATABASE: Connect Escolar - Sincronizado 2º Bimestre
+ */
+const ConnectDB = {
     turmas: {
-        "1B_IFA": { atividades: ["Visto 14/04", "Esquema 27/04", "Atividade 28/04"] },
-        "1B_SOC": { conteudo: "Durkheim", data: "14/04" },
-        "2A_FILO": { conteudo: "Crítica Iluminista", data: "17/04" },
-        "2A_HIST": { conteudo: "Revolução Francesa", data: "17/04" },
-        "2B_SOC": { nota_max: 3.0, data: "28/04" },
-        "9_LD": { conteudo: "Sistema Binário/Decimal", datas: ["14/04", "24/04"] }
+        "1ºB IFA/Sociologia": [
+            "Ana Clara Rezende Vieira", "Ana Clara Souza Bechepeche", "Ana Gabrielly Sousa Diniz", "Ana Luiza Araujo Lima", "Calebe Martins Rocha De Jesus", "Cassiane De Lima Sanches", "Davi Kenedy Ribeiro Sousa", "Dionatan Gonçalves Cambraia", "Evellyn Vitoria Sales Da Costa", "Ezequiel Brito De Jesus", "Fabiano Martins", "Felipe Ferreira De Lima", "Fernanda Eloá Da Silva Farias", "Gabriel Antonio Borges Brandao", "Hadassa Nicole Costa Da Silva", "Hebert Alcantera Ataide", "Israel Alves Da Silva Valadares", "Jhennifer Nunes Da Silva", "João Vitor Barroso Da Silva", "Jordana Tavares Da Silva", "Kaio Felipe Bezerra Teles", "Kaira Barbosa Dos Santos", "Kamilly Vitoria Sales Carvalho De Menezes", "Kaua Rodrigues Silva", "Kayky Aires Machado Silva", "Keillyane Dos Reis Costa Da Silva", "Kleiver Yordano Leal Solorzano", "Lucas Gabriel Guerra Almeida", "Maikon Richard Fernandes Da Silva", "Maria Cecília Dos Santos Souza", "Maria Eduarda Andrade Ferreira", "Maria Eduarda D Avila Dos Santos", "Maria Fernadda Alves De Oliveira", "Michael Alejandro Leal Solorzano", "Murilo Silva Lourenço Filho", "Pedro Henrique Bernardes De Sousa", "Rebeca Vitória Martins De Oliveira", "Rhuan Magno Teixeira Da Silva", "Théo Machado De Brito", "Ysabelly Acacia Rodrigues Magalhães"
+        ],[cite: 1]
+        "2ºA DG Hist/Filo": [
+            "ALEXANDRE ANDRADE", "ALEXANDRE DIAS CAMARGO", "ANA JULLYA SOUSA DE LIMA", "ANNA JULIA ALVES DA SILVA VAZ", "ARTHUR LEMES DA SILVA", "ARTHUR MARIANO BATISTA", "BEATRIZ CORDEIRO DE MOURA", "EDUARDO HENRIQUE RESENDE FERREIRA", "EMANUELLE ALVES DOS SANTOS", "EMANUELLY DUTRA DE LIMA", "EMANUELLY GONÇALVES DE ANDRADE", "FÁBIA ISADORA TEIXEIRA DE SOUSA", "GABRIEL GONÇALVES SLYWITCH", "GABRIEL HENRIQUE MOREIRA DE PAULA", "GABRIEL LIMA SILVA", "GABRIEL ROCHA DOS SANTOS", "GABRIEL VIEIRA DE SOUSA", "GEOVANA GABRIELA RODRIGUES DA SILVA", "GEOVANNA FERNANDES DE OLIVEIRA FREITAS", "IASMYN EDUARDA ANGELO MOREIRA", "ISABELLA FERREIRA DE OLIVEIRA", "ISABELLY VICTÓRIA RIBEIRO ARAUJO", "IZABELE TAVARES RODRIGUES BARBOSA", "JÚLIA SILVA RODRIGUES DE AQUINO", "KETELYN LORAYNE DA SILVA LIMA", "LEONARDO LEMES DOS SANTOS", "MAÍSA CRISTINI BARBOSA DE SOUZA", "MATEUS SOARES BUENO", "PEDRO HENRIQUE SOARES OLIVEIRA", "RHYANNA SABINO DOMIGOS LOPES", "VICTOR HUGO FERREIRA SILVA", "VITÓRIA LORRANE ARAÚJO DA SILVA", "YAGO PARREIRA DE SÁ"
+        ],[cite: 1]
+        "2ºB DG Hist/Filo": [
+            "AUGUSTO DE PAULA FEITOSA", "DAVI AMARO DA SILVA", "ELLEN FREIRE DE SOUZA", "EMILLY BORÉM DIAS", "GABRIEL ANTONIO DOS SANTOS SILVA", "GUSTAVO HENRIQUE CAETANO FELECIANO SILVA", "HIGOR HENRIQUE ALVES DOS REIS", "JOSÉ HENRIQUE FERREIRA GONÇALVES", "JOÃO VICTOR MONTEIRO DE NOGUEIRA", "JOÃO WESLEY EMANOEL BARBOSA", "KAUAN YURI SOARES BRANDAO", "KAUÃ HENRIQUE VARGAS SILVA", "KETLLYN VITORIA GUIMARÃES DOS SANTOS", "LUCAS GABRIEL OLIVEIRA GARCIA", "LUNA GONÇALVES SOUZA", "MATHEUS SOTINI DA SILVA", "MICHAEL KAYO ALMEIDA SILVA", "MIGUEL PACHECO LOPES", "MIRIÃ RIBEIRO DE SOUSA", "MURILO HENRIQUE MENDES DE CASTRO", "PEDRO PAULO PEREIRA BARBOSA SILVA", "RAFAEL PEREIRA DOS SANTOS", "VITOR PEREIRA DOS SANTOS", "WILSON LEANDRO AMARO SILVA", "YASMIN VICTORIA SOUSA GUIMARÃES"
+        ],[cite: 1]
+        "9ºA Letramento Digital": [
+            "ADRIAN PASQUALOTO PRICINOTE PINHEIRO", "ALANA MOREIRA SOUSA SANTOS", "ANA CLARA SOARES DOS SANTOS", "ANA JULIA FERREIRA MARTINS", "ANDRESSA BURJACK CARVALHO", "ANDRESSA PRISCILA MOREIRA DE OLIVEIRA", "ANNA BEATRYZ COSTA NUNES", "BRENDA FERREIRA SILVA", "CARLOS DANIEL PEREIRA SILVA", "CLEITON EMILLIAN LIMA SOUZA", "DANIEL DE SOUZA TELES", "DANYEL FERREIRA ROSA DA SILVA", "DAVI GABRIEL PULO SILVA", "DHENYFFER RIBEIRO DOS SANTOS", "DIENYFFER LOPES CAMBRAIA", "DÉBORA DA SILVA SOUZA", "GABRIEL ALMEIDA LIMA", "GABRIELA SILVA PIRES", "GABRIELLE FERNANDES DE SOUZA", "GEOVANA VITÓRIA GARCIA DE SOUZA", "HEITOR CAETANO RIBEIRO", "JOÃO PAULO GUIMARÃES BORGES", "JOÃO UESLEI FERREIRA DA MATA", "JULIA CRISTINA FRANÇA RIBEIRO", "KATHARINA SENA ARAUJO FERREIRA", "LARISSA FERNANDES DE OLIVEIRA FREITAS", "MARIA EDUARDA COSTA MENDANHA", "MARIANA MENDES BARBOSA", "MARIANA MENDONÇA DE FREITAS COIMBRA", "MARIANY FERNANDES DE SOUZA", "MATHEUS MAGALHAES DA SILVA", "NICOLAS DIAS MOREIRA", "PHAMELLA PEREIRA CAMPOS", "RAYANA CABRAL CELEIRO", "REBECA RODRIGUES MORAIS", "REBEKA SANTOS RODRIGUES", "SARA LIMA DE ABREU", "SOPHIA VITORIA SOUSA MENEZES", "THIAGO HENRIQUE SOUSA ZAGO", "YURI FREIRES ROSA"
+        ][cite: 1]
+    },
+    headers: {
+        "2ºB DG Hist/Filo": { "h1": "Atividade: 2,5", "h2": "Visto", "h3": "Participação" },[cite: 1]
+        "2ºB Sociologia": { "h1": "Atividade: 3,0", "h2": "Visto", "h3": "Esquema" },[cite: 1]
+        "9ºA Letramento Digital": { "h1": "Binário", "h2": "Decimal", "h3": "Ativ. Prática" }[cite: 1]
+    },
+    diario: {
+        "2ºB DG Hist/Filo": {
+            "2026-04-14": "Revolução Francesa",
+            "2026-04-27": "Fatores Catalisadores",
+            "2026-05-04": "Visto no Caderno"
+        },[cite: 1]
+        "9ºA Letramento Digital": {
+            "2026-04-14": "Sistema Binário",
+            "2026-04-24": "Sistema Decimal"
+        }[cite: 1]
     },
     recuperacao: {
-        turma: "2B_DG_HIST",
-        aluno_index: 11,
-        nota: 6.0,
-        periodo: "1º Bimestre"
+        "2ºB DG Hist/Filo": { index: 11, nota: 6.0, ref: "1º Bimestre" }[cite: 1]
     }
 };
 
-// Função para processar os novos dados no sistema
-function sincronizarSistema(dados) {
-    console.log("Iniciando sincronização com o Connect Escolar...");
-    // A lógica de inserção automática nas colunas h1-h5 entra aqui
-    return "Sincronização concluída com sucesso!";
+/**
+ * Lógica do Sistema
+ */
+function renderizarSistema() {
+    const app = document.getElementById('app');
+    let html = '';
+
+    for (const turma in ConnectDB.turmas) {
+        html += `
+            <div class="turma-card">
+                <strong>${turma}</strong> | Alunos: ${ConnectDB.turmas[turma].length}
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nº</th>
+                        <th>Nome do Aluno</th>
+                        <th>${ConnectDB.headers[turma]?.h1 || 'Ativ 1'}</th>
+                        <th>${ConnectDB.headers[turma]?.h2 || 'Ativ 2'}</th>
+                        <th>Notas/Vistos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${ConnectDB.turmas[turma].map((nome, index) => {
+                        let extra = '';
+                        if (turma === "2ºB DG Hist/Filo" && index === 11) {
+                            extra = `<span class="badge">Rec. 1ºB: ${ConnectDB.recuperacao[turma].nota}</span>`;[cite: 1]
+                        }
+                        return `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${nome} ${extra}</td>
+                                <td>---</td>
+                                <td>---</td>
+                                <td>---</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+            <br>
+        `;
+    }
+    app.innerHTML = html;
 }
 
-sincronizarSistema(atualizacaoDiario);
+window.onload = renderizarSistema;
+</script>
+
+</body>
+</html>
