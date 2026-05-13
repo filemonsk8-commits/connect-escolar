@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.16 | Prof. BERNARD II</title>
+    <title>Connect Escolar v3.9.17 | Prof. Eduardo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -26,21 +26,24 @@
         .header-vistos-input { min-width: 130px; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; border: 1px solid #cbd5e1 !important; text-align: center; margin-right: 5px; }
         .visto-container { display: inline-flex; flex-direction: column; align-items: center; margin-left: 6px; width: 40px; }
         .input-v { width: 38px; height: 30px; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; padding: 2px; }
+        
+        /* ESTILO DO HISTÓRICO ATIVO */
+        .hist-item { background: #f8fafc; padding: 10px; margin-bottom: 8px; border-left: 4px solid var(--accent); border-radius: 4px; font-size: 0.85rem; transition: 0.3s; }
+        .active-date { background: #fee2e2 !important; border-left-color: var(--danger) !important; border: 1px solid #fca5a5; }
+
         .timeline-container { margin-top: 20px; border-left: 3px solid var(--accent); padding-left: 20px; margin-left: 10px; }
         .timeline-item { position: relative; margin-bottom: 20px; padding: 10px; background: #f1f5f9; border-radius: 8px; }
         .timeline-item::before { content: ''; position: absolute; left: -27px; top: 15px; width: 12px; height: 12px; background: var(--accent); border-radius: 50%; border: 3px solid white; }
         .timeline-date { font-weight: 800; color: var(--primary); font-size: 0.9rem; margin-bottom: 4px; display: block; }
-        .timeline-content { font-size: 0.85rem; line-height: 1.4; color: var(--text); }
         .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .report-table td, .report-table th { padding: 10px; border: 1px solid #ddd; font-size: 0.85rem; text-align: left; }
-        .hist-item { background: #f8fafc; padding: 10px; margin-bottom: 8px; border-left: 4px solid var(--accent); border-radius: 4px; font-size: 0.85rem; }
         @media print { .no-print, nav, header, .btn-main { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
     </style>
 </head>
 <body>
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.16</h2>
+            <h2>Connect Escolar v3.9.17</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -50,8 +53,8 @@
         <nav class="tabs no-print">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
             <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
-            <button class="tab-btn" onclick="aba('rd')">RELATÓRIO DIÁRIO</button>
-            <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
+            <button class="tab-btn" onclick="aba('rd')">RELAT. DIÁRIO</button>
+            <button class="tab-btn" onclick="aba('r')">RECUPER.</button>
             <button class="tab-btn" onclick="aba('l')">FECHAMENTO</button>
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
         </nav>
@@ -72,6 +75,7 @@
         </header>
 
         <div class="container">
+            <!-- ABA VISTOS -->
             <div id="aba-v" class="card">
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
                 <div id="lista-container">Escolha a turma acima...</div>
@@ -79,6 +83,7 @@
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
 
+            <!-- OUTRAS ABAS -->
             <div id="aba-d" class="card hidden">
                 <input type="hidden" id="edit-key">
                 <textarea id="cont" onblur="corrigirTexto(this)" placeholder="Conteúdo da aula..." style="height:120px;"></textarea>
@@ -139,8 +144,8 @@
             const st = document.getElementById('turma'); const sr = document.getElementById('replica-multi');
             const cats = [
                 { l: "ENSINO FUNDAMENTAL", t: ["9ºA Pensamento Comp", "9ºB Pensamento Comp", "9ºC Letramento Digital", "9ºD Letramento Digital", "9ºA História", "9ºB História", "9ºC História"] },
-                { l: "ENSINO MÉDIO", t: ["1ºB IFA", "1ºB Sociologia", "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia"] },
-                { l: "TÉCNICO (DG)", t: ["2ºA DG História", "2ºB DG História", "2ºA DG Filosofia", "2ºB DG Filosofia"] }
+                { l: "ENSINO MÉDIO", t: ["1ºB IFA", "1ºB História", "1ºB Sociologia", "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia"] },
+                { l: "TÉCNICO (DG)", t: ["1ºA DG História", "2ºA DG História", "2ºB DG História", "2ºA DG Filosofia", "2ºB DG Filosofia"] }
             ];
             cats.forEach(c => {
                 const g = document.createElement('optgroup'); g.label = c.l;
@@ -152,14 +157,12 @@
         function logar() { if(document.getElementById('pass').value === '2203') { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); } }
         function aba(a) { document.querySelectorAll('.card').forEach(c => c.classList.add('hidden')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('aba-'+a).classList.remove('hidden'); if(event) event.currentTarget.classList.add('active'); if(a === 'rd') gerarRelatorioDiario(); if(a === 'l') gerarRelatorio(); if(a === 'r') carregarRec(); if(a === 'c') renderizarEditorAlunos(); if(a === 'd') carregarHistorico(); if(a === 'v') carregarHistoricoVistos(); }
 
-        // FUNÇÃO CORRIGIDA PARA FORÇAR CARREGAMENTO DE DADOS SALVOS
         async function carregarAlunos() {
             const t = limparT(document.getElementById('turma').value); 
             const b = document.getElementById('bimestre').value; 
             const d = document.getElementById('data').value;
             if(!t) return;
 
-            // Limpa o container antes de renderizar para garantir que não haja sobra de dados
             document.getElementById('lista-container').innerHTML = "Carregando...";
 
             const [sH, sA, sV] = await Promise.all([
@@ -170,7 +173,7 @@
             
             const h = sH.val() || {}; 
             const alunos = sA.val() || []; 
-            const diaVistos = sV.val() || {}; // Aqui estão as notas salvas no dia
+            const diaVistos = sV.val() || {};
             
             let hH = ''; for(let i=1; i<=5; i++) hH += `<input type="text" id="h${i}" class="header-vistos-input" value="${h['h'+i] || 'Ativ. '+i}" onchange="salvarHeader()">`;
             document.getElementById('header-inputs').innerHTML = hH;
@@ -179,11 +182,7 @@
             alunos.forEach((nome, idx) => {
                 html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0; font-size:0.85rem;">${nome}</td><td style="text-align:right">`;
                 for(let v=1; v<=5; v++){
-                    // Pega o valor exato do banco de dados para este aluno e este visto
-                    let valorSalvo = "";
-                    if(diaVistos[idx] && diaVistos[idx][v] !== undefined) {
-                        valorSalvo = diaVistos[idx][v];
-                    }
+                    let valorSalvo = (diaVistos[idx] && diaVistos[idx][v] !== undefined) ? diaVistos[idx][v] : "";
                     html += `<div class="visto-container"><input type="number" step="0.1" class="input-v" data-idx="${idx}" data-v="${v}" value="${valorSalvo}"></div>`;
                 }
                 html += `</td></tr>`;
@@ -205,6 +204,32 @@
             db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Salvo!'); carregarAlunos(); }); 
         }
 
+        function carregarHistoricoVistos() {
+            const t = limparT(document.getElementById('turma').value); 
+            const b = document.getElementById('bimestre').value;
+            const dataAtual = document.getElementById('data').value;
+
+            db.ref(`vistos/${t}/${b}`).once('value', s => {
+                const d = s.val() || {}; let h = '';
+                Object.keys(d).sort().reverse().forEach(data => {
+                    // Se a data for a que está aberta, adiciona a classe active-date
+                    const isActive = (data === dataAtual) ? 'active-date' : '';
+                    h += `<div class="hist-item ${isActive}" id="hist-${data}" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>📅 ${data.split('-').reverse().join('/')}</span>
+                        <div><button onclick="setarData('${data}')" class="btn-edit-small" style="background:var(--accent); margin-right:5px;">Abrir</button>
+                        <button onclick="excluirVistoDia('${data}')" class="btn-edit-small" style="background:var(--danger)">🗑</button></div>
+                    </div>`;
+                });
+                document.getElementById('hist-vistos-lista').innerHTML = h;
+            });
+        }
+
+        function setarData(d) { 
+            document.getElementById('data').value = d; 
+            carregarAlunos(); 
+            window.scrollTo(0,0); 
+        }
+
         async function gerarRelatorio() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; if(!t) return;
             document.getElementById('rel-header-info').innerText = `${t} - ${b}`;
@@ -215,7 +240,6 @@
                 if(diaData) Object.keys(diaData).forEach(idx => { 
                     if(res[idx]) Object.values(diaData[idx]).forEach(val => { 
                         if(typeof val === 'number') res[idx].total += val; 
-                        else if(val === true) res[idx].total += 1; 
                     }); 
                 }); 
             });
@@ -241,22 +265,6 @@
             document.getElementById('lista-rel-diario').innerHTML = chaves.length > 0 ? html + '</div>' : "Sem registros.";
         }
 
-        function carregarHistoricoVistos() {
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-            db.ref(`vistos/${t}/${b}`).once('value', s => {
-                const d = s.val() || {}; let h = '';
-                Object.keys(d).sort().reverse().forEach(data => {
-                    h += `<div class="hist-item" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>📅 ${data.split('-').reverse().join('/')}</span>
-                        <div><button onclick="setarData('${data}')" class="btn-edit-small" style="background:var(--accent); margin-right:5px;">Abrir</button>
-                        <button onclick="excluirVistoDia('${data}')" class="btn-edit-small" style="background:var(--danger)">🗑</button></div>
-                    </div>`;
-                });
-                document.getElementById('hist-vistos-lista').innerHTML = h;
-            });
-        }
-
-        function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); window.scrollTo(0,0); }
         async function salvarD() { 
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const txt = document.getElementById('cont').value; const d = document.getElementById('data').value;
             if(!t || !txt) return alert("Preencha!");
