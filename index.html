@@ -66,8 +66,8 @@
         <nav class="tabs no-print">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
             <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
-            <button class="tab-btn" onclick="aba('rd')">RELATÓRIO DIÁRIO</button>
-            <button class="tab-btn" onclick="aba('r')">RECUPERACÃO</button>
+            <button class="tab-btn" onclick="aba('rd')">RELAT. DIÁRIO</button>
+            <button class="tab-btn" onclick="aba('r')">RECUPER.</button>
             <button class="tab-btn" onclick="aba('l')">FECHAMENTO</button>
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
         </nav>
@@ -104,7 +104,8 @@
                     <small><b>Replicar conteúdo para:</b></small>
                     <select id="replica-multi" multiple style="height:120px; margin-top:5px;"></select>
                 </div>
-                <button onclick="salvarD()" class="btn-main btn-blue">Gravar Diário</button>
+                <button onclick="salvarD()" class="btn-main btn-blue" id="btn-save-diario">Gravar Diário</button>
+                <button onclick="limparEdicaoDiario()" id="btn-cancel-diario" class="btn-main hidden" style="background:#64748b; color:white;">Cancelar Edição</button>
                 <div id="historico-lista" style="margin-top:20px;"></div>
             </div>
 
@@ -189,6 +190,7 @@
             if(a === 'r') carregarRec();
             if(a === 'c') renderizarEditorAlunos();
             if(a === 'd') carregarHistorico();
+            if(a === 'v') carregarHistoricoVistos();
         }
 
         async function carregarAlunos() {
@@ -231,20 +233,62 @@
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; 
             const txt = document.getElementById('cont').value; const d = document.getElementById('data').value;
             if(!t || !txt) return alert("Preencha o conteúdo!");
-            const alvos = Array.from(document.getElementById('replica-multi').selectedOptions).map(o => limparT(o.value));
-            if(!alvos.includes(t)) alvos.push(t);
+            
             const ts = document.getElementById('edit-key').value || Date.now();
+            
+            // Se for novo registro, permite replicar. Se for edição, apenas salva na turma atual.
+            const isEdit = document.getElementById('edit-key').value !== "";
+            const alvos = isEdit ? [t] : Array.from(document.getElementById('replica-multi').selectedOptions).map(o => limparT(o.value));
+            if(!alvos.includes(t)) alvos.push(t);
+
             await Promise.all(alvos.map(turma => db.ref(`diario/${turma}/${b}/${ts}`).set({ conteudo: txt, data: d })));
-            document.getElementById('cont').value = ""; document.getElementById('edit-key').value = ""; carregarHistorico(); alert("Salvo com sucesso!");
+            limparEdicaoDiario();
+            carregarHistorico(); 
+            alert("Salvo com sucesso!");
         }
 
         function carregarHistorico() { 
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; if(!t) return;
             db.ref(`diario/${t}/${b}`).once('value', s => { 
                 let h = ''; const r = s.val() || {};
-                Object.keys(r).reverse().forEach(k => { h += `<div class="hist-item"><b>${r[k].data}</b>: ${r[k].conteudo}</div>`; });
+                Object.keys(r).sort().reverse().forEach(k => { 
+                    h += `<div class="hist-item">
+                            <div style="display:flex; justify-content:space-between;">
+                                <b>${r[k].data.split('-').reverse().join('/')}</b>
+                                <div>
+                                    <button onclick="prepararEdicaoDiario('${k}', '${r[k].data}', \`${r[k].conteudo.replace(/"/g, '&quot;')}\`)" class="btn-edit-small" style="background:var(--accent); margin-right:5px;">📝</button>
+                                    <button onclick="excluirDiario('${k}')" class="btn-edit-small" style="background:var(--danger)">🗑</button>
+                                </div>
+                            </div>
+                            <div style="margin-top:5px;">${r[k].conteudo}</div>
+                          </div>`; 
+                });
                 document.getElementById('historico-lista').innerHTML = h;
             });
+        }
+
+        function prepararEdicaoDiario(key, data, cont) {
+            document.getElementById('edit-key').value = key;
+            document.getElementById('data').value = data;
+            document.getElementById('cont').value = cont;
+            document.getElementById('btn-save-diario').innerText = "Atualizar Diário";
+            document.getElementById('btn-cancel-diario').classList.remove('hidden');
+            window.scrollTo(0,0);
+        }
+
+        function limparEdicaoDiario() {
+            document.getElementById('edit-key').value = "";
+            document.getElementById('cont').value = "";
+            document.getElementById('btn-save-diario').innerText = "Gravar Diário";
+            document.getElementById('btn-cancel-diario').classList.add('hidden');
+        }
+
+        async function excluirDiario(key) {
+            if(confirm("Deseja realmente excluir este registro do diário?")) {
+                const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+                await db.ref(`diario/${t}/${b}/${key}`).remove();
+                carregarHistorico();
+            }
         }
 
         async function adicionarUmAluno() {
@@ -287,13 +331,25 @@
             db.ref(`vistos/${t}/${b}`).once('value', s => {
                 const d = s.val() || {}; let h = '';
                 Object.keys(d).sort().reverse().forEach(data => {
+                    const dataFormatada = data.split('-').reverse().join('/');
                     h += `<div class="hist-item" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>📅 ${data}</span>
-                        <button onclick="setarData('${data}')" class="btn-edit-small" style="background:var(--accent)">Abrir</button>
+                        <span>📅 ${dataFormatada}</span>
+                        <div>
+                            <button onclick="setarData('${data}')" class="btn-edit-small" style="background:var(--accent); margin-right:5px;">Abrir</button>
+                            <button onclick="excluirVistoDia('${data}')" class="btn-edit-small" style="background:var(--danger)">🗑</button>
+                        </div>
                     </div>`;
                 });
                 document.getElementById('hist-vistos-lista').innerHTML = h;
             });
+        }
+
+        async function excluirVistoDia(data) {
+            if(confirm(`Excluir todos os vistos do dia ${data.split('-').reverse().join('/')}?`)) {
+                const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+                await db.ref(`vistos/${t}/${b}/${data}`).remove();
+                carregarAlunos();
+            }
         }
 
         function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); window.scrollTo(0,0); }
