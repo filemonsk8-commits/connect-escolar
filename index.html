@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connect Escolar v3.9.18 | Prof. Eduardo</title>
+    
+    <!-- Configurações para PWA -->
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063176.png">
+    
+    <!-- Manifesto para Instalação -->
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNrYWJsZSIKICAgIH0KICBdCn0=">
+
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -27,12 +37,6 @@
         .visto-container { display: inline-flex; flex-direction: column; align-items: center; margin-left: 6px; width: 40px; }
         .input-v, .input-rec { width: 38px; height: 30px; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; padding: 2px; }
         .nota-lançada { color: var(--danger) !important; font-weight: bold; border-color: var(--danger) !important; }
-        .hist-item { background: #f8fafc; padding: 10px; margin-bottom: 8px; border-left: 4px solid var(--accent); border-radius: 4px; font-size: 0.85rem; transition: 0.3s; }
-        .active-date { background: #fee2e2 !important; border-left-color: var(--danger) !important; border: 1px solid #fca5a5; }
-        .timeline-container { margin-top: 20px; border-left: 3px solid var(--accent); padding-left: 20px; margin-left: 10px; }
-        .timeline-item { position: relative; margin-bottom: 20px; padding: 10px; background: #f1f5f9; border-radius: 8px; }
-        .timeline-item::before { content: ''; position: absolute; left: -27px; top: 15px; width: 12px; height: 12px; background: var(--accent); border-radius: 50%; border: 3px solid white; }
-        .timeline-date { font-weight: 800; color: var(--primary); font-size: 0.9rem; margin-bottom: 4px; display: block; }
         .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .report-table td, .report-table th { padding: 10px; border: 1px solid #ddd; font-size: 0.85rem; text-align: left; }
         @media print { .no-print, nav, header, .btn-main { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
@@ -51,8 +55,8 @@
         <nav class="tabs no-print">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
             <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
-            <button class="tab-btn" onclick="aba('rd')">RELATÓRIO DIÁRIO</button>
-            <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
+            <button class="tab-btn" onclick="aba('rd')">RELAT. DIÁRIO</button>
+            <button class="tab-btn" onclick="aba('r')">RECUPER.</button>
             <button class="tab-btn" onclick="aba('l')">FECHAMENTO</button>
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
         </nav>
@@ -73,7 +77,6 @@
         </header>
 
         <div class="container">
-            <!-- VISTOS -->
             <div id="aba-v" class="card">
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
                 <div id="lista-container">Escolha a turma acima...</div>
@@ -81,40 +84,34 @@
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
 
-            <!-- DIÁRIO -->
             <div id="aba-d" class="card hidden">
                 <textarea id="cont" onblur="corrigirTexto(this)" placeholder="Conteúdo da aula..." style="height:120px;"></textarea>
                 <button onclick="salvarD()" class="btn-main btn-blue">Gravar Diário</button>
                 <div id="historico-lista" style="margin-top:20px;"></div>
             </div>
 
-            <!-- RELATÓRIO DIÁRIO -->
             <div id="aba-rd" class="card hidden">
-                <div id="print-diario-area"><div id="lista-rel-diario"></div></div>
+                <div id="lista-rel-diario"></div>
                 <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir Diário</button>
             </div>
 
-            <!-- RECUPERAÇÃO -->
             <div id="aba-r" class="card hidden">
                 <h3>Recuperação</h3>
                 <div id="lista-rec"></div>
-                <button onclick="salvarRec()" class="btn-main btn-blue no-print">Salvar Notas de Recuperação</button>
+                <button onclick="salvarRec()" class="btn-main btn-blue no-print">Salvar Recuperação</button>
             </div>
             
-            <!-- FECHAMENTO -->
             <div id="aba-l" class="card hidden">
-                <div id="relatorio-print-area"><div id="relatorio-lista"></div></div>
+                <div id="relatorio-lista"></div>
                 <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir Relatório Final</button>
             </div>
 
-            <!-- AJUSTES -->
             <div id="aba-c" class="card hidden">
-                <h3 style="color:var(--accent)">Ajustes de Turma</h3>
+                <h3>Ajustes de Turma</h3>
                 <div id="editor-alunos-lista"></div>
                 <hr>
-                <h4>Importação em Massa</h4>
-                <textarea id="imp" style="height:80px;" placeholder="Cole a lista de nomes aqui..."></textarea>
-                <button onclick="importar()" class="btn-main btn-blue">Importar/Substituir Tudo</button>
+                <textarea id="imp" style="height:80px;" placeholder="Importação em massa..."></textarea>
+                <button onclick="importar()" class="btn-main btn-blue">Importar Tudo</button>
             </div>
         </div>
     </div>
@@ -123,15 +120,14 @@
         const config = { databaseURL: "https://connect-escolar-fdef0-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(config);
         const db = firebase.database();
-
         const limparT = (t) => t.replace(/[.#$\[\]]/g, "").trim();
 
         function popularMenus() {
             const st = document.getElementById('turma');
             const cats = [
                 { l: "ENSINO FUNDAMENTAL", t: ["9ºA Pensamento Comp", "9ºB Pensamento Comp", "9ºC Letramento Digital", "9ºD Letramento Digital", "9ºA História", "9ºB História", "9ºC História"] },
-                { l: "ENSINO MÉDIO", t: ["1ºB IFA", "1ºB Sociologia", "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia"] },
-                { l: "TÉCNICO (DG)", t: ["2ºA DG História", "2ºB DG História", "2ºA DG Filosofia", "2ºB DG Filosofia"] }
+                { l: "ENSINO MÉDIO", t: ["1ºB IFA", "1ºB História", "1ºB Sociologia", "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia"] },
+                { l: "TÉCNICO (DG)", t: ["1ºA DG História", "2ºA DG História", "2ºB DG História", "2ºA DG Filosofia", "2ºB DG Filosofia"] }
             ];
             cats.forEach(c => {
                 const g = document.createElement('optgroup'); g.label = c.l;
@@ -147,7 +143,6 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
             document.getElementById('aba-'+a).classList.remove('hidden'); 
             event.currentTarget.classList.add('active'); 
-            
             if(a === 'rd') gerarRelatorioDiario(); 
             if(a === 'l') gerarRelatorio(); 
             if(a === 'r') carregarRec(); 
@@ -156,189 +151,122 @@
             if(a === 'v') carregarHistoricoVistos(); 
         }
 
-        // --- VISTOS ---
+        // --- LÓGICA DE DADOS ---
         async function carregarAlunos() {
-            const t = limparT(document.getElementById('turma').value); 
-            const b = document.getElementById('bimestre').value; 
-            const d = document.getElementById('data').value;
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
-            const [sH, sA, sV] = await Promise.all([
-                db.ref(`headers/${t}/${b}`).once('value'), 
-                db.ref('turmas/'+t).once('value'), 
-                db.ref(`vistos/${t}/${b}/${d}`).once('value')
-            ]);
+            const [sH, sA, sV] = await Promise.all([db.ref(`headers/${t}/${b}`).once('value'), db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}/${d}`).once('value')]);
             const h = sH.val() || {}; const alunos = sA.val() || []; const diaVistos = sV.val() || {};
             let hH = ''; for(let i=1; i<=5; i++) hH += `<input type="text" id="h${i}" class="header-vistos-input" value="${h['h'+i] || 'Ativ. '+i}" onchange="salvarHeader()">`;
             document.getElementById('header-inputs').innerHTML = hH;
-            
             let html = '<table style="width:100%; border-collapse:collapse;">';
             alunos.forEach((nome, idx) => {
                 html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0; font-size:0.85rem;">${nome}</td><td style="text-align:right">`;
                 for(let v=1; v<=5; v++){
                     let valOrig = (diaVistos[idx] && diaVistos[idx][v] !== undefined) ? diaVistos[idx][v] : "";
                     let valForm = valOrig !== "" ? parseFloat(valOrig).toFixed(1).replace('.', ',') : "";
-                    let classe = valOrig !== "" ? "nota-lançada" : "";
-                    html += `<div class="visto-container"><input type="text" class="input-v ${classe}" data-idx="${idx}" data-v="${v}" value="${valForm}" onblur="formatarAoSair(this)"></div>`;
+                    html += `<div class="visto-container"><input type="text" class="input-v ${valOrig!==""?"nota-lançada":""}" data-idx="${idx}" data-v="${v}" value="${valForm}" onblur="formatarAoSair(this)"></div>`;
                 }
                 html += `</td></tr>`;
             });
-            document.getElementById('lista-container').innerHTML = (alunos.length > 0) ? html + '</table>' : "⚠️ Sem alunos.";
+            document.getElementById('lista-container').innerHTML = html + '</table>';
             carregarHistoricoVistos();
         }
 
         function formatarAoSair(inp) {
             let v = inp.value.replace(',', '.');
-            if(v !== "" && !isNaN(v)) {
-                inp.value = parseFloat(v).toFixed(1).replace('.', ',');
-                inp.classList.add('nota-lançada');
-            } else { inp.classList.remove('nota-lançada'); }
+            if(v !== "" && !isNaN(v)) { inp.value = parseFloat(v).toFixed(1).replace('.', ','); inp.classList.add('nota-lançada'); }
+            else { inp.classList.remove('nota-lançada'); }
         }
 
         function salvarVistos() { 
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value; 
-            if(!d) return alert("Data inválida!");
-            let dados = {}; 
-            document.querySelectorAll('.input-v').forEach(inp => { 
-                const i = inp.dataset.idx; const v = inp.dataset.v; 
-                let val = inp.value.replace(',', '.');
-                if(!dados[i]) dados[i] = {}; 
-                if(val !== "" && !isNaN(val)) dados[i][v] = parseFloat(val); 
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
+            let dados = {}; document.querySelectorAll('.input-v').forEach(inp => { 
+                const i = inp.dataset.idx; const v = inp.dataset.v; let val = inp.value.replace(',', '.');
+                if(!dados[i]) dados[i] = {}; if(val !== "" && !isNaN(val)) dados[i][v] = parseFloat(val); 
             }); 
-            db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Notas Salvas!'); carregarAlunos(); }); 
+            db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Salvo!'); carregarAlunos(); }); 
         }
 
-        // --- RECUPERAÇÃO ---
         async function carregarRec() {
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-            if(!t) return;
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; if(!t) return;
             const [sA, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`recuperacao/${t}/${b}`).once('value')]);
             const alunos = sA.val() || []; const notasRec = sR.val() || {};
-            let h = '<table class="report-table"><thead><tr><th>ALUNO</th><th style="width:80px">REC</th></tr></thead><tbody>';
+            let h = '<table class="report-table"><tbody>';
             alunos.forEach((nome, idx) => {
                 let nota = notasRec[idx] !== undefined ? notasRec[idx].toFixed(1).replace('.', ',') : "";
-                h += `<tr><td>${nome}</td><td><input type="text" class="input-rec" data-idx="${idx}" value="${nota}" style="width:60px"></td></tr>`;
+                h += `<tr><td>${nome}</td><td><input type="text" class="input-rec" data-idx="${idx}" value="${nota}"></td></tr>`;
             });
             document.getElementById('lista-rec').innerHTML = h + '</tbody></table>';
         }
 
         function salvarRec() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-            let dados = {};
-            document.querySelectorAll('.input-rec').forEach(inp => {
-                let val = inp.value.replace(',', '.');
-                if(val !== "" && !isNaN(val)) dados[inp.dataset.idx] = parseFloat(val);
+            let dados = {}; document.querySelectorAll('.input-rec').forEach(inp => {
+                let val = inp.value.replace(',', '.'); if(val !== "" && !isNaN(val)) dados[inp.dataset.idx] = parseFloat(val);
             });
-            db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => alert("Recuperação Salva!"));
+            db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => alert("Salvo!"));
         }
 
-        // --- FECHAMENTO ---
         async function gerarRelatorio() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; if(!t) return;
-            const [sA, sV, sR] = await Promise.all([
-                db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}`).once('value'), db.ref(`recuperacao/${t}/${b}`).once('value')
-            ]);
+            const [sA, sV, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}`).once('value'), db.ref(`recuperacao/${t}/${b}`).once('value')]);
             const al = sA.val() || []; const d = sV.val() || {}; const recs = sR.val() || {};
-            let res = al.map((n, idx) => ({ n, total: 0, rec: recs[idx] || 0 }));
-            Object.values(d).forEach(dia => { 
-                if(dia) Object.keys(dia).forEach(idx => { 
-                    if(res[idx]) Object.values(dia[idx]).forEach(v => { if(typeof v === 'number') res[idx].total += v; }); 
-                }); 
+            let h = '<table class="report-table"><thead><tr><th>NOME</th><th>VISTOS</th><th>REC</th><th>FINAL</th></tr></thead><tbody>';
+            al.forEach((n, idx) => {
+                let totalV = 0; Object.values(d).forEach(dia => { if(dia && dia[idx]) Object.values(dia[idx]).forEach(v => totalV += v); });
+                let rec = recs[idx] || 0; let final = Math.max(totalV, rec);
+                h += `<tr><td>${n}</td><td>${totalV.toFixed(1)}</td><td>${rec.toFixed(1)}</td><td><b>${final.toFixed(1)}</b></td></tr>`;
             });
-            let h = `<table class="report-table"><thead><tr><th>NOME</th><th>VISTOS</th><th>REC</th><th>FINAL</th></tr></thead><tbody>`;
-            res.forEach(it => { 
-                let final = Math.max(it.total, it.rec);
-                h += `<tr><td>${it.n}</td><td>${it.total.toFixed(1).replace('.', ',')}</td><td>${it.rec.toFixed(1).replace('.', ',')}</td><td><b>${final.toFixed(1).replace('.', ',')}</b></td></tr>`; 
-            });
-            document.getElementById('relatorio-lista').innerHTML = h + `</tbody></table>`;
+            document.getElementById('relatorio-lista').innerHTML = h + '</tbody></table>';
         }
 
-        // --- AJUSTES (EDITAR NOMES E ADICIONAR UM) ---
         async function renderizarEditorAlunos() {
             const t = limparT(document.getElementById('turma').value); if(!t) return;
-            const s = await db.ref('turmas/'+t).once('value');
-            const alunos = s.val() || [];
-            let html = `<div style="max-height:400px; overflow-y:auto; margin-bottom:15px;">`;
+            const s = await db.ref('turmas/'+t).once('value'); const alunos = s.val() || [];
+            let html = '<div style="max-height:300px; overflow-y:auto; margin-bottom:10px">';
             alunos.forEach((nome, idx) => {
-                html += `<div style="display:flex; gap:5px; margin-bottom:5px;">
-                    <input type="text" class="edit-aluno-nome" data-idx="${idx}" value="${nome}" style="flex:1">
-                    <button onclick="removerAluno(${idx})" style="background:var(--danger); color:white; border:none; border-radius:8px; width:35px">×</button>
-                </div>`;
+                html += `<div style="display:flex; gap:5px; margin-bottom:5px"><input type="text" class="edit-aluno-nome" value="${nome}" style="flex:1"><button onclick="removerAluno(${idx})" style="background:var(--danger);color:white;border:none;border-radius:8px;width:35px">×</button></div>`;
             });
-            html += `</div>
-                <div style="background:#f1f5f9; padding:10px; border-radius:10px; margin-bottom:10px">
-                    <label><b>Adicionar Novo Aluno:</b></label>
-                    <div style="display:flex; gap:5px; margin-top:5px">
-                        <input type="text" id="novo-aluno-nome" placeholder="Nome completo...">
-                        <button onclick="adicionarUmAluno()" style="background:var(--success); color:white; border:none; border-radius:8px; padding:0 15px">Add</button>
-                    </div>
-                </div>
-                <button onclick="salvarEdicaoNomes()" class="btn-main btn-blue">Salvar Todos os Nomes Editados</button>`;
+            html += `</div><div style="display:flex;gap:5px"><input type="text" id="novo-aluno-nome" placeholder="Novo aluno..."><button onclick="adicionarUmAluno()" style="background:var(--success);color:white;border:none;padding:10px;border-radius:8px">Add</button></div><button onclick="salvarEdicaoNomes()" class="btn-main btn-blue">Salvar Nomes</button>`;
             document.getElementById('editor-alunos-lista').innerHTML = html;
         }
 
         async function adicionarUmAluno() {
-            const t = limparT(document.getElementById('turma').value);
-            const nome = document.getElementById('novo-aluno-nome').value.trim();
-            if(!nome) return;
-            const s = await db.ref('turmas/'+t).once('value');
-            let lista = s.val() || [];
-            lista.push(nome);
-            await db.ref('turmas/'+t).set(lista);
-            document.getElementById('novo-aluno-nome').value = "";
-            renderizarEditorAlunos();
-        }
-
-        async function removerAluno(idx) {
-            if(!confirm("Remover este aluno da lista?")) return;
-            const t = limparT(document.getElementById('turma').value);
-            const s = await db.ref('turmas/'+t).once('value');
-            let lista = s.val() || [];
-            lista.splice(idx, 1);
-            await db.ref('turmas/'+t).set(lista);
-            renderizarEditorAlunos();
+            const t = limparT(document.getElementById('turma').value); const nome = document.getElementById('novo-aluno-nome').value.trim();
+            if(!nome) return; const s = await db.ref('turmas/'+t).once('value'); let lista = s.val() || [];
+            lista.push(nome); await db.ref('turmas/'+t).set(lista); document.getElementById('novo-aluno-nome').value=""; renderizarEditorAlunos();
         }
 
         async function salvarEdicaoNomes() {
-            const t = limparT(document.getElementById('turma').value);
-            let novos = [];
+            const t = limparT(document.getElementById('turma').value); let novos = [];
             document.querySelectorAll('.edit-aluno-nome').forEach(inp => { if(inp.value.trim()) novos.push(inp.value.trim()); });
-            await db.ref('turmas/'+t).set(novos);
-            alert("Nomes atualizados com sucesso!");
+            await db.ref('turmas/'+t).set(novos); alert("Atualizado!");
         }
 
-        // --- HISTÓRICO E OUTROS ---
+        async function removerAluno(idx) {
+            const t = limparT(document.getElementById('turma').value); const s = await db.ref('turmas/'+t).once('value');
+            let lista = s.val() || []; lista.splice(idx, 1); await db.ref('turmas/'+t).set(lista); renderizarEditorAlunos();
+        }
+
         function carregarHistoricoVistos() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             db.ref(`vistos/${t}/${b}`).once('value', s => {
                 const d = s.val() || {}; let h = '';
                 Object.keys(d).sort().reverse().forEach(data => {
-                    h += `<div class="hist-item" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>📅 ${data.split('-').reverse().join('/')}</span>
-                        <div><button onclick="setarData('${data}')" class="btn-edit-small" style="background:var(--accent)">Abrir</button>
-                        <button onclick="excluirVistoDia('${data}')" class="btn-edit-small" style="background:var(--danger)">🗑</button></div>
-                    </div>`;
+                    h += `<div class="hist-item" style="display:flex; justify-content:space-between"><span>📅 ${data.split('-').reverse().join('/')}</span><button onclick="setarData('${data}')" class="btn-edit-small" style="background:var(--accent)">Abrir</button></div>`;
                 });
                 document.getElementById('hist-vistos-lista').innerHTML = h;
             });
         }
-        
-        async function excluirVistoDia(data) {
-            if(!confirm("Excluir as notas desse dia?")) return;
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-            await db.ref(`vistos/${t}/${b}/${data}`).remove();
-            carregarAlunos();
-        }
 
         function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); }
-
         async function salvarD() { 
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; 
             const txt = document.getElementById('cont').value; const d = document.getElementById('data').value;
-            if(!t || !txt) return alert("Preencha o conteúdo!");
             await db.ref(`diario/${t}/${b}/${Date.now()}`).set({ conteudo: txt, data: d });
-            document.getElementById('cont').value = ""; carregarHistorico(); alert("Diário Salvo!");
+            document.getElementById('cont').value = ""; carregarHistorico(); alert("Salvo!");
         }
-
         function carregarHistorico() { 
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; if(!t) return;
             db.ref(`diario/${t}/${b}`).once('value', s => { 
@@ -347,21 +275,19 @@
                 document.getElementById('historico-lista').innerHTML = h;
             });
         }
-
         async function gerarRelatorioDiario() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; if(!t) return;
             const s = await db.ref(`diario/${t}/${b}`).once('value'); const data = s.val() || {}; 
-            let html = '<div class="timeline-container">'; 
-            Object.keys(data).sort((a,b) => new Date(data[b].data) - new Date(data[a].data)).forEach(k => { 
-                html += `<div class="timeline-item"><span class="timeline-date">📅 ${data[k].data.split('-').reverse().join('/')}</span><div>${data[k].conteudo}</div></div>`; 
+            let html = ''; Object.keys(data).sort((a,b) => new Date(data[b].data) - new Date(data[a].data)).forEach(k => { 
+                html += `<div class="card"><b>📅 ${data[k].data.split('-').reverse().join('/')}</b><p>${data[k].conteudo}</p></div>`; 
             });
-            document.getElementById('lista-rel-diario').innerHTML = html + '</div>';
+            document.getElementById('lista-rel-diario').innerHTML = html;
         }
 
         async function importar() {
             const t = limparT(document.getElementById('turma').value);
             const lista = document.getElementById('imp').value.split('\n').map(n => n.replace(/^\d+[\s.-]*/, "").trim()).filter(n => n);
-            if(t && lista.length) { await db.ref('turmas/'+t).set(lista); alert("Lista Importada!"); renderizarEditorAlunos(); }
+            if(t && lista.length) { await db.ref('turmas/'+t).set(lista); alert("Importado!"); renderizarEditorAlunos(); }
         }
 
         function salvarHeader() { const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; let h = {}; for(let i=1; i<=5; i++) h['h'+i] = document.getElementById('h'+i).value; db.ref(`headers/${t}/${b}`).set(h); }
@@ -370,6 +296,11 @@
 
         document.getElementById('data').valueAsDate = new Date();
         popularMenus();
+
+        // Registro do Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('data:text/javascript;base64,c2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGZ1bmN0aW9uKGV2ZW50KSB7IH0pOw==');
+        }
     </script>
 </body>
 </html>
