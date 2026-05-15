@@ -2,107 +2,122 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.18 | Prof. Eduardo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Connect Escolar v3.9.20</title>
     
-    <!-- Configurações PWA e Firebase permanecem as mesmas -->
-    <meta name="theme-color" content="#0f172a">
-    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNrYWJsZSIKICAgIH0KICBdCn0=">
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <style>
         :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; --danger: #ef4444; --success: #22c55e; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 60px; }
         
-        /* Estilos Base do App */
         .hidden { display: none !important; }
-        #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: #0f172a; }
+        #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: #0f172a; position: fixed; width: 100%; z-index: 999; }
         .login-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 350px; }
-        nav.tabs { display: flex; background: var(--primary); padding: 5px; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
-        .tab-btn { flex: 0 0 auto; padding: 12px 15px; border: none; background: transparent; color: #94a3b8; font-size: 0.7rem; font-weight: bold; border-radius: 8px; white-space: nowrap; cursor: pointer; }
+        
+        nav.tabs { display: flex; background: var(--primary); padding: 5px; position: sticky; top: 0; z-index: 100; overflow-x: auto; scrollbar-width: none; }
+        .tab-btn { flex: 0 0 auto; padding: 12px 15px; border: none; background: transparent; color: #94a3b8; font-size: 0.7rem; font-weight: bold; border-radius: 8px; cursor: pointer; }
         .tab-btn.active { background: rgba(255,255,255,0.1); color: white; }
+
         header { background: white; padding: 10px; border-bottom: 1px solid #e2e8f0; }
         .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        select, input, textarea { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-size: 0.85rem; width: 100%; box-sizing: border-box; outline: none; }
+        
         .container { padding: 10px; }
         .card { background: var(--card); padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; }
-        .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; font-weight: 700; margin-top: 10px; cursor: pointer; }
+        
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; font-size: 0.9rem; }
+        .btn-main { width: 100%; padding: 15px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; margin-top: 10px; }
         .btn-blue { background: var(--accent); color: white; }
 
-        /* --- ESTILO TIMELINE (ABA DIÁRIO) --- */
-        .timeline { position: relative; padding-left: 30px; margin-top: 20px; border-left: 2px solid #e2e8f0; }
-        .timeline-item { position: relative; margin-bottom: 25px; background: #fff; border: 1px solid #f1f5f9; padding: 12px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .timeline-item::before { content: ""; position: absolute; left: -37px; top: 15px; width: 12px; height: 12px; background: var(--accent); border: 3px solid #fff; border-radius: 50%; z-index: 2; }
-        .timeline-date { font-size: 0.75rem; font-weight: 800; color: var(--accent); margin-bottom: 5px; display: block; }
-        .timeline-content { font-size: 0.85rem; line-height: 1.4; color: var(--text); white-space: pre-wrap; }
-        .timeline-actions { display: flex; gap: 10px; margin-top: 10px; justify-content: flex-end; }
-        .btn-icon { background: #f1f5f9; border: none; padding: 6px 10px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; font-weight: bold; color: var(--text); }
-        .btn-del { color: var(--danger); }
+        /* Timeline Style */
+        .timeline { position: relative; padding-left: 25px; margin-top: 20px; border-left: 2px solid #e2e8f0; }
+        .timeline-item { position: relative; margin-bottom: 20px; background: #fefefe; padding: 10px; border-radius: 8px; border: 1px solid #f1f5f9; }
+        .timeline-item::before { content: ""; position: absolute; left: -32px; top: 12px; width: 10px; height: 10px; background: var(--accent); border: 2px solid #fff; border-radius: 50%; }
+        .timeline-date { font-size: 0.7rem; font-weight: bold; color: var(--accent); }
         
-        /* Ajustes Mobile */
-        .visto-container { display: inline-flex; flex-direction: column; align-items: center; margin-left: 6px; width: 40px; }
-        .input-v { width: 38px; height: 30px; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; }
-        .nota-lançada { color: var(--danger) !important; font-weight: bold; border-color: var(--danger) !important; }
+        /* Tabelas de Relatórios */
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { text-align: left; background: #f1f5f9; padding: 8px; }
+        td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
+        .nota-input { width: 45px; text-align: center; border-radius: 4px; border: 1px solid #cbd5e1; }
     </style>
 </head>
 <body>
+
     <div id="login-screen">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.18</h2>
-            <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
+            <h2>Connect Escolar</h2>
+            <input type="password" id="pass" placeholder="Senha">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
     </div>
 
     <div id="app" class="hidden">
-        <nav class="tabs no-print">
+        <nav class="tabs">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
             <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
-            <button class="tab-btn" onclick="aba('rd')">RELATÓRIO DIÁRIO</button>
+            <button class="tab-btn" onclick="aba('rd')">RELATÓRIO</button>
             <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
             <button class="tab-btn" onclick="aba('l')">FECHAMENTO</button>
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
         </nav>
 
-        <header class="no-print">
+        <header>
             <div class="controls-grid">
-                <select id="turma" onchange="atualizarTudo()" style="grid-column: span 2;">
-                    <option value="">Selecione a Turma...</option>
-                </select>
+                <select id="turma" onchange="atualizarTudo()" style="grid-column: span 2;"></select>
                 <select id="bimestre" onchange="atualizarTudo()">
-                    <option value="1B">1º Bimestre</option>
-                    <option value="2B" selected>2º Bimestre</option>
-                    <option value="3B">3º Bimestre</option>
-                    <option value="4B">4º Bimestre</option>
+                    <option value="1B">1º Bim</option>
+                    <option value="2B" selected>2º Bim</option>
+                    <option value="3B">3º Bim</option>
+                    <option value="4B">4º Bim</option>
                 </select>
                 <input type="date" id="data" onchange="carregarAlunos()">
             </div>
         </header>
 
         <div class="container">
-            <!-- ABA VISTOS -->
+            <!-- VISTOS -->
             <div id="aba-v" class="card">
-                <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
+                <div id="header-inputs" style="display:flex; gap:5px; margin-bottom:10px; overflow-x:auto;"></div>
                 <div id="lista-container">Escolha a turma acima...</div>
-                <button onclick="salvarVistos()" class="btn-main btn-blue no-print">Salvar Notas</button>
-                <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
+                <button onclick="salvarVistos()" class="btn-main btn-blue">Salvar Vistos</button>
             </div>
 
-            <!-- ABA DIÁRIO (TIMELINE) -->
+            <!-- DIÁRIO -->
             <div id="aba-d" class="card hidden">
-                <input type="hidden" id="edit-key"> <!-- Campo oculto para controle de edição -->
-                <textarea id="cont" onblur="corrigirTexto(this)" placeholder="O que foi trabalhado hoje?..." style="height:120px;"></textarea>
-                <button id="btn-save-diario" onclick="salvarD()" class="btn-main btn-blue">Gravar no Diário</button>
-                
+                <input type="hidden" id="edit-key">
+                <textarea id="cont" placeholder="Conteúdo da aula..." style="height:100px;"></textarea>
+                <button id="btn-save-diario" onclick="salvarD()" class="btn-main btn-blue">Gravar Diário</button>
                 <div id="historico-lista" class="timeline"></div>
             </div>
 
-            <!-- OUTRAS ABAS (Mantidas conforme original) -->
-            <div id="aba-rd" class="card hidden"><div id="lista-rel-diario"></div></div>
-            <div id="aba-r" class="card hidden"><h3>Recuperação</h3><div id="lista-rec"></div><button onclick="salvarRec()" class="btn-main btn-blue">Salvar Rec</button></div>
-            <div id="aba-l" class="card hidden"><div id="relatorio-lista"></div></div>
-            <div id="aba-c" class="card hidden"><h3>Ajustes</h3><div id="editor-alunos-lista"></div></div>
+            <!-- RELATÓRIO (NOTAS ACUMULADAS) -->
+            <div id="aba-rd" class="card hidden">
+                <h3>Resumo de Notas</h3>
+                <div id="lista-rel-diario"></div>
+            </div>
+
+            <!-- RECUPERAÇÃO -->
+            <div id="aba-r" class="card hidden">
+                <h3>Notas de Recuperação</h3>
+                <div id="lista-rec"></div>
+                <button onclick="salvarRec()" class="btn-main btn-blue">Salvar Recuperação</button>
+            </div>
+
+            <!-- FECHAMENTO -->
+            <div id="aba-l" class="card hidden">
+                <h3>Médias Finais</h3>
+                <div id="relatorio-lista"></div>
+                <button onclick="window.print()" class="print-btn btn-main">Imprimir Relatório</button>
+            </div>
+
+            <!-- AJUSTES (ALUNOS) -->
+            <div id="aba-c" class="card hidden">
+                <h3>Gerenciar Alunos</h3>
+                <textarea id="lista-alunos-input" placeholder="Um nome por linha..." style="height:200px;"></textarea>
+                <button onclick="salvarListaAlunos()" class="btn-main btn-blue">Atualizar Lista de Alunos</button>
+            </div>
         </div>
     </div>
 
@@ -112,144 +127,175 @@
         const db = firebase.database();
         const limparT = (t) => t.replace(/[.#$\[\]]/g, "").trim();
 
-        // Popular Menus (Mantido)
+        // Inicialização
+        function logar() { if(document.getElementById('pass').value === '2203') { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); popularMenus(); } }
+        
         function popularMenus() {
             const st = document.getElementById('turma');
-            const cats = [
+            st.innerHTML = '<option value="">Selecione a Turma...</option>';
+            
+            const categorias = [
                 { l: "ENSINO FUNDAMENTAL", t: ["9ºA Pensamento Comp", "9ºB Pensamento Comp", "9ºC Letramento Digital", "9ºD Letramento Digital", "9ºA História", "9ºB História", "9ºC História"] },
                 { l: "ENSINO MÉDIO", t: ["1ºB IFA", "1ºB Sociologia", "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia"] },
                 { l: "TÉCNICO (DG)", t: ["2ºA DG História", "2ºB DG História", "2ºA DG Filosofia", "2ºB DG Filosofia"] }
             ];
-            cats.forEach(c => {
-                const g = document.createElement('optgroup'); g.label = c.l;
+
+            categorias.forEach(c => {
+                const g = document.createElement('optgroup'); 
+                g.label = c.l;
                 c.t.forEach(nome => { g.appendChild(new Option(nome, nome)); });
                 st.add(g);
             });
         }
 
-        function logar() { if(document.getElementById('pass').value === '2203') { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); } }
-        
-        function aba(a) { 
-            document.querySelectorAll('.card').forEach(c => c.classList.add('hidden')); 
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
-            document.getElementById('aba-'+a).classList.remove('hidden'); 
-            event.currentTarget.classList.add('active'); 
-            if(a === 'd') carregarHistorico(); 
-            if(a === 'v') carregarAlunos();
+        function aba(a) {
+            document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('aba-'+a).classList.remove('hidden');
+            event.currentTarget.classList.add('active');
+            if(a === 'd') carregarHistorico();
+            if(a === 'rd') gerarRelatorioDiario();
+            if(a === 'l') gerarFechamento();
+            if(a === 'r') carregarRec();
+            if(a === 'c') carregarAlunosAjuste();
         }
 
-        // --- LÓGICA DO DIÁRIO (TIMELINE + EDIÇÃO) ---
-
-        async function salvarD() { 
-            const t = limparT(document.getElementById('turma').value); 
-            const b = document.getElementById('bimestre').value; 
-            const txt = document.getElementById('cont').value; 
-            const data = document.getElementById('data').value;
-            const editKey = document.getElementById('edit-key').value;
-
-            if(!t || !txt) return alert("Selecione a turma e digite o conteúdo");
-
-            // Se tiver editKey, sobrescreve o nó existente, senão cria um novo com Date.now()
-            const refKey = editKey || Date.now();
-            
-            await db.ref(`diario/${t}/${b}/${refKey}`).set({ conteudo: txt, data: data });
-            
-            // Limpar campos
-            document.getElementById('cont').value = "";
-            document.getElementById('edit-key').value = "";
-            document.getElementById('btn-save-diario').innerText = "Gravar no Diário";
-            
-            carregarHistorico(); 
-            alert("Diário atualizado!");
-        }
-
-        function carregarHistorico() { 
-            const t = limparT(document.getElementById('turma').value); 
-            const b = document.getElementById('bimestre').value; 
-            if(!t) return;
-
-            db.ref(`diario/${t}/${b}`).once('value', s => { 
-                let html = ''; 
-                const registros = s.val() || {};
-                
-                // Ordenar por data (mais recentes primeiro)
-                const keysOrdenadas = Object.keys(registros).sort((a,b) => {
-                    return new Date(registros[b].data) - new Date(registros[a].data);
-                });
-
-                keysOrdenadas.forEach(key => { 
-                    const item = registros[key];
-                    const dataBr = item.data.split('-').reverse().join('/');
-                    
-                    html += `
-                        <div class="timeline-item">
-                            <span class="timeline-date">${dataBr}</span>
-                            <div class="timeline-content" id="txt-${key}">${item.conteudo}</div>
-                            <div class="timeline-actions">
-                                <button class="btn-icon" onclick="prepararEdicao('${key}', '${item.data}')">✏️ Editar</button>
-                                <button class="btn-icon btn-del" onclick="excluirDiario('${key}')">🗑️ Apagar</button>
-                            </div>
-                        </div>
-                    `; 
-                });
-                document.getElementById('historico-lista').innerHTML = html || '<p style="font-size:0.8rem; color:gray">Nenhum registro nesta turma.</p>';
-            });
-        }
-
-        function prepararEdicao(key, dataOriginal) {
-            const conteudo = document.getElementById(`txt-${key}`).innerText;
-            document.getElementById('cont').value = conteudo;
-            document.getElementById('data').value = dataOriginal;
-            document.getElementById('edit-key').value = key;
-            document.getElementById('btn-save-diario').innerText = "Atualizar Registro";
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        async function excluirDiario(key) {
-            if(confirm("Deseja apagar este registro permanentemente?")) {
-                const t = limparT(document.getElementById('turma').value);
-                const b = document.getElementById('bimestre').value;
-                await db.ref(`diario/${t}/${b}/${key}`).remove();
-                carregarHistorico();
-            }
-        }
-
-        // Funções de Vistos e Outros (Mantidos do seu código original)
+        // --- LÓGICA DE VISTOS ---
         async function carregarAlunos() {
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
-            if(!t) return;
-            const [sH, sA, sV] = await Promise.all([db.ref(`headers/${t}/${b}`).once('value'), db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}/${d}`).once('value')]);
-            const h = sH.val() || {}; const alunos = sA.val() || []; const diaVistos = sV.val() || {};
-            let hH = ''; for(let i=1; i<=5; i++) hH += `<input type="text" id="h${i}" class="header-vistos-input" value="${h['h'+i] || 'Ativ. '+i}" onchange="salvarHeader()">`;
+            const t = limparT(document.getElementById('turma').value); if(!t) return;
+            const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
+            const [sA, sV, sH] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}/${d}`).once('value'), db.ref(`headers/${t}/${b}`).once('value')]);
+            
+            const alunos = sA.val() || []; const vistos = sV.val() || {}; const h = sH.val() || {};
+            
+            let hH = ''; for(let i=1; i<=5; i++) hH += `<input type="text" id="h${i}" value="${h['h'+i] || 'Ativ'+i}" onchange="salvarHeader()" style="font-size:0.7rem; padding:5px">`;
             document.getElementById('header-inputs').innerHTML = hH;
-            let html = '<table style="width:100%; border-collapse:collapse;">';
-            alunos.forEach((nome, idx) => {
-                html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0; font-size:0.85rem;">${nome}</td><td style="text-align:right">`;
-                for(let v=1; v<=5; v++){
-                    let valOrig = (diaVistos[idx] && diaVistos[idx][v] !== undefined) ? diaVistos[idx][v] : "";
-                    let valForm = valOrig !== "" ? parseFloat(valOrig).toFixed(1).replace('.', ',') : "";
-                    html += `<div class="visto-container"><input type="text" class="input-v ${valOrig!==""?"nota-lançada":""}" data-idx="${idx}" data-v="${v}" value="${valForm}" onblur="formatarAoSair(this)"></div>`;
+
+            let html = '<table>';
+            alunos.forEach((n, i) => {
+                html += `<tr><td>${n}</td><td style="display:flex; gap:3px">`;
+                for(let v=1; v<=5; v++) {
+                    let val = (vistos[i] && vistos[i][v]) ? vistos[i][v] : "";
+                    html += `<input type="text" class="nota-input" data-idx="${i}" data-v="${v}" value="${val}">`;
                 }
                 html += `</td></tr>`;
             });
             document.getElementById('lista-container').innerHTML = html + '</table>';
         }
 
-        function salvarVistos() { 
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
-            let dados = {}; document.querySelectorAll('.input-v').forEach(inp => { 
-                const i = inp.dataset.idx; const v = inp.dataset.v; let val = inp.value.replace(',', '.');
-                if(!dados[i]) dados[i] = {}; if(val !== "" && !isNaN(val)) dados[i][v] = parseFloat(val); 
-            }); 
-            db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Vistos salvos!'); carregarAlunos(); }); 
+        function salvarVistos() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            const d = document.getElementById('data').value;
+            let dados = {};
+            document.querySelectorAll('.nota-input').forEach(inp => {
+                const i = inp.dataset.idx; const v = inp.dataset.v;
+                if(!dados[i]) dados[i] = {};
+                if(inp.value !== "") dados[i][v] = inp.value.replace(',', '.');
+            });
+            db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => alert("Salvo!"));
         }
 
-        function salvarHeader() { const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; let h = {}; for(let i=1; i<=5; i++) h['h'+i] = document.getElementById('h'+i).value; db.ref(`headers/${t}/${b}`).set(h); }
-        function atualizarTudo() { carregarAlunos(); carregarHistorico(); }
-        function corrigirTexto(el) { let t = el.value.replace(/\s\s+/g, ' '); if(t.length > 0) t = t.charAt(0).toUpperCase() + t.slice(1); el.value = t; }
+        function salvarHeader() { 
+            const t = limparT(document.getElementById('turma').value); 
+            const b = document.getElementById('bimestre').value; 
+            let h = {}; 
+            for(let i=1; i<=5; i++) h['h'+i] = document.getElementById('h'+i).value; 
+            db.ref(`headers/${t}/${b}`).set(h); 
+        }
 
+        // --- LÓGICA DO FECHAMENTO & RELATÓRIOS ---
+        async function gerarRelatorioDiario() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            const [sA, sV] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}`).once('value')]);
+            const alunos = sA.val() || []; const todosVistos = sV.val() || {};
+            
+            let html = '<table><tr><th>Aluno</th><th>Total Vistos</th></tr>';
+            alunos.forEach((nome, i) => {
+                let soma = 0;
+                Object.values(todosVistos).forEach(dia => { if(dia[i]) Object.values(dia[i]).forEach(v => soma += parseFloat(v)); });
+                html += `<tr><td>${nome}</td><td><b>${soma.toFixed(1)}</b></td></tr>`;
+            });
+            document.getElementById('lista-rel-diario').innerHTML = html + '</table>';
+        }
+
+        async function gerarFechamento() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            const [sA, sV, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}`).once('value'), db.ref(`recuperacao/${t}/${b}`).once('value')]);
+            const alunos = sA.val() || []; const vistos = sV.val() || {}; const recs = sR.val() || {};
+
+            let html = '<table><tr><th>Estudante</th><th>Vistos</th><th>Rec</th><th>Final</th></tr>';
+            alunos.forEach((nome, i) => {
+                let somaV = 0;
+                Object.values(vistos).forEach(dia => { if(dia[i]) Object.values(dia[i]).forEach(v => somaV += parseFloat(v)); });
+                let nRec = recs[i] ? parseFloat(recs[i]) : 0;
+                let final = Math.max(somaV, nRec);
+                html += `<tr><td>${nome}</td><td>${somaV.toFixed(1)}</td><td>${nRec}</td><td><b>${final.toFixed(1)}</b></td></tr>`;
+            });
+            document.getElementById('relatorio-lista').innerHTML = html + '</table>';
+        }
+
+        // --- LÓGICA DE AJUSTES E REC ---
+        async function carregarAlunosAjuste() {
+            const t = limparT(document.getElementById('turma').value); if(!t) return;
+            const s = await db.ref('turmas/'+t).once('value');
+            document.getElementById('lista-alunos-input').value = (s.val() || []).join('\n');
+        }
+
+        function salvarListaAlunos() {
+            const t = limparT(document.getElementById('turma').value);
+            const lista = document.getElementById('lista-alunos-input').value.split('\n').filter(n => n.trim() !== "");
+            db.ref('turmas/'+t).set(lista).then(() => alert("Lista atualizada!"));
+        }
+
+        async function carregarRec() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            const [sA, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`recuperacao/${t}/${b}`).once('value')]);
+            const alunos = sA.val() || []; const recs = sR.val() || {};
+            let html = '';
+            alunos.forEach((n, i) => {
+                html += `<div style="margin-bottom:5px">${n} <input type="number" class="rec-inp" data-idx="${i}" value="${recs[i] || ''}" style="width:60px; float:right"></div>`;
+            });
+            document.getElementById('lista-rec').innerHTML = html;
+        }
+
+        function salvarRec() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            let dados = {};
+            document.querySelectorAll('.rec-inp').forEach(inp => { if(inp.value !== "") dados[inp.dataset.idx] = inp.value; });
+            db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => alert("Recuperação Salva!"));
+        }
+
+        // --- LÓGICA DO DIÁRIO ---
+        async function salvarD() { 
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; 
+            const txt = document.getElementById('cont').value; const data = document.getElementById('data').value;
+            const editKey = document.getElementById('edit-key').value || Date.now();
+            if(!t || !txt) return;
+            await db.ref(`diario/${t}/${b}/${editKey}`).set({ conteudo: txt, data: data });
+            document.getElementById('cont').value = ""; document.getElementById('edit-key').value = "";
+            carregarHistorico();
+        }
+
+        async function carregarHistorico() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            if(!t) return;
+            const s = await db.ref(`diario/${t}/${b}`).once('value');
+            const logs = s.val() || {};
+            let html = '';
+            Object.keys(logs).reverse().forEach(k => {
+                html += `<div class="timeline-item"><div class="timeline-date">${logs[k].data}</div><div>${logs[k].conteudo}</div></div>`;
+            });
+            document.getElementById('historico-lista').innerHTML = html;
+        }
+
+        function atualizarTudo() { carregarAlunos(); carregarHistorico(); }
         document.getElementById('data').valueAsDate = new Date();
-        popularMenus();
     </script>
 </body>
 </html>
