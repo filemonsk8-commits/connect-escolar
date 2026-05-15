@@ -51,8 +51,8 @@
         <nav class="tabs no-print">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
             <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
-            <button class="tab-btn" onclick="aba('rd')">RELAT. DIÁRIO</button>
-            <button class="tab-btn" onclick="aba('r')">RECUPER.</button>
+            <button class="tab-btn" onclick="aba('rd')">RELATÓRIO DIÁRIO</button>
+            <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
             <button class="tab-btn" onclick="aba('l')">FECHAMENTO</button>
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
         </nav>
@@ -130,8 +130,8 @@
             const st = document.getElementById('turma');
             const cats = [
                 { l: "ENSINO FUNDAMENTAL", t: ["9ºA Pensamento Comp", "9ºB Pensamento Comp", "9ºC Letramento Digital", "9ºD Letramento Digital", "9ºA História", "9ºB História", "9ºC História"] },
-                { l: "ENSINO MÉDIO", t: ["1ºB IFA", "1ºB História", "1ºB Sociologia", "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia"] },
-                { l: "TÉCNICO (DG)", t: ["1ºA DG História", "2ºA DG História", "2ºB DG História", "2ºA DG Filosofia", "2ºB DG Filosofia"] }
+                { l: "ENSINO MÉDIO", t: ["1ºB IFA", "1ºB Sociologia", "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia"] },
+                { l: "TÉCNICO (DG)", t: ["2ºA DG História", "2ºB DG História", "2ºA DG Filosofia", "2ºB DG Filosofia"] }
             ];
             cats.forEach(c => {
                 const g = document.createElement('optgroup'); g.label = c.l;
