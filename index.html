@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063176.png">
+    <link class="no-print" rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063176.png">
     
     <!-- Manifesto para Instalação -->
     <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNrYWJsZSIKICAgIH0KICBdCn0=">
@@ -40,7 +40,7 @@
         .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .report-table td, .report-table th { padding: 10px; border: 1px solid #ddd; font-size: 0.85rem; text-align: left; }
         
-        /* Estilos Exclusivos da Timeline do Diário */
+        /* Estilos da Linha do Tempo (Timeline) na Aba Diário */
         .timeline { position: relative; border-left: 3px solid #cbd5e1; margin: 20px 5px 10px 15px; padding: 0; list-style: none; }
         .timeline-item { position: relative; margin-bottom: 20px; padding-left: 20px; }
         .timeline-item::before { content: ""; position: absolute; left: -27px; top: 4px; width: 11px; height: 11px; background-color: var(--accent); border: 3px solid white; border-radius: 50%; box-shadow: 0 0 0 2px #3b82f640; }
@@ -92,6 +92,7 @@
         </header>
 
         <div class="container">
+            <!-- ABA VISTOS -->
             <div id="aba-v" class="card">
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
                 <div id="lista-container">Escolha a turma acima...</div>
@@ -99,7 +100,7 @@
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
 
-            <!-- MODIFICADA APENAS A ABA-D PARA INCLUIR CONTROLADOR DE EDIÇÃO E TIMELINE -->
+            <!-- ABA DIÁRIO (Mecanismo Timeline Ativado) -->
             <div id="aba-d" class="card hidden">
                 <div id="status-edicao" class="indicator-edit">Editando diário antigo...</div>
                 <input type="hidden" id="diario-id-atual" value="">
@@ -110,20 +111,26 @@
                 <div id="historico-lista" class="timeline"></div>
             </div>
 
+            <!-- ABA RELATÓRIO DIÁRIO -->
             <div id="aba-rd" class="card hidden">
                 <div id="lista-rel-diario"></div>
                 <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir Diário</button>
-                <div id="aba-r" class="card hidden">
+            </div>
+
+            <!-- ABA RECUPERAÇÃO -->
+            <div id="aba-r" class="card hidden">
                 <h3>Recuperação</h3>
                 <div id="lista-rec"></div>
                 <button onclick="salvarRec()" class="btn-main btn-blue no-print">Salvar Recuperação</button>
             </div>
             
+            <!-- ABA FECHAMENTO -->
             <div id="aba-l" class="card hidden">
                 <div id="relatorio-lista"></div>
                 <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir Relatório Final</button>
             </div>
 
+            <!-- ABA AJUSTES -->
             <div id="aba-c" class="card hidden">
                 <h3>Ajustes de Turma</h3>
                 <div id="editor-alunos-lista"></div>
@@ -288,7 +295,6 @@
             
             if(!txt.trim()) { alert("Digite o conteúdo do diário."); return; }
 
-            // Se possuir idExistente, sobrescreve o mesmo nó. Caso contrário, gera um timestamp novo.
             const idFinal = idExistente ? idExistente : Date.now();
 
             await db.ref(`diario/${t}/${b}/${idFinal}`).set({ conteudo: txt, data: d });
@@ -301,7 +307,6 @@
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; if(!t) return;
             db.ref(`diario/${t}/${b}`).once('value', s => { 
                 let h = ''; const r = s.val() || {};
-                // Ordenação cronológica reversa (mais recentes no topo)
                 Object.keys(r).sort().reverse().forEach(k => { 
                     const dataFormatada = r[k].data.split('-').reverse().join('/');
                     h += `
