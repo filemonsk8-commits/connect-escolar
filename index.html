@@ -12,7 +12,7 @@
     <link class="no-print" rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063176.png">
     
     <!-- Manifesto para Instalação -->
-    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiYTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXJrYWJsZSIKICAgIH0KICBdCn0=">
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXJrYWJsZSIKICAgIH0KICBdCn0=">
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -285,18 +285,7 @@
             });
         }
 
-        function setarData(d) { document.getElementById('data').value = d; }
-
-        // --- SCRIPT AUTOMÁTICO DO TECLADO NUMÉRICO ---
-        // Monitora o DOM em tempo real e aplica a propriedade 'inputmode="decimal"' nos campos de notas
-        const observarInputsNumericos = new MutationObserver(() => {
-            document.querySelectorAll('.input-v, .input-rec').forEach(input => {
-                if (!input.hasAttribute('inputmode')) {
-                    input.setAttribute('inputmode', 'decimal');
-                }
-            });
-        });
-        observarInputsNumericos.observe(document.body, { childList: true, subtree: true });
+        function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); }
     </script>
 </body>
 </html>
