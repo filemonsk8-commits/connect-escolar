@@ -40,6 +40,9 @@
         .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .report-table td, .report-table th { padding: 10px; border: 1px solid #ddd; font-size: 0.85rem; text-align: left; }
         
+        /* Ajuste do histórico de vistos */
+        .hist-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
+
         /* Estilos da Linha do Tempo (Timeline) na Aba Diário */
         .timeline { position: relative; border-left: 3px solid #cbd5e1; margin: 20px 5px 10px 15px; padding: 0; list-style: none; }
         .timeline-item { position: relative; margin-bottom: 20px; padding-left: 20px; }
@@ -190,7 +193,6 @@
                 for(let v=1; v<=5; v++){
                     let valOrig = (diaVistos[idx] && diaVistos[idx][v] !== undefined) ? diaVistos[idx][v] : "";
                     let valForm = valOrig !== "" ? parseFloat(valOrig).toFixed(1).replace('.', ',') : "";
-                    // Adicionado o inputmode="decimal" para o teclado perfeito
                     html += `<div class="visto-container"><input type="text" inputmode="decimal" class="input-v ${valOrig!==""?"nota-lançada":""}" data-idx="${idx}" data-v="${v}" value="${valForm}" onblur="formatarAoSair(this)"></div>`;
                 }
                 html += `</td></tr>`;
@@ -221,7 +223,6 @@
             let h = '<table class="report-table"><tbody>';
             alunos.forEach((nome, idx) => {
                 let nota = notasRec[idx] !== undefined ? notasRec[idx].toFixed(1).replace('.', ',') : "";
-                // Adicionado o inputmode="decimal" também na recuperação
                 h += `<tr><td>${nome}</td><td><input type="text" inputmode="decimal" class="input-rec" data-idx="${idx}" value="${nota}"></td></tr>`;
             });
             document.getElementById('lista-rec').innerHTML = h + '</tbody></table>';
@@ -281,10 +282,25 @@
             db.ref(`vistos/${t}/${b}`).once('value', s => {
                 const d = s.val() || {}; let h = '';
                 Object.keys(d).sort().reverse().forEach(data => {
-                    h += `<div class="hist-item" style="display:flex; justify-content:space-between"><span>📅 ${data.split('-').reverse().join('/')}</span><button onclick="setarData('${data}')" class="btn-edit-small" style="background:var(--accent)">Abrir</button></div>`;
+                    h += `<div class="hist-item">
+                        <span>📅 ${data.split('-').reverse().join('/')}</span>
+                        <div style="display:flex; gap:5px;">
+                            <button onclick="setarData('${data}')" class="btn-edit-small" style="background:var(--accent)">Abrir</button>
+                            <button onclick="deletarVistosDia('${data}')" class="btn-edit-small" style="background:var(--danger)">×</button>
+                        </div>
+                    </div>`;
                 });
                 document.getElementById('hist-vistos-lista').innerHTML = h;
             });
+        }
+
+        async function deletarVistosDia(data) {
+            if(confirm(`Deseja realmente apagar TODOS os vistos do dia ${data.split('-').reverse().join('/')}?`)) {
+                const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+                await db.ref(`vistos/${t}/${b}/${data}`).remove();
+                carregarAlunos();
+                alert("Vistos removidos com sucesso!");
+            }
         }
 
         function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); }
