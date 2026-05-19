@@ -57,10 +57,26 @@
         .btn-tl-del { background: var(--danger); }
         .indicator-edit { display: none; background: #fef3c7; border: 1px solid #f59e0b; color: #d97706; padding: 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; margin-bottom: 8px; text-align: center; }
 
-        @media print { .no-print, nav, header, .btn-main { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
+        /* Estilos da Nova Capa de Entrada */
+        #welcome-cover { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 20px; box-sizing: border-box; transition: opacity 0.5s ease, visibility 0.5s ease; }
+        .cover-content { max-width: 450px; animation: fadeInUp 0.8s ease; }
+        .cover-logo { width: 90px; height: 90px; margin-bottom: 20px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+        .cover-title { font-size: 2.2rem; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -0.5px; background: linear-gradient(to right, #ffffff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .cover-subtitle { font-size: 1.1rem; color: #3b82f6; font-weight: 600; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px; }
+        .cover-teacher { font-size: 0.95rem; color: #94a3b8; margin: 0 0 40px 0; font-style: italic; }
+        .btn-cover { background: var(--accent); color: white; border: none; padding: 16px 32px; font-size: 1rem; font-weight: 700; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4); transition: transform 0.2s; width: 100%; max-width: 250px; }
+        .btn-cover:active { transform: scale(0.98); }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media print { .no-print, nav, header, .btn-main, #welcome-cover { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
     </style>
 </head>
 <body>
+    <!-- TELA DE LOGIN -->
     <div id="login-screen">
         <div class="login-box">
             <h2>Connect Escolar v3.9.18</h2>
@@ -69,6 +85,18 @@
         </div>
     </div>
 
+    <!-- NOVA TELA DE CAPA (Aparece após o Login) -->
+    <div id="welcome-cover" class="hidden">
+        <div class="cover-content">
+            <img class="cover-logo" src="https://cdn-icons-png.flaticon.com/512/3063/3063176.png" alt="Logo">
+            <h1 class="cover-title">Connect Escolar</h1>
+            <div class="cover-subtitle">Ambiente de Gestão Integrada</div>
+            <div class="cover-teacher">Desenvolvido pelo Prof. Eduardo</div>
+            <button onclick="entrarNoPainel()" class="btn-cover">Acessar Sistema</button>
+        </div>
+    </div>
+
+    <!-- PAINEL DO APLICATIVO -->
     <div id="app" class="hidden">
         <nav class="tabs no-print">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
@@ -103,7 +131,7 @@
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
 
-            <!-- ABA DIÁRIO (Mecanismo Timeline Ativado) -->
+            <!-- ABA DIÁRIO -->
             <div id="aba-d" class="card hidden">
                 <div id="status-edicao" class="indicator-edit">Editando diário antigo...</div>
                 <input type="hidden" id="diario-id-atual" value="">
@@ -164,7 +192,24 @@
             });
         }
 
-        function logar() { if(document.getElementById('pass').value === '2203') { document.getElementById('login-screen').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); } }
+        /* Alterado para disparar a Capa após a autenticação bem-sucedida */
+        function logar() { 
+            if(document.getElementById('pass').value === '2203') { 
+                document.getElementById('login-screen').classList.add('hidden'); 
+                document.getElementById('welcome-cover').classList.remove('hidden'); 
+            } 
+        }
+
+        /* Nova função para transicionar da Capa para o App Principal */
+        function entrarNoPainel() {
+            const cover = document.getElementById('welcome-cover');
+            cover.style.opacity = '0';
+            cover.style.visibility = 'hidden';
+            setTimeout(() => {
+                cover.classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+            }, 500);
+        }
         
         function aba(a) { 
             document.querySelectorAll('.card').forEach(c => c.classList.add('hidden')); 
@@ -343,6 +388,17 @@
                 }); 
                 document.getElementById('historico-lista').innerHTML = h || '<p style="font-size:0.85rem;color:#64748b;padding-left:10px;">Nenhum diário registrado nesta turma.</p>';
             });
+        }
+
+        function SrinagarEdicaoD(id, dataOriginal, conteudoOriginal) {
+            document.getElementById('diario-id-atual').value = id;
+            document.getElementById('data').value = dataOriginal;
+            document.getElementById('cont').value = conteudoOriginal;
+            
+            document.getElementById('status-edicao').style.display = 'block';
+            document.getElementById('btn-cancelar-diario').classList.remove('hidden');
+            document.getElementById('btn-salvar-diario').textContent = 'Atualizar Registro';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function prepararEdicaoD(id, dataOriginal, conteudoOriginal) {
