@@ -12,15 +12,23 @@
     <link class="no-print" rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063176.png">
     
     <!-- Manifesto para Instalação -->
-    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNavmJsZSIKICAgIH0KICBdCn0=">
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiUzEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNavmJsZSIKICAgIH0KICBdCn0=">
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; --danger: #ef4444; --success: #22c55e; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
-        #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: #0f172a; }
-        .login-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 350px; }
+        
+        /* Ajuste do Login para Suportar Transição Fluida */
+        #login-screen { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh; 
+            display: flex; justify-content: center; align-items: center; 
+            background: #0f172a; z-index: 300;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        .login-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        
         nav.tabs { display: flex; background: var(--primary); padding: 5px; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
         .tab-btn { flex: 0 0 auto; padding: 12px 15px; border: none; background: transparent; color: #94a3b8; font-size: 0.7rem; font-weight: bold; border-radius: 8px; white-space: nowrap; cursor: pointer; }
         .tab-btn.active { background: rgba(255,255,255,0.1); color: white; }
@@ -40,7 +48,6 @@
         .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .report-table td, .report-table th { padding: 10px; border: 1px solid #ddd; font-size: 0.85rem; text-align: left; }
         
-        /* Ajuste do histórico de vistos */
         .hist-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
 
         /* Estilos da Linha do Tempo (Timeline) na Aba Diário */
@@ -57,7 +64,7 @@
         .btn-tl-del { background: var(--danger); }
         .indicator-edit { display: none; background: #fef3c7; border: 1px solid #f59e0b; color: #d97706; padding: 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; margin-bottom: 8px; text-align: center; }
 
-        /* Estilos da Nova Capa de Entrada */
+        /* Estilos da Capa de Entrada */
         #welcome-cover { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 20px; box-sizing: border-box; transition: opacity 0.5s ease, visibility 0.5s ease; }
         .cover-content { max-width: 450px; animation: fadeInUp 0.8s ease; }
         .cover-logo { width: 90px; height: 90px; margin-bottom: 20px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
@@ -72,11 +79,11 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        @media print { .no-print, nav, header, .btn-main, #welcome-cover { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
+        @media print { .no-print, nav, header, .btn-main, #welcome-cover, #login-screen { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
     </style>
 </head>
 <body>
-    <!-- TELA DE LOGIN -->
+    <!-- TELA DE LOGIN (Com suporte a Fade-Out) -->
     <div id="login-screen">
         <div class="login-box">
             <h2>Connect Escolar v3.9.18</h2>
@@ -85,12 +92,12 @@
         </div>
     </div>
 
-    <!-- NOVA TELA DE CAPA (Aparece após o Login) -->
+    <!-- TELA DE CAPA -->
     <div id="welcome-cover" class="hidden">
         <div class="cover-content">
             <img class="cover-logo" src="https://cdn-icons-png.flaticon.com/512/3063/3063176.png" alt="Logo">
             <h1 class="cover-title">Connect Escolar</h1>
-            <div class="cover-subtitle">Ambiente de Gestão</div>
+            <div class="cover-subtitle">Ambiente de Gestão Integrada</div>
             <div class="cover-teacher">Desenvolvido pelo Prof. Eduardo</div>
             <button onclick="entrarNoPainel()" class="btn-cover">Acessar Sistema</button>
         </div>
@@ -192,15 +199,24 @@
             });
         }
 
-        /* Alterado para disparar a Capa após a autenticação bem-sucedida */
+        /* Modificado: Efeito Fade-out suave na Tela de Login antes de abrir a Capa */
         function logar() { 
             if(document.getElementById('pass').value === '2203') { 
-                document.getElementById('login-screen').classList.add('hidden'); 
-                document.getElementById('welcome-cover').classList.remove('hidden'); 
-            } 
+                const loginScreen = document.getElementById('login-screen');
+                loginScreen.style.opacity = '0';
+                loginScreen.style.visibility = 'hidden';
+                
+                // Exibe a Capa logo após a transição terminar
+                setTimeout(() => {
+                    loginScreen.classList.add('hidden'); 
+                    document.getElementById('welcome-cover').classList.remove('hidden'); 
+                }, 500);
+            } else {
+                alert("Senha incorreta!");
+            }
         }
 
-        /* Nova função para transicionar da Capa para o App Principal */
+        /* Transição suave da Capa para o App Principal */
         function entrarNoPainel() {
             const cover = document.getElementById('welcome-cover');
             cover.style.opacity = '0';
@@ -350,14 +366,13 @@
 
         function setarData(d) { document.getElementById('data').value = d; carregarAlunos(); }
 
-        // --- EXCLUSIVO: COMPORTAMENTO DE SALVAMENTO, EDIÇÃO E EXCLUSÃO NA TIMELINE DO DIÁRIO ---
+        // --- COMPORTAMENTO DO DIÁRIO ---
         async function salvarD() { 
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; 
             const txt = document.getElementById('cont').value; const d = document.getElementById('data').value;
             const idExistente = document.getElementById('diario-id-atual').value;
             
             if(!txt.trim()) { alert("Digite o conteúdo do diário."); return; }
-
             const idFinal = idExistente ? idExistente : Date.now();
 
             await db.ref(`diario/${t}/${b}/${idFinal}`).set({ conteudo: txt, data: d });
@@ -388,17 +403,6 @@
                 }); 
                 document.getElementById('historico-lista').innerHTML = h || '<p style="font-size:0.85rem;color:#64748b;padding-left:10px;">Nenhum diário registrado nesta turma.</p>';
             });
-        }
-
-        function SrinagarEdicaoD(id, dataOriginal, conteudoOriginal) {
-            document.getElementById('diario-id-atual').value = id;
-            document.getElementById('data').value = dataOriginal;
-            document.getElementById('cont').value = conteudoOriginal;
-            
-            document.getElementById('status-edicao').style.display = 'block';
-            document.getElementById('btn-cancelar-diario').classList.remove('hidden');
-            document.getElementById('btn-salvar-diario').textContent = 'Atualizar Registro';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function prepararEdicaoD(id, dataOriginal, conteudoOriginal) {
