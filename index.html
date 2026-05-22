@@ -74,11 +74,6 @@
         .btn-cover { background: var(--accent); color: white; border: none; padding: 16px 32px; font-size: 1rem; font-weight: 700; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4); transition: transform 0.2s; width: 100%; max-width: 250px; }
         .btn-cover:active { transform: scale(0.98); }
 
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
         @media print { .no-print, nav, header, .btn-main, #welcome-cover, #login-screen { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
     </style>
 </head>
@@ -310,15 +305,49 @@
             document.getElementById('relatorio-lista').innerHTML = h + '</tbody></table>';
         }
 
+        /* Modificado: Interface da aba Ajustes agora exibe botões de movimentação posicional */
         async function renderizarEditorAlunos() {
             const t = limparT(document.getElementById('turma').value); if(!t) return;
             const s = await db.ref('turmas/'+t).once('value'); const alunos = s.val() || [];
             let html = '<div style="max-height:300px; overflow-y:auto; margin-bottom:10px">';
             alunos.forEach((nome, idx) => {
-                html += `<div style="display:flex; gap:5px; margin-bottom:5px"><input type="text" class="edit-aluno-nome" value="${nome}" style="flex:1"><button onclick="removerAluno(${idx})" style="background:var(--danger);color:white;border:none;border-radius:8px;width:35px">×</button></div>`;
+                html += `
+                <div style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
+                    <input type="text" class="edit-aluno-nome" value="${nome}" style="flex:1">
+                    <button onclick="moverAluno(${idx}, -1)" style="background:#64748b; color:white; border:none; border-radius:8px; width:30px; height:38px; cursor:pointer; font-size:0.75rem;">▲</button>
+                    <button onclick="moverAluno(${idx}, 1)" style="background:#64748b; color:white; border:none; border-radius:8px; width:30px; height:38px; cursor:pointer; font-size:0.75rem;">▼</button>
+                    <button onclick="removerAluno(${idx})" style="background:var(--danger); color:white; border:none; border-radius:8px; width:35px; height:38px; cursor:pointer;">×</button>
+                </div>`;
             });
-            html += `</div><div style="display:flex;gap:5px"><input type="text" id="novo-aluno-nome" placeholder="Novo aluno..."><button onclick="adicionarUmAluno()" style="background:var(--success);color:white;border:none;padding:10px;border-radius:8px">Add</button></div><button onclick="salvarEdicaoNomes()" class="btn-main btn-blue">Salvar Nomes</button>`;
+            html += `</div>
+            <div style="display:flex; gap:5px">
+                <input type="text" id="novo-aluno-nome" placeholder="Novo aluno...">
+                <button onclick="adicionarUmAluno()" style="background:var(--success); color:white; border:none; padding:10px; border-radius:8px; cursor:pointer;">Add</button>
+            </div>
+            <button onclick="salvarEdicaoNomes()" class="btn-main btn-blue">Salvar Nomes</button>`;
             document.getElementById('editor-alunos-lista').innerHTML = html;
+        }
+
+        /* Adicionado: Manipulação posicional mantendo os textos alterados em tela */
+        async function moverAluno(idx, direcao) {
+            const t = limparT(document.getElementById('turma').value);
+            const s = await db.ref('turmas/'+t).once('value');
+            let lista = s.val() || [];
+            
+            const novoIdx = idx + direcao;
+            if (novoIdx < 0 || novoIdx >= lista.length) return;
+            
+            // Absorve dados que foram modificados em tela mas ainda não foram salvos globalmente
+            let nomesAtuais = [];
+            document.querySelectorAll('.edit-aluno-nome').forEach(inp => nomesAtuais.push(inp.value.trim()));
+            
+            // Permuta os valores de índice do vetor
+            const temp = nomesAtuais[idx];
+            nomesAtuais[idx] = nomesAtuais[novoIdx];
+            nomesAtuais[novoIdx] = temp;
+            
+            await db.ref('turmas/'+t).set(nomesAtuais);
+            renderizarEditorAlunos();
         }
 
         async function adicionarUmAluno() {
