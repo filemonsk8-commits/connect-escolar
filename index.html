@@ -305,18 +305,20 @@
             document.getElementById('relatorio-lista').innerHTML = h + '</tbody></table>';
         }
 
-        /* Modificado: Interface da aba Ajustes agora exibe botões de movimentação posicional */
+        /* Modificado: Interface da aba Ajustes agora com botões adicionais para pular para as extremidades (Topo e Fim) */
         async function renderizarEditorAlunos() {
             const t = limparT(document.getElementById('turma').value); if(!t) return;
             const s = await db.ref('turmas/'+t).once('value'); const alunos = s.val() || [];
             let html = '<div style="max-height:300px; overflow-y:auto; margin-bottom:10px">';
             alunos.forEach((nome, idx) => {
                 html += `
-                <div style="display:flex; gap:5px; margin-bottom:5px; align-items:center;">
+                <div style="display:flex; gap:4px; margin-bottom:5px; align-items:center;">
                     <input type="text" class="edit-aluno-nome" value="${nome}" style="flex:1">
-                    <button onclick="moverAluno(${idx}, -1)" style="background:#64748b; color:white; border:none; border-radius:8px; width:30px; height:38px; cursor:pointer; font-size:0.75rem;">▲</button>
-                    <button onclick="moverAluno(${idx}, 1)" style="background:#64748b; color:white; border:none; border-radius:8px; width:30px; height:38px; cursor:pointer; font-size:0.75rem;">▼</button>
-                    <button onclick="removerAluno(${idx})" style="background:var(--danger); color:white; border:none; border-radius:8px; width:35px; height:38px; cursor:pointer;">×</button>
+                    <button onclick="moverAlunoExtremo(${idx}, 'topo')" title="Mover para o Primeiro Lugar" style="background:#475569; color:white; border:none; border-radius:8px; width:28px; height:38px; cursor:pointer; font-size:0.75rem;">⤒</button>
+                    <button onclick="moverAluno(${idx}, -1)" title="Subir um nível" style="background:#64748b; color:white; border:none; border-radius:8px; width:28px; height:38px; cursor:pointer; font-size:0.75rem;">▲</button>
+                    <button onclick="moverAluno(${idx}, 1)" title="Descer um nível" style="background:#64748b; color:white; border:none; border-radius:8px; width:28px; height:38px; cursor:pointer; font-size:0.75rem;">▼</button>
+                    <button onclick="moverAlunoExtremo(${idx}, 'fim')" title="Mover para o Último Lugar" style="background:#475569; color:white; border:none; border-radius:8px; width:28px; height:38px; cursor:pointer; font-size:0.75rem;">⤓</button>
+                    <button onclick="removerAluno(${idx})" title="Remover Aluno" style="background:var(--danger); color:white; border:none; border-radius:8px; width:32px; height:38px; cursor:pointer;">×</button>
                 </div>`;
             });
             html += `</div>
@@ -328,23 +330,39 @@
             document.getElementById('editor-alunos-lista').innerHTML = html;
         }
 
-        /* Adicionado: Manipulação posicional mantendo os textos alterados em tela */
+        /* Modificado: Movimentação passo a passo (capturando mudanças de texto na tela) */
         async function moverAluno(idx, direcao) {
             const t = limparT(document.getElementById('turma').value);
-            const s = await db.ref('turmas/'+t).once('value');
-            let lista = s.val() || [];
-            
-            const novoIdx = idx + direcao;
-            if (novoIdx < 0 || novoIdx >= lista.length) return;
-            
-            // Absorve dados que foram modificados em tela mas ainda não foram salvos globalmente
             let nomesAtuais = [];
             document.querySelectorAll('.edit-aluno-nome').forEach(inp => nomesAtuais.push(inp.value.trim()));
             
-            // Permuta os valores de índice do vetor
+            const novoIdx = idx + direcao;
+            if (novoIdx < 0 || novoIdx >= nomesAtuais.length) return;
+            
             const temp = nomesAtuais[idx];
             nomesAtuais[idx] = nomesAtuais[novoIdx];
             nomesAtuais[novoIdx] = temp;
+            
+            await db.ref('turmas/'+t).set(nomesAtuais);
+            renderizarEditorAlunos();
+        }
+
+        /* Adicionado: Move o aluno diretamente para o topo (índice 0) ou para o fim (último índice) */
+        async function moverAlunoExtremo(idx, destino) {
+            const t = limparT(document.getElementById('turma').value);
+            let nomesAtuais = [];
+            document.querySelectorAll('.edit-aluno-nome').forEach(inp => nomesAtuais.push(inp.value.trim()));
+            
+            if (nomesAtuais.length <= 1) return;
+            
+            // Remove o aluno da posição atual
+            const [alunoSelecionado] = nomesAtuais.splice(idx, 1);
+            
+            if (destino === 'topo') {
+                nomesAtuais.unshift(alunoSelecionado); // Insere no início
+            } else if (destino === 'fim') {
+                nomesAtuais.push(alunoSelecionado); // Insere no fim
+            }
             
             await db.ref('turmas/'+t).set(nomesAtuais);
             renderizarEditorAlunos();
