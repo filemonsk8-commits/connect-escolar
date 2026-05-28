@@ -12,7 +12,7 @@
     <link class="no-print" rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063176.png">
     
     <!-- Manifesto para Instalação -->
-    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiUzEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNavmJsZSIKICAgIH0KICBdCn0=">
+    <link class="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiUzEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNavmJsZSIKICAgIH0KICBdCn0=">
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -43,8 +43,12 @@
         .btn-edit-small { border: none; padding: 4px 8px; border-radius: 4px; color: white; font-size: 0.7rem; cursor: pointer; }
         .header-vistos-input { min-width: 130px; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; border: 1px solid #cbd5e1 !important; text-align: center; margin-right: 5px; }
         .visto-container { display: inline-flex; flex-direction: column; align-items: center; margin-left: 6px; width: 40px; }
+        
+        /* Modificado para aceitar placeholders vermelhos e customizados */
         .input-v, .input-rec { width: 38px; height: 30px; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; padding: 2px; }
+        .input-v::placeholder { color: var(--danger); opacity: 0.7; font-weight: bold; }
         .nota-lançada { color: var(--danger) !important; font-weight: bold; border-color: var(--danger) !important; }
+        
         .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .report-table td, .report-table th { padding: 10px; border: 1px solid #ddd; font-size: 0.85rem; text-align: left; }
         
@@ -137,7 +141,7 @@
             <div id="aba-d" class="card hidden">
                 <div id="status-edicao" class="indicator-edit">Editando diário antigo...</div>
                 <input type="hidden" id="diario-id-atual" value="">
-                <textarea id="cont" onblur="corrigirTexto(this)" placeholder="Conteúdo da aula..." style="height:120px;"></textarea>
+                <textarea id="cont" placeholder="Conteúdo da aula..." style="height:120px;"></textarea>
                 <button id="btn-salvar-diario" onclick="salvarD()" class="btn-main btn-blue">Gravar Diário</button>
                 <button id="btn-cancelar-diario" onclick="cancelarEdicaoD()" class="btn-main no-print hidden" style="background:#64748b; color:white;">Cancelar Edição</button>
                 
@@ -194,16 +198,13 @@
             });
         }
 
-        // Executa a atualização completa ao mudar turma ou bimestre
         function atualizarTudo() {
             carregarAlunos();
         }
 
-        // Configuração inicial ao abrir a página
         document.addEventListener("DOMContentLoaded", () => {
             popularMenus();
             
-            // Garante o preenchimento correto da data sem conflito regional
             const hoje = new Date();
             const ano = hoje.getFullYear();
             const mes = String(hoje.getMonth() + 1).padStart(2, '0');
@@ -211,7 +212,6 @@
             document.getElementById('data').value = `${ano}-${mes}-${dia}`;
         });
 
-        /* Transição suave da Capa para o Login */
         function entrarNoLogin() {
             const cover = document.getElementById('welcome-cover');
             cover.style.opacity = '0';
@@ -222,7 +222,6 @@
             }, 500);
         }
 
-        /* Transição suave do Login para o Painel Principal */
         function logar() { 
             if(document.getElementById('pass').value === '2203') { 
                 const loginScreen = document.getElementById('login-screen');
@@ -255,17 +254,59 @@
         async function carregarAlunos() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
-            const [sH, sA, sV] = await Promise.all([db.ref(`headers/${t}/${b}`).once('value'), db.ref('turmas/'+t).once('value'), db.ref(`vistos/${t}/${b}/${d}`).once('value')]);
-            const h = sH.val() || {}; const alunos = sA.val() || []; const diaVistos = sV.val() || {};
+
+            // Busca todo o histórico do bimestre para preencher os quadradinhos anteriores
+            const [sH, sA, sV] = await Promise.all([
+                db.ref(`headers/${t}/${b}`).once('value'), 
+                db.ref('turmas/'+t).once('value'), 
+                db.ref(`vistos/${t}/${b}`).once('value')
+            ]);
+            
+            const h = sH.val() || {}; 
+            const alunos = sA.val() || []; 
+            const todosVistosBimestre = sV.val() || {};
+            const diaVistos = todosVistosBimestre[d] || {};
+
             let hH = ''; for(let i=1; i<=5; i++) hH += `<input type="text" id="h${i}" class="header-vistos-input" value="${h['h'+i] || 'Ativ. '+i}" onchange="salvarHeader()">`;
             document.getElementById('header-inputs').innerHTML = hH;
+            
             let html = '<table style="width:100%; border-collapse:collapse;">';
             alunos.forEach((nome, idx) => {
                 html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0; font-size:0.85rem;">${nome}</td><td style="text-align:right">`;
+                
                 for(let v=1; v<=5; v++){
                     let valOrig = (diaVistos[idx] && diaVistos[idx][v] !== undefined) ? diaVistos[idx][v] : "";
                     let valForm = valOrig !== "" ? parseFloat(valOrig).toFixed(1).replace('.', ',') : "";
-                    html += `<div class="visto-container"><input type="text" inputmode="decimal" class="input-v ${valOrig!==""?"nota-lançada":""}" data-idx="${idx}" data-v="${v}" value="${valForm}" onblur="formatarAoSair(this)"></div>`;
+                    
+                    let placeholderNota = "";
+                    let estiloInlineeo = "";
+                    
+                    // Procura se o aluno já tem nota nessa atividade em outra data do mesmo bimestre
+                    if (valForm === "") {
+                        Object.keys(todosVistosBimestre).forEach(dataChave => {
+                            if (dataChave !== d && todosVistosBimestre[dataChave][idx] && todosVistosBimestre[dataChave][idx][v] !== undefined) {
+                                let notaEncontrada = todosVistosBimestre[dataChave][idx][v];
+                                placeholderNota = parseFloat(notaEncontrada).toFixed(1).replace('.', ',');
+                            }
+                        });
+                    }
+
+                    // Se encontrou histórico em outra data, aplica fundo cinza claro e deixa o texto vermelho
+                    if (placeholderNota !== "") {
+                        estiloInlineeo = `style="background: #f1f5f9; color: var(--danger); font-weight: bold;" title="Já possui visto com nota ${placeholderNota} em outro dia"`;
+                    }
+
+                    html += `<div class="visto-container">
+                                <input type="text" 
+                                       inputmode="decimal" 
+                                       class="input-v ${valOrig!==""?"nota-lançada":""}" 
+                                       data-idx="${idx}" 
+                                       data-v="${v}" 
+                                       value="${valForm}" 
+                                       placeholder="${placeholderNota}" 
+                                       ${estiloInlineeo}
+                                       onblur="formatarAoSair(this)">
+                             </div>`;
                 }
                 html += `</td></tr>`;
             });
@@ -275,8 +316,19 @@
 
         function formatarAoSair(inp) {
             let v = inp.value.replace(',', '.');
-            if(v !== "" && !isNaN(v)) { inp.value = parseFloat(v).toFixed(1).replace('.', ','); inp.classList.add('nota-lançada'); }
-            else { inp.classList.remove('nota-lançada'); }
+            if(v !== "" && !isNaN(v)) { 
+                inp.value = parseFloat(v).toFixed(1).replace('.', ','); 
+                inp.classList.add('nota-lançada'); 
+                inp.style.background = ""; 
+                inp.style.color = "";
+            }
+            else { 
+                inp.classList.remove('nota-lançada'); 
+                if(inp.placeholder !== "") {
+                    inp.style.background = "#f1f5f9";
+                    inp.style.color = "var(--danger)";
+                }
+            }
         }
 
         function salvarVistos() { 
@@ -286,6 +338,14 @@
                 if(!dados[i]) dados[i] = {}; if(val !== "" && !isNaN(val)) dados[i][v] = parseFloat(val); 
             }); 
             db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Salvo!'); carregarAlunos(); }); 
+        }
+
+        function salvarHeader() {
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            if(!t) return;
+            let dados = {};
+            for(let i=1; i<=5; i++) { dados['h'+i] = document.getElementById('h'+i).value; }
+            db.ref(`headers/${t}/${b}`).set(dados);
         }
 
         async function carregarRec() {
@@ -500,17 +560,6 @@
                 html += `<div class="card"><b>📅 ${data[k].data.split('-').reverse().join('/')}</b><p>${data[k].conteudo}</p></div>`; 
             });
             document.getElementById('lista-rel-diario').innerHTML = html;
-        }
-
-        async function importar() {
-            const t = limparT(document.getElementById('turma').value);
-            const listaTxt = document.getElementById('imp').value.trim();
-            if(!listaTxt || !t) return;
-            const novosNomes = listaTxt.split('\n').map(n => n.trim()).filter(n => n !== "");
-            await db.ref('turmas/'+t).set(novosNomes);
-            document.getElementById('imp').value = "";
-            alert("Alunos importados com sucesso!");
-            renderizarEditorAlunos();
         }
     </script>
 </body>
