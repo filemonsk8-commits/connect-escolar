@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connect Escolar v3.9.18 | Prof. Eduardo</title>
     
+    <!-- Configurações para PWA -->
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link class="no-print" rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063176.png">
     
+    <!-- Manifesto para Instalação -->
     <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiUzEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNavmJsZSIKICAgIH0KICBdCn0=">
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -76,6 +78,7 @@
     </style>
 </head>
 <body>
+    <!-- TELA DE CAPA -->
     <div id="welcome-cover">
         <div class="cover-content">
             <img class="cover-logo" src="https://cdn-icons-png.flaticon.com/512/3063/3063176.png" alt="Logo">
@@ -86,6 +89,7 @@
         </div>
     </div>
 
+    <!-- TELA DE LOGIN -->
     <div id="login-screen" class="hidden">
         <div class="login-box">
             <h2>Connect Escolar v3.9.18</h2>
@@ -94,6 +98,7 @@
         </div>
     </div>
 
+    <!-- PAINEL DO APLICATIVO -->
     <div id="app" class="hidden">
         <nav class="tabs no-print">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
@@ -120,6 +125,7 @@
         </header>
 
         <div class="container">
+            <!-- ABA VISTOS -->
             <div id="aba-v" class="card">
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
                 <div id="lista-container">Escolha a turma acima...</div>
@@ -127,6 +133,7 @@
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
 
+            <!-- ABA DIÁRIO -->
             <div id="aba-d" class="card hidden">
                 <div id="status-edicao" class="indicator-edit">Editando diário antigo...</div>
                 <input type="hidden" id="diario-id-atual" value="">
@@ -137,22 +144,26 @@
                 <div id="historico-lista" class="timeline"></div>
             </div>
 
+            <!-- ABA RELATÓRIO DIÁRIO -->
             <div id="aba-rd" class="card hidden">
                 <div id="lista-rel-diario"></div>
                 <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir Diário</button>
             </div>
 
+            <!-- ABA RECUPERAÇÃO -->
             <div id="aba-r" class="card hidden">
                 <h3>Recuperação</h3>
                 <div id="lista-rec"></div>
                 <button onclick="salvarRec()" class="btn-main btn-blue no-print">Salvar Recuperação</button>
             </div>
             
+            <!-- ABA FECHAMENTO -->
             <div id="aba-l" class="card hidden">
                 <div id="relatorio-lista"></div>
                 <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir Relatório Final</button>
             </div>
 
+            <!-- ABA AJUSTES -->
             <div id="aba-c" class="card hidden">
                 <h3>Ajustes de Turma</h3>
                 <div id="editor-alunos-lista"></div>
@@ -183,13 +194,24 @@
             });
         }
 
+        // Executa a atualização completa ao mudar turma ou bimestre
+        function atualizarTudo() {
+            carregarAlunos();
+        }
+
         // Configuração inicial ao abrir a página
         document.addEventListener("DOMContentLoaded", () => {
             popularMenus();
-            document.getElementById('data').valueAsDate = new Date();
+            
+            // Garante o preenchimento correto da data sem conflito regional
+            const hoje = new Date();
+            const ano = hoje.getFullYear();
+            const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+            const dia = String(hoje.getDate()).padStart(2, '0');
+            document.getElementById('data').value = `${ano}-${mes}-${dia}`;
         });
 
-        /* Modificado: Transição suave da Capa para o Login */
+        /* Transição suave da Capa para o Login */
         function entrarNoLogin() {
             const cover = document.getElementById('welcome-cover');
             cover.style.opacity = '0';
@@ -200,7 +222,7 @@
             }, 500);
         }
 
-        /* Modificado: Transição suave do Login para o Painel Principal */
+        /* Transição suave do Login para o Painel Principal */
         function logar() { 
             if(document.getElementById('pass').value === '2203') { 
                 const loginScreen = document.getElementById('login-screen');
