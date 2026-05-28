@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.19 | Prof. Eduardo</title>
+    <title>Connect Escolar v3.9.20 | Prof. Eduardo</title>
     
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -97,7 +97,7 @@
 
     <div id="login-screen" class="hidden">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.19</h2>
+            <h2>Connect Escolar v3.9.20</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -179,7 +179,7 @@
         const db = firebase.database();
         const limparT = (t) => t.replace(/[.#$\[\]]/g, "").trim();
         
-        // Controle interno para saber se a data em foco foi carregada via clique explícito do histórico
+        // Controle interno para saber se a data em foco foi liberada via histórico
         let dataOficialmenteAberta = false;
 
         function popularMenus() {
@@ -268,16 +268,23 @@
             const alunos = sA.val() || []; 
             const todosVistosBimestre = sV.val() || {};
             
-            // Se a data já existe com dados cadastrados, ela se valida automaticamente como aberta
-            if(todosVistosBimestre[d]) {
-                dataOficialmenteAberta = true;
+            // Checa se já existe algum registro salvo especificamente nesse dia
+            const diaTemDadosNoBanco = todosVistosBimestre[d] !== undefined;
+
+            // NOVA REGRA: Se o dia não tem dados nenhum salvos (ex: ontem ou hoje novos), 
+            // ele está livre por padrão para novos vistos. 
+            // Só bloqueia se o dia já existe no banco e você não clicou em "Abrir" no histórico.
+            let podeEditar = false;
+            if (!diaTemDadosNoBanco || dataOficialmenteAberta) {
+                podeEditar = true;
             }
+
             const diaVistos = todosVistosBimestre[d] || {};
 
-            // Exibe ou oculta a mensagem de aviso "Data Incorreta" e desativa o botão salvar
+            // Exibe ou oculta a mensagem de aviso "Data Incorreta"
             const aviso = document.getElementById('aviso-data-incorreta');
             const btnSalvar = document.getElementById('btn-salvar-vistos');
-            if(!dataOficialmenteAberta) {
+            if(!podeEditar) {
                 aviso.classList.remove('hidden');
                 btnSalvar.setAttribute('disabled', 'true');
                 btnSalvar.style.opacity = "0.5";
@@ -290,7 +297,7 @@
             }
 
             let hH = ''; for(let i=1; i<=5; i++) {
-                let disabledAttr = !dataOficialmenteAberta ? 'disabled' : '';
+                let disabledAttr = !podeEditar ? 'disabled' : '';
                 hH += `<input type="text" id="h${i}" class="header-vistos-input" value="${h['h'+i] || 'Ativ. '+i}" ${disabledAttr} onchange="salvarHeader()">`;
             }
             document.getElementById('header-inputs').innerHTML = hH;
@@ -306,7 +313,7 @@
                     let placeholderNota = "";
                     let estiloInlineeo = "";
                     
-                    // Busca histórico em outras datas caso o campo atual esteja vazio
+                    // Busca histórico de notas paralelas para exibir em cinza/vermelho
                     if (valForm === "") {
                         Object.keys(todosVistosBimestre).forEach(dataChave => {
                             if (dataChave !== d && todosVistosBimestre[dataChave][idx] && todosVistosBimestre[dataChave][idx][v] !== undefined) {
@@ -316,9 +323,8 @@
                         });
                     }
 
-                    // Define estilo visual padrão e se está travado por segurança
                     let travadoAttr = "";
-                    if (!dataOficialmenteAberta) {
+                    if (!podeEditar) {
                         travadoAttr = "disabled";
                         estiloInlineeo = `style="background: #f1f5f9; color: var(--danger); font-weight: bold; cursor: not-allowed;"`;
                     } else if (placeholderNota !== "" && valForm === "") {
@@ -362,17 +368,19 @@
         }
 
         function salvarVistos() { 
-            if(!dataOficialmenteAberta) return;
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             let dados = {}; document.querySelectorAll('.input-v').forEach(inp => { 
                 const i = inp.dataset.idx; const v = inp.dataset.v; let val = inp.value.replace(',', '.');
                 if(!dados[i]) dados[i] = {}; if(val !== "" && !isNaN(val)) dados[i][v] = parseFloat(val); 
             }); 
-            db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { alert('Salvo!'); carregarAlunos(); }); 
+            db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { 
+                alert('Salvo!'); 
+                dataOficialmenteAberta = true; 
+                carregarAlunos(); 
+            }); 
         }
 
         function salvarHeader() {
-            if(!dataOficialmenteAberta) return;
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             if(!t) return;
             let dados = {};
