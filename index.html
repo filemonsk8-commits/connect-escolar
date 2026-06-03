@@ -45,7 +45,6 @@
         .input-v::placeholder { color: var(--danger); opacity: 0.7; font-weight: bold; }
         .nota-lançada { color: var(--danger) !important; font-weight: bold; border-color: var(--danger) !important; }
         
-        /* Alerta de data incorreta */
         .alerta-bloqueio { background: #fee2e2; border: 1px solid #fca5a5; color: var(--danger); padding: 10px; border-radius: 8px; text-align: center; font-size: 0.85rem; font-weight: bold; margin-bottom: 10px; animation: pulse 2s infinite; }
         
         @keyframes pulse {
@@ -167,7 +166,7 @@
                 <h3>Ajustes de Turma</h3>
                 <div id="editor-alunos-lista"></div>
                 <hr>
-                <textarea id="imp" style="height:80px;" placeholder="Importação em massa..."></textarea>
+                <textarea id="imp" style="height:120px;" placeholder="Importação em massa... Pode colar a lista com números e datas, o sistema limpa automaticamente!"></textarea>
                 <button onclick="importar()" class="btn-main btn-blue">Importar Tudo</button>
             </div>
         </div>
@@ -177,9 +176,10 @@
         const config = { databaseURL: "https://connect-escolar-fdef0-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(config);
         const db = firebase.database();
-        const limparT = (t) => t.replace(/[.#$\[\]]/g, "").trim();
         
-        // Controle interno para saber se a data em foco foi liberada via histórico
+        // Função de limpeza robusta para tratar o nome dos caminhos das turmas no Firebase
+        const limparT = (t) => t ? t.replace(/[.#$\[\]]/g, "").trim() : "";
+        
         let dataOficialmenteAberta = false;
 
         function popularMenus() {
@@ -268,12 +268,8 @@
             const alunos = sA.val() || []; 
             const todosVistosBimestre = sV.val() || {};
             
-            // Checa se já existe algum registro salvo especificamente nesse dia
             const diaTemDadosNoBanco = todosVistosBimestre[d] !== undefined;
 
-            // NOVA REGRA: Se o dia não tem dados nenhum salvos (ex: ontem ou hoje novos), 
-            // ele está livre por padrão para novos vistos. 
-            // Só bloqueia se o dia já existe no banco e você não clicou em "Abrir" no histórico.
             let podeEditar = false;
             if (!diaTemDadosNoBanco || dataOficialmenteAberta) {
                 podeEditar = true;
@@ -281,7 +277,6 @@
 
             const diaVistos = todosVistosBimestre[d] || {};
 
-            // Exibe ou oculta a mensagem de aviso "Data Incorreta"
             const aviso = document.getElementById('aviso-data-incorreta');
             const btnSalvar = document.getElementById('btn-salvar-vistos');
             if(!podeEditar) {
@@ -313,7 +308,6 @@
                     let placeholderNota = "";
                     let estiloInlineeo = "";
                     
-                    // Busca histórico de notas paralelas para exibir em cinza/vermelho
                     if (valForm === "") {
                         Object.keys(todosVistosBimestre).forEach(dataChave => {
                             if (dataChave !== d && todosVistosBimestre[dataChave][idx] && todosVistosBimestre[dataChave][idx][v] !== undefined) {
@@ -530,81 +524,152 @@
             carregarAlunos(); 
         }
 
-        // --- COMPORTAMENTO DO DIÁRIO ---
-        async function salvarD() { 
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; 
-            const txt = document.getElementById('cont').value; const d = document.getElementById('data').value;
-            const idExistente = document.getElementById('diario-id-atual').value;
-            
-            if(!txt.trim()) { alert("Digite o conteúdo do diário."); return; }
-            const idFinal = idExistente ? idExistente : Date.now();
+        // --- FUNÇÃO DE IMPORTAÇÃO EM MASSA INTELIGENTE (RESOLVE O PROBLEMA DE NÚMEROS E DATAS) ---
+        async function importar() {
+            const t = limparT(document.getElementById('turma').value);
+            if (!t) {
+                alert("Por favor, selecione uma turma primeiro!");
+                return;
+            }
 
-            await db.ref(`diario/${t}/${b}/${idFinal}`).set({ conteudo: txt, data: d });
-            cancelarEdicaoD();
-            carregarHistorico(); 
-            alert("Diário gravado!");
+            const textoImportacao = document.getElementById('imp').value;
+            if (!textoImportacao.trim()) {
+                alert("Cole a lista de alunos na caixa de texto!");
+                return;
+            }
+
+            const linhas = textoImportacao.split('\n');
+            const novosAlunos = [];
+
+            linhas.forEach(linha => {
+                let txt = linha.trim();
+                if (!txt) return;
+
+                // 1. Remove datas de nascimento no formato DD/MM/AAAA ou DD/MM/AA
+                txt = txt.replace(/\b\d{2}\/\d{2}\/\d{2,4}\b/g, "");
+
+                // 2. Remove números soltos (números de chamada, matrículas, CPF, RG) no começo ou fim
+                txt = txt.replace(/^[-\d.\s#]+/g, ""); // Remove números, traços e pontos no início da linha
+                txt = txt.replace(/[-\d.\s]+$/g, ""); // Remove no final da linha
+
+                // 3. Remove caracteres comuns separadores que restam (como abas de tabelas, barras sobressalentes)
+                txt = txt.replace(/[\t;|]+/g, " ");
+
+                // Limpa múltiplos espaços em branco gerados pelas deleções antigas
+                txt = txt.replace(/\s+/g, " ").trim();
+
+                // Só adiciona se o que sobrou for um nome consistente (com mais de 3 caracteres)
+                if (txt.length > 3) {
+                    novosAlunos.push(txt);
+                }
+            });
+
+            if (novosAlunos.length === 0) {
+                alert("Nenhum nome válido foi identificado! Certifique-se de que há nomes textuais na lista.");
+                return;
+            }
+
+            if (confirm(`Foram limpos e identificados ${novosAlunos.length} alunos para a turma "${t}". Deseja prosseguir? Isso substituirá os registros atuais desta turma.`)) {
+                try {
+                    await db.ref('turmas/' + t).set(novosAlunos);
+                    alert("Importação em massa concluída com sucesso!");
+                    document.getElementById('imp').value = "";
+                    renderizarEditorAlunos();
+                } catch (erro) {
+                    console.error(erro);
+                    alert("Erro ao salvar no banco de dados.");
+                }
+            }
         }
 
-        function carregarHistorico() { 
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; if(!t) return;
-            db.ref(`diario/${t}/${b}`).once('value', s => { 
-                let h = ''; const r = s.val() || {};
-                Object.keys(r).sort().reverse().forEach(k => { 
-                    const dataFormatada = r[k].data.split('-').reverse().join('/');
-                    h += `
-                    <div class="timeline-item">
+        // --- COMPORTAMENTO DO DIÁRIO (MANTIDO E CORRIGIDO) ---
+        function salvarD() {
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
+            const conteudo = document.getElementById('cont').value.trim();
+            const idExistente = document.getElementById('diario-id-atual').value;
+            
+            if(!t || !conteudo) { alert("Selecione a turma e preencha o conteúdo!"); return; }
+            
+            let rota = db.ref(`diarios/${t}/${b}`);
+            if(idExistente) {
+                rota.child(idExistente).update({ data: d, conteudo: conteudo }).then(() => {
+                    alert("Diário atualizado!");
+                    cancelarEdicaoD();
+                    carregarHistorico();
+                });
+            } else {
+                let novoRef = rota.push();
+                novoRef.set({ data: d, conteudo: conteudo }).then(() => {
+                    alert("Diário gravado!");
+                    document.getElementById('cont').value = "";
+                    carregarHistorico();
+                });
+            }
+        }
+
+        function carregarHistorico() {
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            if(!t) return;
+            db.ref(`diarios/${t}/${b}`).once('value', s => {
+                const dados = s.val() || {}; let html = '';
+                Object.keys(dados).sort((x,y) => dados[y].data.localeCompare(dados[x].data)).forEach(id => {
+                    let registro = dados[id];
+                    let dataBr = registro.data.split('-').reverse().join('/');
+                    html += `
+                    <li class="timeline-item">
                         <div class="timeline-card">
                             <div class="timeline-header">
-                                <span class="timeline-date">📅 ${dataFormatada}</span>
+                                <span class="timeline-date">📅 ${dataBr}</span>
                                 <div class="timeline-actions">
-                                    <button onclick="prepararEdicaoD('${k}', '${r[k].data}', \`${r[k].conteudo.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`)" class="btn-tl btn-tl-edit">Editar</button>
-                                    <button onclick="deletarDiarioD('${k}')" class="btn-tl btn-tl-del">×</button>
+                                    <button onclick="prepararEdicaoD('${id}', '${registro.data}', \`${registro.conteudo.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`)" class="btn-tl btn-tl-edit">Editar</button>
+                                    <button onclick="deletarD('${id}')" class="btn-tl btn-tl-del">×</button>
                                 </div>
                             </div>
-                            <div class="timeline-body">${r[k].conteudo.replace(/\n/g, '<br>')}</div>
+                            <div class="timeline-body">${registro.conteudo.replace(/\n/g, '<br>')}</div>
                         </div>
-                    </div>`;
-                }); 
-                document.getElementById('historico-lista').innerHTML = h || '<p style="font-size:0.85rem;color:#64748b;padding-left:10px;">Nenhum diário registrado nesta turma.</p>';
+                    </li>`;
+                });
+                document.getElementById('historico-lista').innerHTML = html || '<p style="font-size:0.85rem;color:#64748b;padding-left:15px">Nenhum diário registrado para este bimestre.</p>';
             });
         }
 
-        function prepararEdicaoD(id, dataOriginal, conteudoOriginal) {
+        function prepararEdicaoD(id, data, conteudo) {
             document.getElementById('diario-id-atual').value = id;
-            document.getElementById('data').value = dataOriginal;
-            document.getElementById('cont').value = conteudoOriginal;
-            
-            document.getElementById('status-edicao').style.display = 'block';
+            document.getElementById('data').value = data;
+            document.getElementById('cont').value = conteudo;
+            document.getElementById('status-edicao').style.display = "block";
             document.getElementById('btn-cancelar-diario').classList.remove('hidden');
-            document.getElementById('btn-salvar-diario').textContent = 'Atualizar Registro';
+            document.getElementById('btn-salvar-diario').innerText = "Atualizar Conteúdo";
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function cancelarEdicaoD() {
-            document.getElementById('diario-id-atual').value = '';
-            document.getElementById('cont').value = '';
-            document.getElementById('data').valueAsDate = new Date();
-            
-            document.getElementById('status-edicao').style.display = 'none';
+            document.getElementById('diario-id-atual').value = "";
+            document.getElementById('cont').value = "";
+            document.getElementById('status-edicao').style.display = "none";
             document.getElementById('btn-cancelar-diario').classList.add('hidden');
-            document.getElementById('btn-salvar-diario').textContent = 'Gravar Diário';
+            document.getElementById('btn-salvar-diario').innerText = "Gravar Diário";
         }
 
-        async function deletarDiarioD(id) {
-            if(confirm("Deseja realmente remover este registro de diário?")) {
+        async function deletarD(id) {
+            if(confirm("Tem certeza que deseja remover esta aula do diário?")) {
                 const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-                await db.ref(`diario/${t}/${b}/${id}`).remove();
+                await db.ref(`diarios/${t}/${b}/${id}`).remove();
                 carregarHistorico();
             }
         }
 
         async function gerarRelatorioDiario() {
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; if(!t) return;
-            const s = await db.ref(`diario/${t}/${b}`).once('value'); const data = s.val() || {}; 
-            let html = ''; Object.keys(data).sort((a,b) => new Date(data[b].data) - new Date(data[a].data)).forEach(k => { 
-                html += `<div class="card"><b>📅 ${data[k].data.split('-').reverse().join('/')}</b><p>${data[k].conteudo}</p></div>`; 
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            if(!t) { document.getElementById('lista-rel-diario').innerHTML = "Escolha uma turma primeiro..."; return; }
+            const s = await db.ref(`diarios/${t}/${b}`).once('value');
+            const dados = s.val() || {};
+            let html = `<h2>Diário de Classe - Turma: ${document.getElementById('turma').value} (${b})</h2>`;
+            html += '<table class="report-table"><thead><tr><th style="width:100px;">DATA</th><th>CONTEÚDO MINISTRADO</th></tr></thead><tbody>';
+            Object.values(dados).sort((x,y) => x.data.localeCompare(y.data)).forEach(r => {
+                html += `<tr><td><b>${r.data.split('-').reverse().join('/')}</b></td><td>${r.conteudo.replace(/\n/g, '<br>')}</td></tr>`;
             });
-            document.getElementById('lista-rel-diario').innerHTML = html;
+            document.getElementById('lista-rel-diario').innerHTML = html + '</tbody></table>';
         }
     </script>
 </body>
