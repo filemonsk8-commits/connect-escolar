@@ -177,7 +177,8 @@
         firebase.initializeApp(config);
         const db = firebase.database();
         
-        const limparT = (t) => t ? t.replace(/[.#$\[\]]/g, "").trim() : "";
+        // Função de limpeza robusta para garantir correspondência exata de nós do Firebase
+        const limparT = (t) => t ? t.replace(/[.#$\[\]]/g, "").replace(/\s+/g, " ").trim() : "";
         
         let dataOficialmenteAberta = false;
 
@@ -201,6 +202,14 @@
 
         function atualizarTudo() {
             dataOficialmenteAberta = false;
+            const selectAba = document.querySelector('.tab-btn.active');
+            const abaAtiva = selectAba ? selectAba.innerText : '';
+            
+            if(abaAtiva === 'DIÁRIO') { cancelarEdicaoD(); carregarHistorico(); }
+            if(abaAtiva === 'RELATÓRIO DIÁRIO') gerarRelatorioDiario();
+            if(abaAtiva === 'FECHAMENTO') gerarRelatorio();
+            if(abaAtiva === 'RECUPERAÇÃO') carregarRec();
+            if(abaAtiva === 'AJUSTES') renderizarEditorAlunos();
             carregarAlunos();
         }
 
@@ -244,12 +253,15 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
             document.getElementById('aba-'+a).classList.remove('hidden'); 
             event.currentTarget.classList.add('active'); 
-            if(a === 'rd') gerarRelatorioDiario(); 
-            if(a === 'l') gerarRelatorio(); 
-            if(a === 'r') carregarRec(); 
-            if(a === 'c') renderizarEditorAlunos(); 
-            if(a === 'd') { cancelarEdicaoD(); carregarHistorico(); } 
-            if(a === 'v') carregarAlunos(); 
+            
+            setTimeout(() => {
+                if(a === 'rd') gerarRelatorioDiario(); 
+                if(a === 'l') gerarRelatorio(); 
+                if(a === 'r') carregarRec(); 
+                if(a === 'c') renderizarEditorAlunos(); 
+                if(a === 'd') { cancelarEdicaoD(); carregarHistorico(); } 
+                if(a === 'v') carregarAlunos(); 
+            }, 50);
         }
 
         // --- LÓGICA DE DADOS ---
@@ -575,7 +587,7 @@
             }
         }
 
-        // --- COMPORTAMENTO DO DIÁRIO (CORRIGIDO) ---
+        // --- COMPORTAMENTO DO DIÁRIO (MÁXIMA CORRESPONDÊNCIA DE BANCO) ---
         function salvarD() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             const conteudo = document.getElementById('cont').value.trim();
@@ -603,7 +615,11 @@
         function carregarHistorico() {
             const t = limparT(document.getElementById('turma').value); 
             const b = document.getElementById('bimestre').value;
-            if(!t) return;
+            
+            if(!t) {
+                document.getElementById('historico-lista').innerHTML = '<p style="font-size:0.85rem;color:#64748b;padding-left:15px">Selecione uma turma para ver o histórico do diário.</p>';
+                return;
+            }
             
             db.ref(`diarios/${t}/${b}`).once('value', s => {
                 const dados = s.val() || {}; 
@@ -618,9 +634,12 @@
                 listaOrdenada.forEach(item => {
                     let id = item.id;
                     let dataBr = item.data ? item.data.split('-').reverse().join('/') : 'S/D';
+                    
                     let conteudoTratado = (item.conteudo || "")
+                        .replace(/\\/g, '\\\\')
                         .replace(/`/g, '\\`')
-                        .replace(/\n/g, '\\n');
+                        .replace(/\n/g, '\\n')
+                        .replace(/\r/g, '');
 
                     html += `
                     <li class="timeline-item">
@@ -628,7 +647,7 @@
                             <div class="timeline-header">
                                 <span class="timeline-date">📅 ${dataBr}</span>
                                 <div class="timeline-actions">
-                                    <button onclick="prepararEdicaoD('${id}', '${item.data}', \`${conteudoTratado}\`)" class="btn-tl btn-tl-edit">Editar</button>
+                                    <button onclick="prepararEdicaoD('${id}', '${item.data || ''}', \`${conteudoTratado}\`)" class="btn-tl btn-tl-edit">Editar</button>
                                     <button onclick="deletarD('${id}')" class="btn-tl btn-tl-del">×</button>
                                 </div>
                             </div>
@@ -670,13 +689,21 @@
         async function gerarRelatorioDiario() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             if(!t) { document.getElementById('lista-rel-diario').innerHTML = "Escolha uma turma primeiro..."; return; }
+            
             const s = await db.ref(`diarios/${t}/${b}`).once('value');
             const dados = s.val() || {};
             let html = `<h2>Diário de Classe - Turma: ${document.getElementById('turma').value} (${b})</h2>`;
             html += '<table class="report-table"><thead><tr><th style="width:100px;">DATA</th><th>CONTEÚDO MINISTRADO</th></tr></thead><tbody>';
-            Object.values(dados).sort((x,y) => x.data.localeCompare(y.data)).forEach(r => {
-                html += `<tr><td><b>${r.data.split('-').reverse().join('/')}</b></td><td>${r.conteudo.replace(/\n/g, '<br>')}</td></tr>`;
-            });
+            
+            const itensArray = Object.values(dados);
+            if(itensArray.length === 0) {
+                html += `<tr><td colspan="2" style="text-align:center; color:#64748b;">Nenhum registro encontrado no banco para esta turma neste bimestre.</td></tr>`;
+            } else {
+                itensArray.sort((x,y) => (x.data || "").localeCompare(y.data || "")).forEach(r => {
+                    let dataFormatada = r.data ? r.data.split('-').reverse().join('/') : 'S/D';
+                    html += `<tr><td><b>${dataFormatada}</b></td><td>${(r.conteudo || "").replace(/\n/g, '<br>')}</td></tr>`;
+                });
+            }
             document.getElementById('lista-rel-diario').innerHTML = html + '</tbody></table>';
         }
     </script>
