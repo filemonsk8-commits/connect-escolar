@@ -425,7 +425,7 @@
             carregarAlunos();
         }
 
-        // --- LÓGICA DO DIÁRIO (MÓDULO CORRIGIDO) ---
+        // --- LÓGICA DO DIÁRIO ---
         function salvarD() {
             const t = limparT(document.getElementById('turma').value);
             const b = document.getElementById('bimestre').value;
@@ -483,7 +483,6 @@
 
                 registrosOrdenados.forEach(item => {
                     const dataFormatada = item.data ? item.data.split('-').reverse().join('/') : "Sem Data";
-                    // Compatibilidade de leitura com chaves com ou sem acento
                     const textoConteudo = item.conteudo || item.conteúdo || "";
                     
                     html += `
@@ -503,6 +502,11 @@
 
                 listaContainer.innerHTML = html;
             });
+        }
+
+        function pegarEdicaoD(id, conteudoBase64, dataOriginal) {
+            // Função legada mantida para compatibilidade interna caso necessária
+            prepararEdicaoD(id, conteudoBase64, dataOriginal);
         }
 
         function prepararEdicaoD(id, conteudoBase64, dataOriginal) {
@@ -656,6 +660,56 @@
         async function removerAluno(idx) {
             const t = limparT(document.getElementById('turma').value); const s = await db.ref('turmas/'+t).once('value');
             let lista = s.val() || []; lista.splice(idx, 1); await db.ref('turmas/'+t).set(lista); renderizarEditorAlunos();
+        }
+
+        // --- INTEGRAÇÃO CORRIGIDA: IMPORTAÇÃO EM MASSA COM LIMPEZA AUTOMÁTICA ---
+        async function importar() {
+            const t = limparT(document.getElementById('turma').value);
+            const campoTexto = document.getElementById('imp');
+            const conteudo = campoTexto.value.trim();
+
+            if (!t) {
+                alert("Por favor, selecione uma turma no menu superior antes de realizar a importação!");
+                return;
+            }
+
+            if (!conteudo) {
+                alert("Cole a lista bruta de alunos no campo de texto antes de clicar em Importar!");
+                return;
+            }
+
+            let linhas = conteudo.split('\n');
+            let novosAlunos = [];
+
+            linhas.forEach(linha => {
+                // Remove numeração de chamadas (ex: "01-", "2."), datas perdidas, espaços extras duplos
+                let nomeLimpo = linha
+                    .replace(/^\d+[\s.\-_)°º]*/, '') 
+                    .replace(/[\d/]+/g, '')          
+                    .replace(/\s+/g, ' ')            
+                    .trim();                         
+
+                if (nomeLimpo.length > 2) {
+                    novosAlunos.push(nomeLimpo);
+                }
+            });
+
+            if (novosAlunos.length === 0) {
+                alert("Não foi encontrado nenhum nome processável no texto colado. Verifique a formatação.");
+                return;
+            }
+
+            if (confirm(`Deseja realmente importar ${novosAlunos.length} alunos para a turma "${document.getElementById('turma').value}"? Isso substituirá os registros atuais desta turma.`)) {
+                try {
+                    await db.ref('turmas/' + t).set(novosAlunos);
+                    alert(`Sucesso! ${novosAlunos.length} alunos foram salvos na turma.`);
+                    campoTexto.value = ""; 
+                    renderizarEditorAlunos(); 
+                    carregarAlunos(); 
+                } catch (erro) {
+                    alert("Erro técnico ao salvar no Firebase: " + erro.message);
+                }
+            }
         }
     </script>
 </body>
