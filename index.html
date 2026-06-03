@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.21 | Prof. Eduardo</title>
+    <title>Connect Escolar v3.9.20 | Prof. Eduardo</title>
     
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -45,6 +45,7 @@
         .input-v::placeholder { color: var(--danger); opacity: 0.7; font-weight: bold; }
         .nota-lançada { color: var(--danger) !important; font-weight: bold; border-color: var(--danger) !important; }
         
+        /* Alerta de data incorreta */
         .alerta-bloqueio { background: #fee2e2; border: 1px solid #fca5a5; color: var(--danger); padding: 10px; border-radius: 8px; text-align: center; font-size: 0.85rem; font-weight: bold; margin-bottom: 10px; animation: pulse 2s infinite; }
         
         @keyframes pulse {
@@ -80,14 +81,6 @@
         .btn-cover { background: var(--accent); color: white; border: none; padding: 16px 32px; font-size: 1rem; font-weight: 700; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4); transition: transform 0.2s; width: 100%; max-width: 250px; }
         .btn-cover:active { transform: scale(0.98); }
 
-        .schedule-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #f1f5f9; padding: 10px 15px; border-radius: 8px; }
-        .schedule-day-title { font-weight: 800; color: var(--primary); margin: 0; font-size: 1.1rem; }
-        .schedule-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e2e8f0; background: #fff; border-radius: 8px; margin-bottom: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-        .schedule-time { font-size: 0.75rem; font-weight: bold; color: #64748b; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
-        .schedule-info { flex: 1; }
-        .schedule-class { font-weight: 700; font-size: 0.9rem; margin: 0; color: #1e293b; }
-        .schedule-subject { font-size: 0.8rem; color: #64748b; margin: 0; }
-
         @media print { .no-print, nav, header, .btn-main, #welcome-cover, #login-screen { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
     </style>
 </head>
@@ -104,7 +97,7 @@
 
     <div id="login-screen" class="hidden">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.21</h2>
+            <h2>Connect Escolar v3.9.20</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -113,7 +106,6 @@
     <div id="app" class="hidden">
         <nav class="tabs no-print">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
-            <button class="tab-btn" onclick="aba('h')">AULAS DO DIA</button>
             <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
             <button class="tab-btn" onclick="aba('rd')">RELATÓRIO DIÁRIO</button>
             <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
@@ -137,20 +129,6 @@
         </header>
 
         <div class="container">
-            <div id="aba-h" class="card hidden">
-                <div class="schedule-header">
-                    <h3 class="schedule-day-title" id="schedule-day-display">Carregando dia...</h3>
-                    <select id="schedule-day-filter" onchange="renderizarCronogramaDia(parseInt(this.value))" style="width: auto; padding: 5px 10px;">
-                        <option value="1">Segunda-feira</option>
-                        <option value="2">Terça-feira</option>
-                        <option value="3">Quarta-feira</option>
-                        <option value="4">Quinta-feira</option>
-                        <option value="5">Sexta-feira</option>
-                    </select>
-                </div>
-                <div id="schedule-list-container"></div>
-            </div>
-
             <div id="aba-v" class="card">
                 <div id="aviso-data-incorreta" class="alerta-bloqueio hidden">⚠️ Data incorreta - Selecione ou abra esta data pelo histórico abaixo para editar!</div>
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
@@ -201,60 +179,16 @@
         const db = firebase.database();
         const limparT = (t) => t.replace(/[.#$\[\]]/g, "").trim();
         
+        // Controle interno para saber se a data em foco foi liberada via histórico
         let dataOficialmenteAberta = false;
-
-        // Matriz baseada no seu Horário Oficial - CETAN (Vespertino) 2026
-        const MATRIZ_HORARIOS = {
-            1: [ // Segunda-feira
-                { hora: "13:00", turma: "9º A", materia: "História" },
-                { hora: "13:50", turma: "1º B", materia: "IFA - Dir. Humanos" },
-                { hora: "14:40", turma: "1º A DG", materia: "História" },
-                { hora: "15:45", turma: "9º B", materia: "História" },
-                { hora: "16:35", turma: "9º C", materia: "Letramento Digital" },
-                { hora: "17:25", turma: "9º B", materia: "Pensamento Computacional" }
-            ],
-            2: [ // Terça-feira
-                { hora: "13:00", turma: "2º C", materia: "Filosofia" },
-                { hora: "13:50", turma: "2º B", materia: "Filosofia" },
-                { hora: "14:40", turma: "9º C", materia: "História" },
-                { hora: "15:45", turma: "2º B DG", materia: "Filosofia" },
-                { hora: "16:35", turma: "1º B", materia: "Sociologia" },
-                { hora: "17:25", turma: "2º B DG", materia: "História" }
-            ],
-            3: [ // Quarta-feira
-                { hora: "13:00", turma: "2º D", materia: "Sociologia" },
-                { hora: "13:50", turma: "9º D", materia: "Letramento Digital" },
-                { hora: "14:40", turma: "2º B", materia: "Sociologia" },
-                { hora: "15:45", turma: "2º A DG", materia: "História" },
-                { hora: "16:35", turma: "9º B", materia: "História" },
-                { hora: "17:25", turma: "2º A DG", materia: "História" }
-            ],
-            4: [ // Quinta-feira
-                { hora: "13:50", turma: "9º A", materia: "História" },
-                { hora: "14:40", turma: "2º A DG", materia: "Filosofia" },
-                { hora: "15:45", turma: "9º C", materia: "Eletiva" },
-                { hora: "16:35", turma: "9º C", materia: "Eletiva" },
-                { hora: "17:25", turma: "1º B", materia: "IFA - Dir. Humanos" }
-            ],
-            5: [ // Sexta-feira
-                { hora: "13:00", turma: "2º B DG", materia: "História" },
-                { hora: "13:50", turma: "9º B", materia: "História" },
-                { hora: "14:40", turma: "9º A", materia: "Pensamento Computacional" },
-                { hora: "15:45", turma: "9º C", materia: "História" },
-                { hora: "16:35", turma: "9º C", materia: "História" },
-                { hora: "17:25", turma: "9º A", materia: "História" }
-            ]
-        };
-
-        const DIAS_NOME = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 
         function popularMenus() {
             const st = document.getElementById('turma');
             const cats = [
-                { l: "ENSINO FUNDAMENTAL", t: ["9º A", "9º B", "9º C", "9º D"] },
-                { l: "ENSINO MÉDIO E TÉCNICO", t: ["1º B", "1º A DG", "2º B", "2º C", "2º D", "2º A DG", "2º B DG"] }
+                { l: "ENSINO FUNDAMENTAL", t: ["9ºA Pensamento Comp", "9ºB Pensamento Comp", "9ºC Letramento Digital", "9ºD Letramento Digital", "9ºA História", "9ºB História", "9ºC História"] },
+                { l: "ENSINO MÉDIO", t: ["1ºB IFA", "1ºB Sociologia", "2ºB Sociologia", "2ºC Sociologia", "2ºD Sociologia", "2ºB Filosofia", "2ºC Filosofia" ] },
+                { l: "TÉCNICO (DG)", t: ["1ºA DG História", "2ºA DG História", "2ºB DG História", "2ºA DG Filosofia", "2ºB DG Filosofia"] }
             ];
-            st.innerHTML = '<option value="">Selecione a Turma...</option>';
             cats.forEach(c => {
                 const g = document.createElement('optgroup'); g.label = c.l;
                 c.t.forEach(nome => { g.appendChild(new Option(nome, nome)); });
@@ -279,51 +213,7 @@
             const mes = String(hoje.getMonth() + 1).padStart(2, '0');
             const dia = String(hoje.getDate()).padStart(2, '0');
             document.getElementById('data').value = `${ano}-${mes}-${dia}`;
-
-            let diaSemana = hoje.getDay();
-            if (diaSemana === 0 || diaSemana === 6) diaSemana = 1;
-            document.getElementById('schedule-day-filter').value = diaSemana;
-            renderizarCronogramaDia(diaSemana);
         });
-
-        function renderizarCronogramaDia(diaNum) {
-            document.getElementById('schedule-day-display').innerText = DIAS_NOME[diaNum];
-            const conteiner = document.getElementById('schedule-list-container');
-            const aulas = MATRIZ_HORARIOS[diaNum] || [];
-
-            if(aulas.length === 0) {
-                conteiner.innerHTML = `<p style="text-align:center; color:#64748b; font-size:0.85rem; padding:20px;">Nenhuma aula cadastrada para esse dia.</p>`;
-                return;
-            }
-
-            let html = "";
-            aulas.forEach(aula => {
-                html += `
-                <div class="schedule-row">
-                    <span class="schedule-time">${aula.hora}</span>
-                    <div class="schedule-info">
-                        <h4 class="schedule-class">${aula.turma}</h4>
-                        <p class="schedule-subject">${aula.materia}</p>
-                    </div>
-                    <button onclick="atalhoAbrirAula('${aula.turma}')" class="btn-edit-small" style="background:var(--success); font-weight:bold; padding:8px 12px; border-radius:6px;">Abrir Aula</button>
-                </div>`;
-            });
-            conteiner.innerHTML = html;
-        }
-
-        function atalhoAbrirAula(nomeTurma) {
-            document.getElementById('turma').value = nomeTurma;
-            dataOficialmenteAberta = false;
-            
-            document.querySelectorAll('.card').forEach(c => c.classList.add('hidden')); 
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
-            document.getElementById('aba-v').classList.remove('hidden');
-            
-            const botoesTabs = document.querySelectorAll('.tab-btn');
-            botoesTabs[0].classList.add('active');
-
-            carregarAlunos();
-        }
 
         function entrarNoLogin() {
             const cover = document.getElementById('welcome-cover');
@@ -361,9 +251,9 @@
             if(a === 'c') renderizarEditorAlunos(); 
             if(a === 'd') { cancelarEdicaoD(); carregarHistorico(); } 
             if(a === 'v') carregarAlunos(); 
-            if(a === 'h') { renderizarCronogramaDia(parseInt(document.getElementById('schedule-day-filter').value)); }
         }
 
+        // --- LÓGICA DE DADOS ---
         async function carregarAlunos() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
@@ -378,8 +268,12 @@
             const alunos = sA.val() || []; 
             const todosVistosBimestre = sV.val() || {};
             
+            // Checa se já existe algum registro salvo especificamente nesse dia
             const diaTemDadosNoBanco = todosVistosBimestre[d] !== undefined;
 
+            // NOVA REGRA: Se o dia não tem dados nenhum salvos (ex: ontem ou hoje novos), 
+            // ele está livre por padrão para novos vistos. 
+            // Só bloqueia se o dia já existe no banco e você não clicou em "Abrir" no histórico.
             let podeEditar = false;
             if (!diaTemDadosNoBanco || dataOficialmenteAberta) {
                 podeEditar = true;
@@ -387,6 +281,7 @@
 
             const diaVistos = todosVistosBimestre[d] || {};
 
+            // Exibe ou oculta a mensagem de aviso "Data Incorreta"
             const aviso = document.getElementById('aviso-data-incorreta');
             const btnSalvar = document.getElementById('btn-salvar-vistos');
             if(!podeEditar) {
@@ -418,6 +313,7 @@
                     let placeholderNota = "";
                     let estiloInlineeo = "";
                     
+                    // Busca histórico de notas paralelas para exibir em cinza/vermelho
                     if (valForm === "") {
                         Object.keys(todosVistosBimestre).forEach(dataChave => {
                             if (dataChave !== d && todosVistosBimestre[dataChave][idx] && todosVistosBimestre[dataChave][idx][v] !== undefined) {
@@ -634,96 +530,81 @@
             carregarAlunos(); 
         }
 
-        async function salvarD() {
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
-            const conteudo = document.getElementById('cont').value.trim();
-            if(!t || !conteudo) return alert("Selecione a turma e preencha o conteúdo!");
+        // --- COMPORTAMENTO DO DIÁRIO ---
+        async function salvarD() { 
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; 
+            const txt = document.getElementById('cont').value; const d = document.getElementById('data').value;
+            const idExistente = document.getElementById('diario-id-atual').value;
             
-            const idAtual = document.getElementById('diario-id-atual').value;
-            if(idAtual) {
-                await db.ref(`diarios/${t}/${b}/${idAtual}`).set({ data: d, texto: conteudo });
-            } else {
-                await db.ref(`diarios/${t}/${b}`).push({ data: d, texto: conteudo });
-            }
-            
-            document.getElementById('cont').value = "";
+            if(!txt.trim()) { alert("Digite o conteúdo do diário."); return; }
+            const idFinal = idExistente ? idExistente : Date.now();
+
+            await db.ref(`diario/${t}/${b}/${idFinal}`).set({ conteudo: txt, data: d });
             cancelarEdicaoD();
-            carregarHistorico();
+            carregarHistorico(); 
             alert("Diário gravado!");
         }
 
-        function carregarHistorico() {
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-            if(!t) return;
-            db.ref(`diarios/${t}/${b}`).once('value', s => {
-                const dados = s.val() || {}; let h = '';
-                Object.keys(dados).reverse().forEach(id => {
-                    const item = dados[id];
+        function carregarHistorico() { 
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; if(!t) return;
+            db.ref(`diario/${t}/${b}`).once('value', s => { 
+                let h = ''; const r = s.val() || {};
+                Object.keys(r).sort().reverse().forEach(k => { 
+                    const dataFormatada = r[k].data.split('-').reverse().join('/');
                     h += `
-                    <li class="timeline-item">
+                    <div class="timeline-item">
                         <div class="timeline-card">
                             <div class="timeline-header">
-                                <span class="timeline-date">📅 ${item.data.split('-').reverse().join('/')}</span>
+                                <span class="timeline-date">📅 ${dataFormatada}</span>
                                 <div class="timeline-actions">
-                                    <button onclick="editarD('${id}', '${item.data}', \`${item.texto.replace(/"/g, '&quot;')}\`)" class="btn-tl btn-tl-edit">Editar</button>
-                                    <button onclick="deletarD('${id}')" class="btn-tl btn-tl-del">×</button>
+                                    <button onclick="prepararEdicaoD('${k}', '${r[k].data}', \`${r[k].conteudo.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`)" class="btn-tl btn-tl-edit">Editar</button>
+                                    <button onclick="deletarDiarioD('${k}')" class="btn-tl btn-tl-del">×</button>
                                 </div>
                             </div>
-                            <div class="timeline-body">${item.texto.replace(/\n/g, '<br>')}</div>
+                            <div class="timeline-body">${r[k].conteudo.replace(/\n/g, '<br>')}</div>
                         </div>
-                    </li>`;
-                });
-                document.getElementById('historico-lista').innerHTML = h;
+                    </div>`;
+                }); 
+                document.getElementById('historico-lista').innerHTML = h || '<p style="font-size:0.85rem;color:#64748b;padding-left:10px;">Nenhum diário registrado nesta turma.</p>';
             });
         }
 
-        function editarD(id, data, texto) {
+        function prepararEdicaoD(id, dataOriginal, conteudoOriginal) {
             document.getElementById('diario-id-atual').value = id;
-            document.getElementById('data').value = data;
-            document.getElementById('cont').value = texto;
-            document.getElementById('status-edicao').style.display = "block";
+            document.getElementById('data').value = dataOriginal;
+            document.getElementById('cont').value = conteudoOriginal;
+            
+            document.getElementById('status-edicao').style.display = 'block';
             document.getElementById('btn-cancelar-diario').classList.remove('hidden');
-            document.getElementById('btn-salvar-diario').innerText = "Atualizar Diário";
+            document.getElementById('btn-salvar-diario').textContent = 'Atualizar Registro';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function cancelarEdicaoD() {
-            document.getElementById('diario-id-atual').value = "";
-            document.getElementById('status-edicao').style.display = "none";
+            document.getElementById('diario-id-atual').value = '';
+            document.getElementById('cont').value = '';
+            document.getElementById('data').valueAsDate = new Date();
+            
+            document.getElementById('status-edicao').style.display = 'none';
             document.getElementById('btn-cancelar-diario').classList.add('hidden');
-            document.getElementById('btn-salvar-diario').innerText = "Gravar Diário";
-            document.getElementById('cont').value = "";
+            document.getElementById('btn-salvar-diario').textContent = 'Gravar Diário';
         }
 
-        async function deletarD(id) {
-            if(confirm("Deseja apagar este registro de diário?")) {
+        async function deletarDiarioD(id) {
+            if(confirm("Deseja realmente remover este registro de diário?")) {
                 const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-                await db.ref(`diarios/${t}/${b}/${id}`).remove();
+                await db.ref(`diario/${t}/${b}/${id}`).remove();
                 carregarHistorico();
             }
         }
 
         async function gerarRelatorioDiario() {
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-            if(!t) return;
-            const s = await db.ref(`diarios/${t}/${b}`).once('value');
-            const dados = s.val() || {};
-            let html = `<h2>Diário de Classe - ${document.getElementById('turma').value} (${b})</h2>`;
-            Object.values(dados).sort((a,b) => a.data.localeCompare(b.data)).forEach(item => {
-                html += `<div style="margin-bottom:15px; border-bottom:1px solid #ccc; padding-bottom:5px;">
-                    <b>Data: ${item.data.split('-').reverse().join('/')}</b><br>${item.texto.replace(/\n/g, '<br>')}
-                </div>`;
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; if(!t) return;
+            const s = await db.ref(`diario/${t}/${b}`).once('value'); const data = s.val() || {}; 
+            let html = ''; Object.keys(data).sort((a,b) => new Date(data[b].data) - new Date(data[a].data)).forEach(k => { 
+                html += `<div class="card"><b>📅 ${data[k].data.split('-').reverse().join('/')}</b><p>${data[k].conteudo}</p></div>`; 
             });
             document.getElementById('lista-rel-diario').innerHTML = html;
-        }
-
-        async function importar() {
-            const t = limparT(document.getElementById('turma').value); const raw = document.getElementById('imp').value.trim();
-            if(!t || !raw) return alert("Falta dados!");
-            const arr = raw.split('\n').map(x => x.trim()).filter(x => x);
-            await db.ref('turmas/'+t).set(arr);
-            document.getElementById('imp').value = "";
-            renderizarEditorAlunos();
-            alert("Pronto!");
         }
     </script>
 </body>
