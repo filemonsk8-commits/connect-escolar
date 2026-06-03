@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.20 | Prof. Eduardo</title>
+    <title>Connect Escolar v3.9.21 | Prof. Eduardo</title>
     
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -96,7 +96,7 @@
 
     <div id="login-screen" class="hidden">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.20</h2>
+            <h2>Connect Escolar v3.9.21</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -177,7 +177,7 @@
         firebase.initializeApp(config);
         const db = firebase.database();
         
-        // Função de limpeza robusta para garantir correspondência exata de nós do Firebase
+        // Mantém a limpeza padrão que funciona perfeitamente para a estrutura de vistos
         const limparT = (t) => t ? t.replace(/[.#$\[\]]/g, "").replace(/\s+/g, " ").trim() : "";
         
         let dataOficialmenteAberta = false;
@@ -538,41 +538,25 @@
         // --- FUNÇÃO DE IMPORTAÇÃO EM MASSA INTELIGENTE ---
         async function importar() {
             const t = limparT(document.getElementById('turma').value);
-            if (!t) {
-                alert("Por favor, selecione uma turma primeiro!");
-                return;
-            }
+            if (!t) { alert("Por favor, selecione uma turma primeiro!"); return; }
 
             const textoImportacao = document.getElementById('imp').value;
-            if (!textoImportacao.trim()) {
-                alert("Cole a lista de alunos na caixa de texto!");
-                return;
-            }
+            if (!textoImportacao.trim()) { alert("Cole a lista de alunos na caixa de texto!"); return; }
 
             const linhas = textoImportacao.split('\n');
             const novosAlunos = [];
-
             linhas.forEach(linha => {
-                let txt = inline(linha);
-                if (!txt) return;
-
+                let txt = inline(linha); if (!txt) return;
                 txt = txt.replace(/\b\d{2}\/\d{2}\/\d{2,4}\b/g, "");
                 txt = txt.replace(/^[-\d.\s#]+/g, ""); 
                 txt = txt.replace(/[-\d.\s]+$/g, ""); 
                 txt = txt.replace(/[\t;|]+/g, " ");
                 txt = txt.replace(/\s+/g, " ").trim();
-
-                if (txt.length > 3) {
-                    novosAlunos.push(txt);
-                }
+                if (txt.length > 3) novosAlunos.push(txt);
             });
 
             function inline(str) { return str ? str.trim() : ""; }
-
-            if (novosAlunos.length === 0) {
-                alert("Nenhum nome válido foi identificado!");
-                return;
-            }
+            if (novosAlunos.length === 0) { alert("Nenhum nome válido foi identificado!"); return; }
 
             if (confirm(`Foram limpos e identificados ${novosAlunos.length} alunos para a turma "${t}". Deseja prosseguir? Isso substituirá os registros atuais.`)) {
                 try {
@@ -581,13 +565,12 @@
                     document.getElementById('imp').value = "";
                     renderizarEditorAlunos();
                 } catch (erro) {
-                    console.error(erro);
                     alert("Erro ao salvar no banco de dados.");
                 }
             }
         }
 
-        // --- COMPORTAMENTO DO DIÁRIO (MÁXIMA CORRESPONDÊNCIA DE BANCO) ---
+        // --- COMPORTAMENTO DO DIÁRIO (MANDATÓRIO: LEITURA HÍBRIDA DE CHAVES) ---
         function salvarD() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             const conteudo = document.getElementById('cont').value.trim();
@@ -597,14 +580,15 @@
             
             let rota = db.ref(`diarios/${t}/${b}`);
             if(idExistente) {
-                rota.child(idExistente).update({ data: d, conteudo: conteudo }).then(() => {
+                // Se a chave antiga for uma data pura (ex: "2026-05-10"), atualiza direto nela, senão altera o ID gerado
+                db.ref(`diarios/${t}/${b}/${idExistente}`).set({ data: d, conteudo: conteudo }).then(() => {
                     alert("Diário atualizado!");
                     cancelarEdicaoD();
                     carregarHistorico();
                 });
             } else {
-                let novoRef = rota.push();
-                novoRef.set({ data: d, conteudo: conteudo }).then(() => {
+                // Para evitar misturas e sumiços futuros, salvamos indexando por data para máxima previsibilidade
+                rota.child(d).set({ data: d, conteudo: conteudo }).then(() => {
                     alert("Diário gravado!");
                     document.getElementById('cont').value = "";
                     carregarHistorico();
@@ -624,12 +608,30 @@
             db.ref(`diarios/${t}/${b}`).once('value', s => {
                 const dados = s.val() || {}; 
                 let html = '';
+                let listaOrdenada = [];
                 
-                const listaOrdenada = Object.keys(dados).map(id => {
-                    return { id: id, ...dados[id] };
-                }).sort((x, y) => {
-                    return (y.data || "").localeCompare(x.data || "");
+                // Mapeamento Híbrido: Processa tanto objetos com IDs aleatórios quanto nós diretos por data
+                Object.keys(dados).forEach(chave => {
+                    let nó = dados[chave];
+                    if (nó && typeof nó === 'object') {
+                        // Se o banco foi salvo com a estrutura {data, conteudo}
+                        listaOrdenada.push({
+                            id: chave,
+                            data: nó.data || chave, // Fallback caso a chave seja a própria data
+                            conteudo: nó.conteudo || ""
+                        });
+                    } else if (typeof nó === 'string') {
+                        // Segurança extrema caso em alguma versão antiga o conteúdo estivesse direto na string da data
+                        listaOrdenada.push({
+                            id: chave,
+                            data: chave,
+                            conteudo: nó
+                        });
+                    }
                 });
+
+                // Ordena do mais recente para o mais antigo
+                listaOrdenada.sort((x, y) => (y.data || "").localeCompare(x.data || ""));
 
                 listaOrdenada.forEach(item => {
                     let id = item.id;
@@ -695,13 +697,22 @@
             let html = `<h2>Diário de Classe - Turma: ${document.getElementById('turma').value} (${b})</h2>`;
             html += '<table class="report-table"><thead><tr><th style="width:100px;">DATA</th><th>CONTEÚDO MINISTRADO</th></tr></thead><tbody>';
             
-            const itensArray = Object.values(dados);
+            let itensArray = [];
+            Object.keys(dados).forEach(chave => {
+                let nó = dados[chave];
+                if(nó && typeof nó === 'object') {
+                    itensArray.push({ data: nó.data || chave, conteudo: nó.conteudo || "" });
+                } else if(typeof nó === 'string') {
+                    itensArray.push({ data: chave, conteudo: nó });
+                }
+            });
+
             if(itensArray.length === 0) {
                 html += `<tr><td colspan="2" style="text-align:center; color:#64748b;">Nenhum registro encontrado no banco para esta turma neste bimestre.</td></tr>`;
             } else {
                 itensArray.sort((x,y) => (x.data || "").localeCompare(y.data || "")).forEach(r => {
                     let dataFormatada = r.data ? r.data.split('-').reverse().join('/') : 'S/D';
-                    html += `<tr><td><b>${dataFormatada}</b></td><td>${(r.conteudo || "").replace(/\n/g, '<br>')}</td></tr>`;
+                    html += `<tr><td><b>${dataFormatada}</b></td><td>${r.conteudo.replace(/\n/g, '<br>')}</td></tr>`;
                 });
             }
             document.getElementById('lista-rel-diario').innerHTML = html + '</tbody></table>';
