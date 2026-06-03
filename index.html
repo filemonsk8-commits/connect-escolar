@@ -177,7 +177,6 @@
         firebase.initializeApp(config);
         const db = firebase.database();
         
-        // Função de limpeza robusta para tratar o nome dos caminhos das turmas no Firebase
         const limparT = (t) => t ? t.replace(/[.#$\[\]]/g, "").trim() : "";
         
         let dataOficialmenteAberta = false;
@@ -524,7 +523,7 @@
             carregarAlunos(); 
         }
 
-        // --- FUNÇÃO DE IMPORTAÇÃO EM MASSA INTELIGENTE (RESOLVE O PROBLEMA DE NÚMEROS E DATAS) ---
+        // --- FUNÇÃO DE IMPORTAÇÃO EM MASSA INTELIGENTE ---
         async function importar() {
             const t = limparT(document.getElementById('turma').value);
             if (!t) {
@@ -542,37 +541,31 @@
             const novosAlunos = [];
 
             linhas.forEach(linha => {
-                let txt = linha.trim();
+                let txt = inline(linha);
                 if (!txt) return;
 
-                // 1. Remove datas de nascimento no formato DD/MM/AAAA ou DD/MM/AA
                 txt = txt.replace(/\b\d{2}\/\d{2}\/\d{2,4}\b/g, "");
-
-                // 2. Remove números soltos (números de chamada, matrículas, CPF, RG) no começo ou fim
-                txt = txt.replace(/^[-\d.\s#]+/g, ""); // Remove números, traços e pontos no início da linha
-                txt = txt.replace(/[-\d.\s]+$/g, ""); // Remove no final da linha
-
-                // 3. Remove caracteres comuns separadores que restam (como abas de tabelas, barras sobressalentes)
+                txt = txt.replace(/^[-\d.\s#]+/g, ""); 
+                txt = txt.replace(/[-\d.\s]+$/g, ""); 
                 txt = txt.replace(/[\t;|]+/g, " ");
-
-                // Limpa múltiplos espaços em branco gerados pelas deleções antigas
                 txt = txt.replace(/\s+/g, " ").trim();
 
-                // Só adiciona se o que sobrou for um nome consistente (com mais de 3 caracteres)
                 if (txt.length > 3) {
                     novosAlunos.push(txt);
                 }
             });
 
+            function inline(str) { return str ? str.trim() : ""; }
+
             if (novosAlunos.length === 0) {
-                alert("Nenhum nome válido foi identificado! Certifique-se de que há nomes textuais na lista.");
+                alert("Nenhum nome válido foi identificado!");
                 return;
             }
 
-            if (confirm(`Foram limpos e identificados ${novosAlunos.length} alunos para a turma "${t}". Deseja prosseguir? Isso substituirá os registros atuais desta turma.`)) {
+            if (confirm(`Foram limpos e identificados ${novosAlunos.length} alunos para a turma "${t}". Deseja prosseguir? Isso substituirá os registros atuais.`)) {
                 try {
                     await db.ref('turmas/' + t).set(novosAlunos);
-                    alert("Importação em massa concluída com sucesso!");
+                    alert("Importação em massa concluída!");
                     document.getElementById('imp').value = "";
                     renderizarEditorAlunos();
                 } catch (erro) {
@@ -582,7 +575,7 @@
             }
         }
 
-        // --- COMPORTAMENTO DO DIÁRIO (MANTIDO E CORRIGIDO) ---
+        // --- COMPORTAMENTO DO DIÁRIO (CORRIGIDO) ---
         function salvarD() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             const conteudo = document.getElementById('cont').value.trim();
@@ -608,27 +601,42 @@
         }
 
         function carregarHistorico() {
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            const t = limparT(document.getElementById('turma').value); 
+            const b = document.getElementById('bimestre').value;
             if(!t) return;
+            
             db.ref(`diarios/${t}/${b}`).once('value', s => {
-                const dados = s.val() || {}; let html = '';
-                Object.keys(dados).sort((x,y) => dados[y].data.localeCompare(dados[x].data)).forEach(id => {
-                    let registro = dados[id];
-                    let dataBr = registro.data.split('-').reverse().join('/');
+                const dados = s.val() || {}; 
+                let html = '';
+                
+                const listaOrdenada = Object.keys(dados).map(id => {
+                    return { id: id, ...dados[id] };
+                }).sort((x, y) => {
+                    return (y.data || "").localeCompare(x.data || "");
+                });
+
+                listaOrdenada.forEach(item => {
+                    let id = item.id;
+                    let dataBr = item.data ? item.data.split('-').reverse().join('/') : 'S/D';
+                    let conteudoTratado = (item.conteudo || "")
+                        .replace(/`/g, '\\`')
+                        .replace(/\n/g, '\\n');
+
                     html += `
                     <li class="timeline-item">
                         <div class="timeline-card">
                             <div class="timeline-header">
                                 <span class="timeline-date">📅 ${dataBr}</span>
                                 <div class="timeline-actions">
-                                    <button onclick="prepararEdicaoD('${id}', '${registro.data}', \`${registro.conteudo.replace(/`/g, '\\`').replace(/\n/g, '\\n')}\`)" class="btn-tl btn-tl-edit">Editar</button>
+                                    <button onclick="prepararEdicaoD('${id}', '${item.data}', \`${conteudoTratado}\`)" class="btn-tl btn-tl-edit">Editar</button>
                                     <button onclick="deletarD('${id}')" class="btn-tl btn-tl-del">×</button>
                                 </div>
                             </div>
-                            <div class="timeline-body">${registro.conteudo.replace(/\n/g, '<br>')}</div>
+                            <div class="timeline-body">${(item.conteudo || "").replace(/\n/g, '<br>')}</div>
                         </div>
                     </li>`;
                 });
+                
                 document.getElementById('historico-lista').innerHTML = html || '<p style="font-size:0.85rem;color:#64748b;padding-left:15px">Nenhum diário registrado para este bimestre.</p>';
             });
         }
