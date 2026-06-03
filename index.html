@@ -177,7 +177,6 @@
         firebase.initializeApp(config);
         const db = firebase.database();
         
-        // Mantém a limpeza padrão que funciona perfeitamente para a estrutura de vistos
         const limparT = (t) => t ? t.replace(/[.#$\[\]]/g, "").replace(/\s+/g, " ").trim() : "";
         
         let dataOficialmenteAberta = false;
@@ -264,7 +263,7 @@
             }, 50);
         }
 
-        // --- LÓGICA DE DADOS ---
+        // --- LÓGICA DE VISTOS ---
         async function carregarAlunos() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
@@ -393,6 +392,177 @@
             db.ref(`headers/${t}/${b}`).set(dados);
         }
 
+        function carregarHistoricoVistos() {
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            db.ref(`vistos/${t}/${b}`).once('value', s => {
+                const d = s.val() || {}; let h = '';
+                Object.keys(d).sort().reverse().forEach(data => {
+                    h += `<div class="hist-item">
+                        <span>📅 ${data.split('-').reverse().join('/')}</span>
+                        <div style="display:flex; gap:5px;">
+                            <button onclick="setarData('${data}')" class="btn-edit-small" style="background:var(--accent)">Abrir</button>
+                            <button onclick="deletarVistosDia('${data}')" class="btn-edit-small" style="background:var(--danger)">×</button>
+                        </div>
+                    </div>`;
+                });
+                document.getElementById('hist-vistos-lista').innerHTML = h;
+            });
+        }
+
+        async function deletarVistosDia(data) {
+            if(confirm(`Deseja realmente apagar TODOS os vistos do dia ${data.split('-').reverse().join('/')}?`)) {
+                const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+                await db.ref(`vistos/${t}/${b}/${data}`).remove();
+                dataOficialmenteAberta = false;
+                carregarAlunos();
+                alert("Vistos removidos com sucesso!");
+            }
+        }
+
+        function setarData(d) { 
+            document.getElementById('data').value = d;
+            dataOficialmenteAberta = true; 
+            carregarAlunos();
+        }
+
+        // --- LÓGICA DO DIÁRIO (MÓDULO CORRIGIDO) ---
+        function salvarD() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            const d = document.getElementById('data').value;
+            const conteudo = document.getElementById('cont').value.trim();
+            const idAtual = document.getElementById('diario-id-atual').value;
+
+            if (!t) { alert("Por favor, selecione uma turma antes de gravar!"); return; }
+            if (!conteudo) { alert("O conteúdo do diário não pode estar vazio!"); return; }
+
+            const idDiario = idAtual ? idAtual : Date.now().toString();
+            const dadosDiario = { conteudo: conteudo, data: d };
+
+            db.ref(`diario/${t}/${b}/${idDiario}`).set(dadosDiario).then(() => {
+                alert("Diário gravado com sucesso!");
+                cancelarEdicaoD();
+                carregarHistorico();
+            }).catch(erro => {
+                alert("Erro ao salvar no Firebase: " + erro.message);
+            });
+        }
+
+        function cancelarEdicaoD() {
+            document.getElementById('diario-id-atual').value = "";
+            document.getElementById('cont').value = "";
+            document.getElementById('status-edicao').style.display = "none";
+            document.getElementById('btn-cancelar-diario').classList.add('hidden');
+            document.getElementById('btn-salvar-diario').innerText = "Gravar Diário";
+        }
+
+        function carregarHistorico() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            const listaContainer = document.getElementById('historico-lista');
+
+            if (!t) {
+                listaContainer.innerHTML = "<p style='padding:15px; color:#64748b;'>Escolha uma turma para visualizar o histórico de diários.</p>";
+                return;
+            }
+
+            listaContainer.innerHTML = "<p style='padding:15px; color:#64748b;'>Carregando registros do diário...</p>";
+
+            db.ref(`diario/${t}/${b}`).once('value', snapshot => {
+                const dados = snapshot.val();
+                if (!dados) {
+                    listaContainer.innerHTML = "<p style='padding:15px; color:#64748b;'>Nenhum registro de diário encontrado para esta turma neste bimestre.</p>";
+                    return;
+                }
+
+                let html = "";
+                const registrosOrdenados = Object.keys(dados).map(id => ({
+                    id: id,
+                    ...dados[id]
+                })).sort((a, b) => new Date(b.data) - new Date(a.data));
+
+                registrosOrdenados.forEach(item => {
+                    const dataFormatada = item.data ? item.data.split('-').reverse().join('/') : "Sem Data";
+                    // Compatibilidade de leitura com chaves com ou sem acento
+                    const textoConteudo = item.conteudo || item.conteúdo || "";
+                    
+                    html += `
+                    <div class="timeline-item">
+                        <div class="timeline-card">
+                            <div class="timeline-header">
+                                <span class="timeline-date">📅 ${dataFormatada}</span>
+                                <div class="timeline-actions">
+                                    <button onclick="prepararEdicaoD('${item.id}', '${btoa(unescape(encodeURIComponent(textoConteudo)))}', '${item.data}')" class="btn-tl btn-tl-edit">Editar</button>
+                                    <button onclick="deletarDiario('${item.id}', '${dataFormatada}')" class="btn-tl btn-tl-del">×</button>
+                                </div>
+                            </div>
+                            <div class="timeline-body">${textoConteudo}</div>
+                        </div>
+                    </div>`;
+                });
+
+                listaContainer.innerHTML = html;
+            });
+        }
+
+        function prepararEdicaoD(id, conteudoBase64, dataOriginal) {
+            const conteudo = decodeURIComponent(escape(atob(conteudoBase64)));
+            document.getElementById('diario-id-atual').value = id;
+            document.getElementById('cont').value = conteudo;
+            document.getElementById('data').value = dataOriginal;
+            
+            document.getElementById('status-edicao').style.display = "block";
+            document.getElementById('btn-cancelar-diario').classList.remove('hidden');
+            document.getElementById('btn-salvar-diario').innerText = "Atualizar Registro";
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function deletarDiario(id, dataStr) {
+            if (confirm(`Deseja realmente apagar o registro de aula do dia ${dataStr}?`)) {
+                const t = limparT(document.getElementById('turma').value);
+                const b = document.getElementById('bimestre').value;
+                await db.ref(`diario/${t}/${b}/${id}`).remove();
+                alert("Registro removido!");
+                carregarHistorico();
+            }
+        }
+
+        // --- RELATÓRIO DIÁRIO DE IMPRESSÃO ---
+        function gerarRelatorioDiario() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            const container = document.getElementById('lista-rel-diario');
+
+            if (!t) {
+                container.innerHTML = "Selecione uma turma para gerar o relatório.";
+                return;
+            }
+
+            db.ref(`diario/${t}/${b}`).once('value', snapshot => {
+                const dados = snapshot.val();
+                if (!dados) {
+                    container.innerHTML = "<p>Nenhum diário registrado para esta turma.</p>";
+                    return;
+                }
+
+                let html = `<h2>Diário de Classe - ${document.getElementById('turma').value} (${b})</h2>`;
+                html += '<table class="report-table"><thead><tr><th style="width:120px;">DATA</th><th>CONTEÚDO MINISTRADO</th></tr></thead><tbody>';
+                
+                const ordenados = Object.keys(dados).map(id => ({id, ...dados[id]}))
+                                        .sort((a,b) => new Date(a.data) - new Date(b.data));
+
+                ordenados.forEach(item => {
+                    const dataF = item.data ? item.data.split('-').reverse().join('/') : "";
+                    const textoConteudo = item.conteudo || item.conteúdo || "";
+                    html += `<tr><td><b>${dataF}</b></td><td>${textoConteudo}</td></tr>`;
+                });
+
+                container.innerHTML = html + '</tbody></table>';
+            });
+        }
+
+        // --- OUTROS MÓDULOS (RECUPERAÇÃO, FECHAMENTO, AJUSTES) ---
         async function carregarRec() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; if(!t) return;
             const [sA, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`recuperacao/${t}/${b}`).once('value')]);
@@ -454,35 +624,21 @@
             const t = limparT(document.getElementById('turma').value);
             let nomesAtuais = [];
             document.querySelectorAll('.edit-aluno-nome').forEach(inp => nomesAtuais.push(inp.value.trim()));
-            
             const novoIdx = idx + direcao;
             if (novoIdx < 0 || novoIdx >= nomesAtuais.length) return;
-            
-            const temp = nomesAtuais[idx];
-            nomesAtuais[idx] = nomesAtuais[novoIdx];
-            nomesAtuais[novoIdx] = temp;
-            
-            await db.ref('turmas/'+t).set(nomesAtuais);
-            renderizarEditorAlunos();
+            const temp = nomesAtuais[idx]; nomesAtuais[idx] = nomesAtuais[novoIdx]; nomesAtuais[novoIdx] = temp;
+            await db.ref('turmas/'+t).set(nomesAtuais); renderizarEditorAlunos();
         }
 
         async function moverAlunoExtremo(idx, destino) {
             const t = limparT(document.getElementById('turma').value);
             let nomesAtuais = [];
             document.querySelectorAll('.edit-aluno-nome').forEach(inp => nomesAtuais.push(inp.value.trim()));
-            
             if (nomesAtuais.length <= 1) return;
-            
             const [alunoSelecionado] = nomesAtuais.splice(idx, 1);
-            
-            if (destino === 'topo') {
-                nomesAtuais.unshift(alunoSelecionado);
-            } else if (destino === 'fim') {
-                nomesAtuais.push(alunoSelecionado);
-            }
-            
-            await db.ref('turmas/'+t).set(nomesAtuais);
-            renderizarEditorAlunos();
+            if (destino === 'topo') { nomesAtuais.unshift(alunoSelecionado); } 
+            else if (destino === 'fim') { nomesAtuais.push(alunoSelecionado); }
+            await db.ref('turmas/'+t).set(nomesAtuais); renderizarEditorAlunos();
         }
 
         async function adicionarUmAluno() {
@@ -500,222 +656,6 @@
         async function removerAluno(idx) {
             const t = limparT(document.getElementById('turma').value); const s = await db.ref('turmas/'+t).once('value');
             let lista = s.val() || []; lista.splice(idx, 1); await db.ref('turmas/'+t).set(lista); renderizarEditorAlunos();
-        }
-
-        function carregarHistoricoVistos() {
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-            db.ref(`vistos/${t}/${b}`).once('value', s => {
-                const d = s.val() || {}; let h = '';
-                Object.keys(d).sort().reverse().forEach(data => {
-                    h += `<div class="hist-item">
-                        <span>📅 ${data.split('-').reverse().join('/')}</span>
-                        <div style="display:flex; gap:5px;">
-                            <button onclick="setarData('${data}')" class="btn-edit-small" style="background:var(--accent)">Abrir</button>
-                            <button onclick="deletarVistosDia('${data}')" class="btn-edit-small" style="background:var(--danger)">×</button>
-                        </div>
-                    </div>`;
-                });
-                document.getElementById('hist-vistos-lista').innerHTML = h;
-            });
-        }
-
-        async function deletarVistosDia(data) {
-            if(confirm(`Deseja realmente apagar TODOS os vistos do dia ${data.split('-').reverse().join('/')}?`)) {
-                const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-                await db.ref(`vistos/${t}/${b}/${data}`).remove();
-                dataOficialmenteAberta = false;
-                carregarAlunos();
-                alert("Vistos removidos com sucesso!");
-            }
-        }
-
-        function setarData(d) { 
-            dataOficialmenteAberta = true; 
-            document.getElementById('data').value = d; 
-            carregarAlunos(); 
-        }
-
-        // --- FUNÇÃO DE IMPORTAÇÃO EM MASSA INTELIGENTE ---
-        async function importar() {
-            const t = limparT(document.getElementById('turma').value);
-            if (!t) { alert("Por favor, selecione uma turma primeiro!"); return; }
-
-            const textoImportacao = document.getElementById('imp').value;
-            if (!textoImportacao.trim()) { alert("Cole a lista de alunos na caixa de texto!"); return; }
-
-            const linhas = textoImportacao.split('\n');
-            const novosAlunos = [];
-            linhas.forEach(linha => {
-                let txt = inline(linha); if (!txt) return;
-                txt = txt.replace(/\b\d{2}\/\d{2}\/\d{2,4}\b/g, "");
-                txt = txt.replace(/^[-\d.\s#]+/g, ""); 
-                txt = txt.replace(/[-\d.\s]+$/g, ""); 
-                txt = txt.replace(/[\t;|]+/g, " ");
-                txt = txt.replace(/\s+/g, " ").trim();
-                if (txt.length > 3) novosAlunos.push(txt);
-            });
-
-            function inline(str) { return str ? str.trim() : ""; }
-            if (novosAlunos.length === 0) { alert("Nenhum nome válido foi identificado!"); return; }
-
-            if (confirm(`Foram limpos e identificados ${novosAlunos.length} alunos para a turma "${t}". Deseja prosseguir? Isso substituirá os registros atuais.`)) {
-                try {
-                    await db.ref('turmas/' + t).set(novosAlunos);
-                    alert("Importação em massa concluída!");
-                    document.getElementById('imp').value = "";
-                    renderizarEditorAlunos();
-                } catch (erro) {
-                    alert("Erro ao salvar no banco de dados.");
-                }
-            }
-        }
-
-        // --- COMPORTAMENTO DO DIÁRIO (MANDATÓRIO: LEITURA HÍBRIDA DE CHAVES) ---
-        function salvarD() {
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
-            const conteudo = document.getElementById('cont').value.trim();
-            const idExistente = document.getElementById('diario-id-atual').value;
-            
-            if(!t || !conteudo) { alert("Selecione a turma e preencha o conteúdo!"); return; }
-            
-            let rota = db.ref(`diarios/${t}/${b}`);
-            if(idExistente) {
-                // Se a chave antiga for uma data pura (ex: "2026-05-10"), atualiza direto nela, senão altera o ID gerado
-                db.ref(`diarios/${t}/${b}/${idExistente}`).set({ data: d, conteudo: conteudo }).then(() => {
-                    alert("Diário atualizado!");
-                    cancelarEdicaoD();
-                    carregarHistorico();
-                });
-            } else {
-                // Para evitar misturas e sumiços futuros, salvamos indexando por data para máxima previsibilidade
-                rota.child(d).set({ data: d, conteudo: conteudo }).then(() => {
-                    alert("Diário gravado!");
-                    document.getElementById('cont').value = "";
-                    carregarHistorico();
-                });
-            }
-        }
-
-        function carregarHistorico() {
-            const t = limparT(document.getElementById('turma').value); 
-            const b = document.getElementById('bimestre').value;
-            
-            if(!t) {
-                document.getElementById('historico-lista').innerHTML = '<p style="font-size:0.85rem;color:#64748b;padding-left:15px">Selecione uma turma para ver o histórico do diário.</p>';
-                return;
-            }
-            
-            db.ref(`diarios/${t}/${b}`).once('value', s => {
-                const dados = s.val() || {}; 
-                let html = '';
-                let listaOrdenada = [];
-                
-                // Mapeamento Híbrido: Processa tanto objetos com IDs aleatórios quanto nós diretos por data
-                Object.keys(dados).forEach(chave => {
-                    let nó = dados[chave];
-                    if (nó && typeof nó === 'object') {
-                        // Se o banco foi salvo com a estrutura {data, conteudo}
-                        listaOrdenada.push({
-                            id: chave,
-                            data: nó.data || chave, // Fallback caso a chave seja a própria data
-                            conteudo: nó.conteudo || ""
-                        });
-                    } else if (typeof nó === 'string') {
-                        // Segurança extrema caso em alguma versão antiga o conteúdo estivesse direto na string da data
-                        listaOrdenada.push({
-                            id: chave,
-                            data: chave,
-                            conteudo: nó
-                        });
-                    }
-                });
-
-                // Ordena do mais recente para o mais antigo
-                listaOrdenada.sort((x, y) => (y.data || "").localeCompare(x.data || ""));
-
-                listaOrdenada.forEach(item => {
-                    let id = item.id;
-                    let dataBr = item.data ? item.data.split('-').reverse().join('/') : 'S/D';
-                    
-                    let conteudoTratado = (item.conteudo || "")
-                        .replace(/\\/g, '\\\\')
-                        .replace(/`/g, '\\`')
-                        .replace(/\n/g, '\\n')
-                        .replace(/\r/g, '');
-
-                    html += `
-                    <li class="timeline-item">
-                        <div class="timeline-card">
-                            <div class="timeline-header">
-                                <span class="timeline-date">📅 ${dataBr}</span>
-                                <div class="timeline-actions">
-                                    <button onclick="prepararEdicaoD('${id}', '${item.data || ''}', \`${conteudoTratado}\`)" class="btn-tl btn-tl-edit">Editar</button>
-                                    <button onclick="deletarD('${id}')" class="btn-tl btn-tl-del">×</button>
-                                </div>
-                            </div>
-                            <div class="timeline-body">${(item.conteudo || "").replace(/\n/g, '<br>')}</div>
-                        </div>
-                    </li>`;
-                });
-                
-                document.getElementById('historico-lista').innerHTML = html || '<p style="font-size:0.85rem;color:#64748b;padding-left:15px">Nenhum diário registrado para este bimestre.</p>';
-            });
-        }
-
-        function prepararEdicaoD(id, data, conteudo) {
-            document.getElementById('diario-id-atual').value = id;
-            document.getElementById('data').value = data;
-            document.getElementById('cont').value = conteudo;
-            document.getElementById('status-edicao').style.display = "block";
-            document.getElementById('btn-cancelar-diario').classList.remove('hidden');
-            document.getElementById('btn-salvar-diario').innerText = "Atualizar Conteúdo";
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function cancelarEdicaoD() {
-            document.getElementById('diario-id-atual').value = "";
-            document.getElementById('cont').value = "";
-            document.getElementById('status-edicao').style.display = "none";
-            document.getElementById('btn-cancelar-diario').classList.add('hidden');
-            document.getElementById('btn-salvar-diario').innerText = "Gravar Diário";
-        }
-
-        async function deletarD(id) {
-            if(confirm("Tem certeza que deseja remover esta aula do diário?")) {
-                const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-                await db.ref(`diarios/${t}/${b}/${id}`).remove();
-                carregarHistorico();
-            }
-        }
-
-        async function gerarRelatorioDiario() {
-            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-            if(!t) { document.getElementById('lista-rel-diario').innerHTML = "Escolha uma turma primeiro..."; return; }
-            
-            const s = await db.ref(`diarios/${t}/${b}`).once('value');
-            const dados = s.val() || {};
-            let html = `<h2>Diário de Classe - Turma: ${document.getElementById('turma').value} (${b})</h2>`;
-            html += '<table class="report-table"><thead><tr><th style="width:100px;">DATA</th><th>CONTEÚDO MINISTRADO</th></tr></thead><tbody>';
-            
-            let itensArray = [];
-            Object.keys(dados).forEach(chave => {
-                let nó = dados[chave];
-                if(nó && typeof nó === 'object') {
-                    itensArray.push({ data: nó.data || chave, conteudo: nó.conteudo || "" });
-                } else if(typeof nó === 'string') {
-                    itensArray.push({ data: chave, conteudo: nó });
-                }
-            });
-
-            if(itensArray.length === 0) {
-                html += `<tr><td colspan="2" style="text-align:center; color:#64748b;">Nenhum registro encontrado no banco para esta turma neste bimestre.</td></tr>`;
-            } else {
-                itensArray.sort((x,y) => (x.data || "").localeCompare(y.data || "")).forEach(r => {
-                    let dataFormatada = r.data ? r.data.split('-').reverse().join('/') : 'S/D';
-                    html += `<tr><td><b>${dataFormatada}</b></td><td>${r.conteudo.replace(/\n/g, '<br>')}</td></tr>`;
-                });
-            }
-            document.getElementById('lista-rel-diario').innerHTML = html + '</tbody></table>';
         }
     </script>
 </body>
