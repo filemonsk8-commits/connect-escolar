@@ -81,6 +81,16 @@
         .btn-cover { background: var(--accent); color: white; border: none; padding: 16px 32px; font-size: 1rem; font-weight: 700; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4); transition: transform 0.2s; width: 100%; max-width: 250px; }
         .btn-cover:active { transform: scale(0.98); }
 
+        /* Estilos adicionais para os controles finos na lista de ajustes */
+        .ajuste-aluno-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; gap: 10px; }
+        .ajuste-aluno-nome { font-size: 0.85rem; font-weight: 500; color: #334155; flex-grow: 1; }
+        .ajuste-botoes-container { display: flex; gap: 4px; }
+        .btn-movimentacao { border: none; width: 28px; height: 28px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; }
+        .btn-up { background: #64748b; }
+        .btn-down { background: #475569; }
+        .btn-last { background: #1e293b; }
+        .btn-del-aluno { background: var(--danger); margin-left: 4px; }
+
         @media print { .no-print, nav, header, .btn-main, #welcome-cover, #login-screen { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
     </style>
 </head>
@@ -167,9 +177,17 @@
             <div id="aba-c" class="card hidden">
                 <h3>Ajustes de Turma</h3>
                 <div id="editor-alunos-lista"></div>
-                <hr>
-                <textarea id="imp" style="height:120px;" placeholder="Importação em massa... Pode colar a lista com números e datas, o sistema limpa automaticamente!"></textarea>
-                <button onclick="importar()" class="btn-main btn-blue">Importar Tudo</button>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+                
+                <h4>Adicionar Único Aluno</h4>
+                <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+                    <input type="text" id="novo-aluno-nome" placeholder="Digite o nome completo do aluno...">
+                    <button onclick="adicionarAlunoIndividual()" class="btn-main btn-blue" style="margin-top: 0; width: auto; white-space: nowrap; padding: 0 20px;">Adicionar</button>
+                </div>
+
+                <h4>Importação/Limpeza em Massa</h4>
+                <textarea id="imp" style="height:120px;" placeholder="Cole a listagem aqui. O sistema vai extrair estritamente os nomes limpando números, datas e caracteres especiais automaticamente!"></textarea>
+                <button onclick="importar()" class="btn-main btn-blue">Importar Tudo Sanitizado</button>
             </div>
         </div>
     </div>
@@ -568,144 +586,189 @@
             });
         }
 
+        // --- RECUPERAÇÃO ---
+        async function carregarRec() {
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            if(!t) return;
+            const [sA, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`recuperacao/${t}/${b}`).once('value')]);
+            const alunos = sA.val() || []; const recs = sR.val() || {};
+            
+            let h = '<table style="width:100%; border-collapse:collapse;">';
+            alunos.forEach((nome, idx) => {
+                let valOrig = recs[idx] !== undefined ? recs[idx] : "";
+                let valForm = valOrig !== "" ? parseFloat(valOrig).toFixed(1).replace('.', ',') : "";
+                h += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0; font-size:0.85rem;">${nome}</td>
+                <td style="text-align:right"><input type="text" inputmode="decimal" class="input-rec" data-idx="${idx}" value="${valForm}" onblur="formatarRec(this)"></td></tr>`;
+            });
+            document.getElementById('lista-rec').innerHTML = h + '</table>';
+        }
+
+        function formatarRec(inp) {
+            let v = inp.value.replace(',', '.');
+            if(v !== "" && !isNaN(v)) inp.value = parseFloat(v).toFixed(1).replace('.', ',');
+        }
+
+        function salvarRec() {
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            let dados = {}; document.querySelectorAll('.input-rec').forEach(inp => {
+                const i = inp.dataset.idx; let val = inp.value.replace(',', '.');
+                if(val !== "" && !isNaN(val)) dados[i] = parseFloat(val);
+            });
+            db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => alert('Recuperação Salva!'));
+        }
+
         // --- FECHAMENTO (RELATÓRIO FINAL) ---
         async function gerarRelatorio() {
-            const t = limparT(document.getElementById('turma').value); 
-            const b = document.getElementById('bimestre').value; 
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             const container = document.getElementById('relatorio-lista');
-            if(!t) { container.innerHTML = "Selecione a turma..."; return; }
-
-            const [sA, sV] = await Promise.all([
+            if(!t) { container.innerHTML = "Escolha uma turma..."; return; }
+            
+            container.innerHTML = "<p>Processando fechamento final...</p>";
+            
+            const [sA, sV, sR] = await Promise.all([
                 db.ref('turmas/'+t).once('value'),
-                db.ref(`vistos/${t}/${b}`).once('value')
+                db.ref(`vistos/${t}/${b}`).once('value'),
+                db.ref(`recuperacao/${t}/${b}`).once('value')
             ]);
             
-            const alunos = sA.val() || [];
-            const dadosVistos = sV.val() || {};
-            
+            const alunos = sA.val() || []; const todosVistos = sV.val() || {}; const recs = sR.val() || {};
             notasParaCopiaGlobal = [];
-
-            let html = `<h2>Relatório de Notas - ${document.getElementById('turma').value} (${b})</h2>`;
-            html += '<table class="report-table"><thead><tr><th>Estudante</th><th>Ativ. 1</th><th>Ativ. 2</th><th>Ativ. 3</th><th>Ativ. 4</th><th>Ativ. 5</th><th>Nota Vistos</th></tr></thead><tbody>';
-
+            
+            let html = `<h2>Fechamento de Notas - ${document.getElementById('turma').value} (${b})</h2>`;
+            html += '<table class="report-table"><thead><tr><th>Nº</th><th>ESTUDANTE</th><th style="text-align:center">N.B.</th><th style="text-align:center">REC</th><th style="text-align:center">N.F.</th></tr></thead><tbody>';
+            
             alunos.forEach((nome, idx) => {
-                let somaAluno = 0;
-                let colunasVistosHtml = '';
-                
-                for(let v=1; v<=5; v++) {
-                    let notaEncontrada = "";
-                    Object.keys(dadosVistos).forEach(dataChave => {
-                        if(dadosVistos[dataChave][idx] && dadosVistos[dataChave][idx][v] !== undefined) {
-                            notaEncontrada = dadosVistos[dataChave][idx][v];
-                        }
-                    });
-                    
-                    if(notaEncontrada !== "") {
-                        somaAluno += parseFloat(notaEncontrada);
-                        colunasVistosHtml += `<td>${parseFloat(notaEncontrada).toFixed(1).replace('.', ',')}</td>`;
-                    } else {
-                        colunasVistosHtml += `<td>-</td>`;
+                let maxNotas = [0,0,0,0,0];
+                Object.keys(todosVistos).forEach(data => {
+                    const diaV = todosVistos[data][idx] || {};
+                    for(let v=1; v<=5; v++) {
+                        if(diaV[v] !== undefined && diaV[v] > maxNotas[v-1]) maxNotas[v-1] = diaV[v];
                     }
-                }
-
-                if (somaAluno > 10.0) { somaAluno = 10.0; }
-
-                let notaFinalString = somaAluno.toFixed(1).replace('.', ',');
-                notasParaCopiaGlobal.push(notaFinalString);
-
-                html += `<tr>
-                    <td><b>${nome}</b></td>
-                    ${colunasVistosHtml}
-                    <td style="font-weight: bold; color: var(--accent);">${notaFinalString}</td>
-                </tr>`;
+                });
+                
+                let nb = maxNotas.reduce((acc,curr) => acc+curr, 0);
+                let rec = recs[idx] !== undefined ? recs[idx] : "";
+                let nf = rec !== "" ? Math.max(nb, rec) : nb;
+                
+                if(nf > 10) nf = 10;
+                
+                let nbStr = nb > 0 ? nb.toFixed(1).replace('.', ',') : "0,0";
+                let recStr = rec !== "" ? rec.toFixed(1).replace('.', ',') : "-";
+                let nfStr = nf > 0 ? nf.toFixed(1).replace('.', ',') : "0,0";
+                
+                notasParaCopiaGlobal.push(nfStr);
+                
+                html += `<tr><td>${idx+1}</td><td>${nome}</td><td style="text-align:center">${nbStr}</td><td style="text-align:center; color:var(--danger); font-weight:bold;">${recStr}</td><td style="text-align:center; font-weight:bold; background:#f1f5f9;">${nfStr}</td></tr>`;
             });
-
+            
             container.innerHTML = html + '</tbody></table>';
         }
 
         function copiarNotasApenasNumeros() {
-            if (notasParaCopiaGlobal.length === 0) {
-                alert("Nenhuma nota gerada para ser copiada. Certifique-se de selecionar uma turma.");
+            if(notasParaCopiaGlobal.length === 0) { alert("Nenhuma nota gerada para cópia!"); return; }
+            const textoCopia = notasParaCopiaGlobal.join("\n");
+            navigator.clipboard.writeText(textoCopia).then(() => {
+                alert(`Sucesso! ${notasParaCopiaGlobal.length} notas copiadas em coluna para o SIAP!`);
+            }).catch(err => {
+                alert("Erro ao copiar: " + err);
+            });
+        }
+
+        // --- NOVA LÓGICA DE AJUSTES E MOVIMENTAÇÃO (ABA C) ---
+        async function renderizarEditorAlunos() {
+            const t = limparT(document.getElementById('turma').value);
+            if(!t) {
+                document.getElementById('editor-alunos-lista').innerHTML = "Escolha uma turma primeiro.";
                 return;
             }
-            const textoParaCopiar = notasParaCopiaGlobal.join('\n');
-            navigator.clipboard.writeText(textoParaCopiar).then(() => {
-                alert(`Sucesso! ${notasParaCopiaGlobal.length} notas copiadas para a área de transferência.`);
-            }).catch(err => {
-                alert("Erro ao copiar notas: " + err);
-            });
-        }
-
-        // --- LÓGICA DE RECUPERAÇÃO ---
-        async function carregarRec() {
-            const t = limparT(document.getElementById('turma').value); 
-            const b = document.getElementById('bimestre').value; 
-            if(!t) { document.getElementById('lista-rec').innerHTML = "Escolha a turma acima..."; return; }
             
-            const [sA, sR] = await Promise.all([
-                db.ref('turmas/'+t).once('value'), 
-                db.ref(`recuperacao/${t}/${b}`).once('value')
-            ]);
+            const snap = await db.ref('turmas/'+t).once('value');
+            const alunos = snap.val() || [];
             
-            const alunos = sA.val() || []; 
-            const recs = sR.val() || {};
+            if(alunos.length === 0) {
+                document.getElementById('editor-alunos-lista').innerHTML = "<p style='color:#64748b;'>Nenhum aluno cadastrado nesta turma.</p>";
+                return;
+            }
             
-            let html = '<table style="width:100%; border-collapse:collapse;">';
+            let html = '<div style="margin-bottom:15px;">';
             alunos.forEach((nome, idx) => {
-                let val = recs[idx] !== undefined ? parseFloat(recs[idx]).toFixed(1).replace('.', ',') : "";
-                html += `<tr style="border-bottom:1px solid #eee">
-                    <td style="padding:10px 0; font-size:0.85rem;">${nome}</td>
-                    <td style="text-align:right">
-                        <input type="text" inputmode="decimal" class="input-rec" data-idx="${idx}" value="${val}" onblur="formatarAoSairRec(this)">
-                    </td>
-                </tr>`;
+                html += `
+                <div class="ajuste-aluno-row">
+                    <span class="ajuste-aluno-nome"><b>${idx + 1}.</b> ${nome}</span>
+                    <div class="ajuste-botoes-container">
+                        <button onclick="moverAluno(${idx}, -1)" class="btn-movimentacao btn-up" title="Mover para cima">↑</button>
+                        <button onclick="moverAluno(${idx}, 1)" class="btn-movimentacao btn-down" title="Mover para baixo">↓</button>
+                        <button onclick="moverAlunoParaUltimo(${idx})" class="btn-movimentacao btn-last" title="Jogar para o final">⤓</button>
+                        <button onclick="removerAlunoUnico(${idx}, '${nome}')" class="btn-movimentacao btn-del-aluno" title="Excluir">×</button>
+                    </div>
+                </div>`;
             });
-            document.getElementById('lista-rec').innerHTML = html + '</table>';
+            html += '</div>';
+            document.getElementById('editor-alunos-lista').innerHTML = html;
         }
 
-        function formatarAoSairRec(inp) {
-            let v = inp.value.replace(',', '.');
-            if(v !== "" && !isNaN(v)) { inp.value = parseFloat(v).toFixed(1).replace('.', ','); }
-        }
-
-        function salvarRec() {
-            const t = limparT(document.getElementById('turma').value); 
-            const b = document.getElementById('bimestre').value;
-            let dados = {}; 
-            document.querySelectorAll('.input-rec').forEach(inp => {
-                const i = inp.dataset.idx; 
-                let val = inp.value.replace(',', '.');
-                if(val !== "" && !isNaN(val)) dados[i] = parseFloat(val);
-            });
-            db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => { alert('Recuperação salva!'); });
-        }
-
-        // --- LÓGICA DE AJUSTES E EDIÇÃO DE ALUNOS ---
-        async function renderizarEditorAlunos() {
-            const t = limparT(document.getElementById('turma').value); 
-            if(!t) { document.getElementById('editor-alunos-lista').innerHTML = "Selecione a turma..."; return; }
+        async function adicionarAlunoIndividual() {
+            const t = limparT(document.getElementById('turma').value);
+            const inputNome = document.getElementById('novo-aluno-nome');
+            let nomeLimpo = inputNome.value.replace(/\s+/g, " ").trim();
             
-            const snapshot = await db.ref('turmas/'+t).once('value');
-            const alunos = snapshot.val() || [];
+            if(!t) { alert("Selecione uma turma antes!"); return; }
+            if(!nomeLimpo) { alert("Digite um nome válido!"); return; }
             
-            let html = '<table style="width:100%; border-collapse:collapse; margin-bottom:15px;">';
-            alunos.forEach((nome, idx) => {
-                html += `<tr style="border-bottom:1px solid #eee">
-                    <td style="padding:6px 0; font-size:0.85rem;">${idx + 1}. ${nome}</td>
-                    <td style="text-align:right">
-                        <button onclick="removerAluno(${idx})" class="btn-edit-small" style="background:var(--danger)">Excluir</button>
-                    </td>
-                </tr>`;
-            });
-            document.getElementById('editor-alunos-lista').innerHTML = html + '</table>';
+            const snap = await db.ref('turmas/'+t).once('value');
+            let alunos = snap.val() || [];
+            
+            alunos.push(nomeLimpo);
+            
+            await db.ref('turmas/'+t).set(alunos);
+            inputNome.value = "";
+            renderizarEditorAlunos();
+            carregarAlunos();
         }
 
-        async function removerAluno(idx) {
-            if(confirm("Deseja realmente remover este estudante? Isso afetará os índices dos vistos dele!")) {
+        async function moverAluno(index, direcao) {
+            const t = limparT(document.getElementById('turma').value);
+            if((index === 0 && direcao === -1) || (index === 0 && direcao === 0)) return; 
+            
+            const snap = await db.ref('turmas/'+t).once('value');
+            let alunos = snap.val() || [];
+            
+            let alvo = index + direcao;
+            if(alvo < 0 || alvo >= alunos.length) return;
+            
+            // Troca de Posição Simples
+            let temp = alunos[index];
+            alunos[index] = alunos[alvo];
+            alunos[alvo] = temp;
+            
+            await db.ref('turmas/'+t).set(alunos);
+            renderizarEditorAlunos();
+            carregarAlunos();
+        }
+
+        async function moverAlunoParaUltimo(index) {
+            const t = limparT(document.getElementById('turma').value);
+            const snap = await db.ref('turmas/'+t).once('value');
+            let alunos = snap.val() || [];
+            
+            if(index >= alunos.length - 1) return;
+            
+            let elemento = alunos.splice(index, 1)[0];
+            alunos.push(elemento);
+            
+            await db.ref('turmas/'+t).set(alunos);
+            renderizarEditorAlunos();
+            carregarAlunos();
+        }
+
+        async function removerAlunoUnico(index, nome) {
+            if(confirm(`Tem certeza que deseja remover o(a) aluno(a) "${nome}"?`)) {
                 const t = limparT(document.getElementById('turma').value);
-                const snapshot = await db.ref('turmas/'+t).once('value');
-                let alunos = snapshot.val() || [];
-                alunos.splice(idx, 1);
+                const snap = await db.ref('turmas/'+t).once('value');
+                let alunos = snap.val() || [];
+                
+                alunos.splice(index, 1);
+                
                 await db.ref('turmas/'+t).set(alunos);
                 renderizarEditorAlunos();
                 carregarAlunos();
@@ -713,27 +776,38 @@
         }
 
         async function importar() {
-            const t = limparT(document.getElementById('turma').value); 
-            if(!t) { alert("Escolha a turma primeiro!"); return; }
+            const t = limparT(document.getElementById('turma').value);
+            if(!t) { alert("Escolha a turma!"); return; }
             
-            const texto = document.getElementById('imp').value;
-            if(!texto.trim()) { alert("Cole a lista de alunos primeiro!"); return; }
+            const raw = document.getElementById('imp').value;
+            if(!raw.trim()) { alert("Cole algo no campo de importação!"); return; }
             
-            let linhas = texto.split('\n');
-            let alunosLimpos = [];
+            let linhas = raw.split("\n");
+            let arr = [];
             
             linhas.forEach(l => {
-                let s = l.replace(/^\d+[\s.\-_)°]*\s*/, '').trim(); // Remove numerações iniciais
-                s = s.replace(/\s+\d{2}\/\d{2}\/\d{4}.*$/, '').trim(); // Remove datas de nascimento no final da linha
-                if(s.length > 2) { alunosLimpos.push(s); }
+                // Remove chamadas de número (Ex: "01-", "2.", "43 ")
+                // Remove datas associadas à linha se houver
+                // Remove tabs/múltiplos espaços e preserva apenas caracteres nominais
+                let processada = l.replace(/^\s*\d+[\s\.\-\/°º]*/g, ""); 
+                processada = processada.replace(/\d{2}[\/\-]\d{2}[\/\-]\d{2,4}/g, ""); 
+                processada = processada.replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, "");
+                processada = processada.replace(/\s+/g, " ").trim();
+                
+                if(processada.length > 2) {
+                    arr.push(processada);
+                }
             });
             
-            if(alunosLimpos.length === 0) { alert("Nenhum nome válido encontrado!"); return; }
+            if(arr.length === 0) {
+                alert("Nenhum nome válido foi filtrado na sanitização. Verifique o formato inserido!");
+                return;
+            }
             
-            if(confirm(`Deseja importar ${alunosLimpos.length} estudantes para a turma ${document.getElementById('turma').value}? ATENÇÃO: Isso substituirá a lista atual.`)) {
-                await db.ref('turmas/'+t).set(alunosLimpos);
+            if(confirm(`Detectamos ${arr.length} alunos limpos prontos para gravação. Sobrescrever lista atual da turma?`)) {
+                await db.ref('turmas/'+t).set(arr);
                 document.getElementById('imp').value = "";
-                alert("Importado com sucesso!");
+                alert("Importação realizada com sucesso!");
                 renderizarEditorAlunos();
                 carregarAlunos();
             }
