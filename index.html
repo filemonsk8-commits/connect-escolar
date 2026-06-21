@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.22 | Prof. Eduardo</title>
+    <title>Connect Escolar v3.9.23 | Prof. Eduardo</title>
     
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -107,7 +107,7 @@
 
     <div id="login-screen" class="hidden">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.22</h2>
+            <h2>Connect Escolar v3.9.23</h2>
             <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -171,7 +171,10 @@
             <div id="aba-l" class="card hidden">
                 <div id="relatorio-lista"></div>
                 <button onclick="window.print()" class="btn-main btn-blue no-print">Imprimir Relatório Final</button>
-                <button onclick="copiarNotasApenasNumeros()" class="btn-main btn-green no-print" style="margin-top: 8px;">Copiar Notas (Apenas Números)</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;" class="no-print">
+                    <button onclick="copiarNotasApenasNumeros()" class="btn-main btn-green" style="margin-top: 0;">Copiar Notas (Apenas Números)</button>
+                    <button onclick="copiarListaNomesENotas()" class="btn-main btn-orange" style="margin-top: 0;">Copiar Lista (Nomes + Notas)</button>
+                </div>
             </div>
 
             <div id="aba-c" class="card hidden">
@@ -204,6 +207,7 @@
         
         let dataOficialmenteAberta = false;
         let notasParaCopiaGlobal = [];
+        let listaNomesENotasGlobal = [];
 
         function popularMenus() {
             const st = document.getElementById('turma');
@@ -602,7 +606,7 @@
             db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => alert("Recuperação salva!"));
         }
 
-        // --- LÓGICA DE FECHAMENTO (ALTERADA: SOMA DIRETAMENTE COM TETO 10.0 + BOTÃO COPIAR NOME + NOTA) ---
+        // --- LÓGICA DE FECHAMENTO (SOMA DIRETA COM TETO 10.0 + CAPTURA EM ARRAY) ---
         async function gerarRelatorio() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             const container = document.getElementById('relatorio-lista');
@@ -630,17 +634,20 @@
             });
 
             notasParaCopiaGlobal = [];
+            listaNomesENotasGlobal = []; // Limpa histórico anterior para nova cópia em lote
+
             let html = `<h2>Fechamento de Notas - ${document.getElementById('turma').value} (${b})</h2>`;
             html += `<table class="report-table"><thead><tr><th>Aluno</th><th>Soma Vistos (Máx 10,0)</th><th>Recuperação</th><th>Nota Final</th><th class="no-print">Ações</th></tr></thead><tbody>`;
 
             alunos.forEach((nome, idx) => {
-                // AQUI FOI ALTERADO: Agora faz a somatória simples limitada ao teto de 10.0 (Math.min)
                 let notaVistos = Math.min(totais[idx], 10.0);
                 let notaRec = recs[idx] !== undefined ? parseFloat(recs[idx]) : null;
                 let notaFinal = notaRec !== null ? Math.max(notaVistos, notaRec) : notaVistos;
                 
                 let notaFinalStr = notaFinal.toFixed(1).replace('.', ',');
+                
                 notasParaCopiaGlobal.push(notaFinalStr);
+                listaNomesENotasGlobal.push(`${nome} - ${notaFinalStr}`); // Guarda string para a cópia em bloco
 
                 html += `<tr>
                     <td>${nome}</td>
@@ -648,14 +655,13 @@
                     <td>${notaRec !== null ? notaRec.toFixed(1).replace('.', ',') : '-'}</td>
                     <td style="font-weight:bold; color:var(--primary);">${notaFinalStr}</td>
                     <td class="no-print">
-                        <button onclick="copiarNomeNota('${nome}', '${notaFinalStr}')" class="btn-edit-small" style="background: var(--accent); font-weight: bold; padding: 6px 10px;">📋 Copiar Nome + Nota</button>
+                        <button onclick="copiarNomeNota('${nome}', '${notaFinalStr}')" class="btn-edit-small" style="background: var(--accent); font-weight: bold; padding: 6px 10px;">📋 Copiar</button>
                     </td>
                 </tr>`;
             });
             container.innerHTML = html + "</tbody></table>";
         }
 
-        // NOVA FUNÇÃO: Copia individual de Nome + Nota formatada
         function copiarNomeNota(nome, nota) {
             const texto = `${nome} - ${nota}`;
             navigator.clipboard.writeText(texto).then(() => {
@@ -670,6 +676,17 @@
             const textoFinal = notasParaCopiaGlobal.join("\n");
             navigator.clipboard.writeText(textoFinal).then(() => {
                 alert("Notas copiadas com sucesso! Prontas para colar na coluna do portal SIAP.");
+            });
+        }
+
+        // NOVA FUNÇÃO: Copia em bloco de todos os Alunos + Notas correspondentes
+        function copiarListaNomesENotas() {
+            if(listaNomesENotasGlobal.length === 0) { alert("Nenhuma lista de notas disponível para copiar."); return; }
+            const textoListaCompleta = listaNomesENotasGlobal.join("\n");
+            navigator.clipboard.writeText(textoListaCompleta).then(() => {
+                alert("Toda a listagem (Nomes + Notas) foi copiada com sucesso para a área de transferência!");
+            }).catch(err => {
+                alert("Erro ao executar a cópia em lote.");
             });
         }
 
@@ -761,7 +778,7 @@
             carregarAlunos();
         }
 
-        // --- SISTEMA INTELIGENTE DE IMPORTAÇÃO E MIGRAÇÃO CORRIGIDO ---
+        // --- GESTÃO E MIGRAÇÃO DE LISTA ---
         async function importarComMigracao() {
             const t = limparT(document.getElementById('turma').value);
             const texto = document.getElementById('imp').value;
