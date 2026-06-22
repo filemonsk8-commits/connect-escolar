@@ -44,7 +44,7 @@
         .visto-container { display: inline-flex; flex-direction: column; align-items: center; margin-left: 6px; width: 40px; }
         
         .input-v, .input-rec { width: 50px; height: 30px; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; padding: 2px; }
-        .input-v::placeholder { color: var(--danger); opacity: 0.7; font-weight: bold; }
+        .input-v::placeholder, .input-rec::placeholder { color: var(--danger); opacity: 0.7; font-weight: bold; }
         .nota-lançada { color: var(--danger) !important; font-weight: bold; border-color: var(--danger) !important; }
         
         .alerta-bloqueio { background: #fee2e2; border: 1px solid #fca5a5; color: var(--danger); padding: 10px; border-radius: 8px; text-align: center; font-size: 0.85rem; font-weight: bold; margin-bottom: 10px; animation: pulse 2s infinite; }
@@ -582,7 +582,7 @@
             });
         }
 
-        // --- LÓGICA DE RECUPERAÇÃO ---
+        // --- LÓGICA DE RECUPERAÇÃO (MODIFICADA PARA MOSTRAR EM VERMELHO) ---
         async function carregarRec() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             if(!t) return;
@@ -594,7 +594,15 @@
                 let valOrig = recs[idx] !== undefined ? recs[idx] : "";
                 let valForm = valOrig !== "" ? parseFloat(valOrig).toFixed(1).replace('.', ',') : "";
                 html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0; font-size:0.85rem;">${nome}</td><td style="text-align:right">
-                    <input type="number" inputmode="decimal" step="0.1" pattern="[0-9]*" class="input-rec" data-idx="${idx}" value="${valForm}" onblur="formatarAoSair(this)">
+                    <input type="number" 
+                           inputmode="decimal" 
+                           step="0.1" 
+                           pattern="[0-9]*" 
+                           class="input-rec ${valOrig!==""?"nota-lançada":""}" 
+                           data-idx="${idx}" 
+                           value="${valForm}" 
+                           onchange="formatarAoSair(this)"
+                           onblur="formatarAoSair(this)">
                 </td></tr>`;
             });
             document.getElementById('lista-rec').innerHTML = html + '</table>';
@@ -609,7 +617,7 @@
             db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => alert('Recuperação salva!'));
         }
 
-        // --- LÓGICA DE FECHAMENTO (MODIFICADA COM A TRAVA DE 10,0) ---
+        // --- LÓGICA DE FECHAMENTO ---
         async function gerarRelatorio() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             if(!t) { document.getElementById('relatorio-lista').innerHTML = "Escolha uma turma..."; return; }
@@ -641,7 +649,6 @@
                 let totalBimestre = 0;
                 for(let v=1;v<=5;v++) totalBimestre += somas[v];
                 
-                // APLICAÇÃO DA TRAVA PEDIDA: A somatória preliminar não pode passar de 10,0
                 totalBimestre = Math.min(totalBimestre, 10.0);
 
                 let rec = recs[idx] !== undefined ? parseFloat(recs[idx]) : "";
@@ -755,7 +762,7 @@
                 await realizarRemapeamentoGeralVistosEAlunos(t, novosAlunos);
                 document.getElementById('imp').value = "";
                 renderizarEditorAlunos();
-                alert("Lista atualizada e notas migradas perfeitamente!");
+                alert("Lista updated e notas migradas perfeitamente!");
             }
         }
 
