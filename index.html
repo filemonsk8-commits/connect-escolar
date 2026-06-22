@@ -108,7 +108,7 @@
     <div id="login-screen" class="hidden">
         <div class="login-box">
             <h2>Connect Escolar v3.9.23</h2>
-            <input type="password" id="pass" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
+            <input type="password" id="pass" inputmode="numeric" pattern="[0-9]*" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
     </div>
@@ -363,9 +363,12 @@
                         estiloInlineeo = `style="background: #f1f5f9; color: var(--danger); font-weight: bold;"`;
                     }
 
+                    // CORREÇÃO: Forçando o teclado numérico por padrão nos vistos
                     html += `<div class="visto-container">
-                                <input type="text" 
+                                <input type="number" 
                                        inputmode="decimal" 
+                                       step="0.1" 
+                                       pattern="[0-9]*"
                                        class="input-v ${valOrig!==""?"nota-lançada":""}" 
                                        data-idx="${idx}" 
                                        data-v="${v}" 
@@ -555,199 +558,380 @@
             }
         }
 
-        // --- ABA: RELATÓRIO DIÁRIO (rd) ---
+        // --- ABA RELATÓRIO DIÁRIO ---
         function gerarRelatorioDiario() {
             const t = limparT(document.getElementById('turma').value);
             const b = document.getElementById('bimestre').value;
             const container = document.getElementById('lista-rel-diario');
-            if(!t) { container.innerHTML = "Selecione uma turma..."; return; }
-
-            db.ref(`diario/${t}/${b}`).once('value', s => {
-                const dados = s.val();
+            
+            if(!t) { container.innerHTML = "Escolha uma turma..."; return; }
+            
+            db.ref(`diario/${t}/${b}`).once('value', snapshot => {
+                const dados = snapshot.val();
                 if(!dados) { container.innerHTML = "Nenhum diário registrado."; return; }
                 
-                let html = `<h3>Relatório Geral de Diários - ${document.getElementById('turma').value}</h3><table class="report-table"><thead><tr><th>Data</th><th>Conteúdo Lecionado</th></tr></thead><tbody>`;
-                Object.keys(dados).sort().forEach(id => {
-                    const item = dados[id];
-                    html += `<tr><td>${item.data.split('-').reverse().join('/')}</td><td>${item.conteudo || item.conteúdo}</td></tr>`;
+                let html = `<h2>Diário de Classe - Turma: ${document.getElementById('turma').value} (${b})</h2>`;
+                html += `<table class="report-table"><thead><tr><th style="width:100px;">Data</th><th>Conteúdo Realizado</th></tr></thead><tbody>`;
+                
+                const ordenados = Object.keys(dados).map(id => dados[id]).sort((a,b) => new Date(a.data) - new Date(b.data));
+                ordenados.forEach(item => {
+                    html += `<tr><td><strong>${item.data.split('-').reverse().join('/')}</strong></td><td>${item.conteudo || item.conteúdo || ""}</td></tr>`;
                 });
+                
                 container.innerHTML = html + "</tbody></table>";
             });
         }
 
-        // --- ABA: RECUPERAÇÃO (r) ---
+        // --- ABA RECUPERAÇÃO ---
         async function carregarRec() {
-            const t = limparT(document.getElementById('turma').value);
-            const b = document.getElementById('bimestre').value;
-            const container = document.getElementById('lista-rec');
-            if(!t) { container.innerHTML = "Selecione uma turma..."; return; }
-
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            if(!t) return;
+            
             const [sA, sR] = await Promise.all([
                 db.ref('turmas/'+t).once('value'),
                 db.ref(`recuperacao/${t}/${b}`).once('value')
             ]);
-            const alunos = sA.val() || [];
-            const recs = sR.val() || {};
-
-            let html = '<table style="width:100%; border-collapse:collapse;">';
+            
+            const alunos = sA.val() || []; const recDados = sR.val() || {};
+            let html = '<table style="width:100%">';
+            
             alunos.forEach((nome, idx) => {
-                let valOrig = recs[idx] !== undefined ? recs[idx] : "";
+                let valOrig = recDados[idx] !== undefined ? recDados[idx] : "";
                 let valForm = valOrig !== "" ? parseFloat(valOrig).toFixed(1).replace('.', ',') : "";
-                html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0; font-size:0.85rem;">${nome}</td><td style="text-align:right">
-                    <input type="text" inputmode="decimal" class="input-rec" data-idx="${idx}" value="${valForm}">
-                </td></tr>`;
+                
+                // CORREÇÃO: Forçando teclado numérico na recuperação
+                html += `<tr style="border-bottom:1px solid #eee">
+                    <td style="padding:10px 0;">${nome}</td>
+                    <td style="text-align:right">
+                        <input type="number" 
+                               inputmode="decimal" 
+                               step="0.1" 
+                               pattern="[0-9]*"
+                               class="input-rec" 
+                               data-idx="${idx}" 
+                               value="${valForm}" 
+                               onblur="formatarAoSair(this)">
+                    </td>
+                </tr>`;
             });
-            container.innerHTML = html + '</table>';
+            document.getElementById('lista-rec').innerHTML = html + '</table>';
         }
 
         function salvarRec() {
-            const t = limparT(document.getElementById('turma').value);
-            const b = document.getElementById('bimestre').value;
-            let dados = {};
-            document.querySelectorAll('.input-rec').forEach(inp => {
-                const idx = inp.dataset.idx;
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            let dados = {}; document.querySelectorAll('.input-rec').forEach(inp => {
                 let val = inp.value.replace(',', '.');
-                if(val !== "" && !isNaN(val)) dados[idx] = parseFloat(val);
+                if(val !== "" && !isNaN(val)) dados[inp.dataset.idx] = parseFloat(val);
             });
-            db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => alert('Recuperação salva com sucesso!'));
+            db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => alert('Recuperação Salva!'));
         }
 
-        // --- ABA: FECHAMENTO / RELATÓRIO FINAL (l) ---
+        // --- ABA FECHAMENTO (MUDADO PARA SOMATÓRIA SIMPLES) ---
         async function gerarRelatorio() {
-            const t = limparT(document.getElementById('turma').value);
-            const b = document.getElementById('bimestre').value;
-            const container = document.getElementById('relatorio-lista');
-            if(!t) { container.innerHTML = "Selecione uma turma..."; return; }
-
-            const [sA, sV, sR] = await Promise.all([
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            if(!t) { document.getElementById('relatorio-lista').innerHTML = "Escolha uma turma..."; return; }
+            
+            const [sH, sA, sV, sR] = await Promise.all([
+                db.ref(`headers/${t}/${b}`).once('value'),
                 db.ref('turmas/'+t).once('value'),
                 db.ref(`vistos/${t}/${b}`).once('value'),
                 db.ref(`recuperacao/${t}/${b}`).once('value')
             ]);
-
-            const alunos = sA.val() || [];
-            const todosVistos = sV.val() || {};
-            const recs = sR.val() || {};
-
+            
+            const h = sH.val() || {}; const alunos = sA.val() || []; const todosVistos = sV.val() || {}; const rec = sR.val() || {};
+            
             notasParaCopiaGlobal = [];
             listaNomesENotasGlobal = [];
 
-            let html = `<h3>Fechamento de Notas - ${document.getElementById('turma').value} (${b})</h3><table class="report-table"><thead><tr><th>Aluno</th><th>Vistos Realizados (Média)</th><th>Rec.</th><th>Nota Final</th></tr></thead><tbody>`;
-
+            let html = `<h2>Fechamento de Notas - Turma: ${document.getElementById('turma').value} (${b})</h2>`;
+            html += `<table class="report-table"><thead><tr><th>Nº</th><th>Aluno</th>`;
+            
+            for(let i=1; i<=5; i++) html += `<th>${h['h'+i] || 'Ativ. '+i}</th>`;
+            html += `<th>Soma Vistos</th><th>Rec.</th><th>Nota Final</th></tr></thead><tbody>`;
+            
             alunos.forEach((nome, idx) => {
-                let soma = 0; let totalVistos = 0;
-                Object.keys(todosVistos).forEach(data => {
-                    if(todosVistos[data][idx]) {
-                        for(let v=1; v<=5; v++) {
-                            if(todosVistos[data][idx][v] !== undefined) {
-                                soma += parseFloat(todosVistos[data][idx][v]);
-                                totalVistos++;
+                html += `<tr><td>${idx+1}</td><td><strong>${nome}</strong></td>`;
+                
+                let somaAluno = 0;
+                let temAlgumVisto = false;
+
+                // Armazena temporariamente a maior nota de cada coluna/visto
+                let colunasMaiorNota = {1: null, 2: null, 3: null, 4: null, 5: null};
+
+                Object.keys(todosVistos).forEach(dataChave => {
+                    if (todosVistos[dataChave][idx]) {
+                        for (let v = 1; v <= 5; v++) {
+                            let notaVisto = todosVistos[dataChave][idx][v];
+                            if (notaVisto !== undefined && !isNaN(notaVisto)) {
+                                if (colunasMaiorNota[v] === null || notaVisto > colunasMaiorNota[v]) {
+                                    colunasMaiorNota[v] = notaVisto;
+                                }
                             }
                         }
                     }
                 });
 
-                let media = totalVistos > 0 ? (soma / totalVistos) : 0;
-                let rec = recs[idx] !== undefined ? parseFloat(recs[idx]) : "";
-                let notaFinal = rec !== "" && rec > media ? rec : media;
-
-                let notaFinalForm = notaFinal.toFixed(1).replace('.', ',');
-                notasParaCopiaGlobal.push(notaFinalForm);
-                listaNomesENotasGlobal.push(`${nome}\t${notaFinalForm}`);
-
-                html += `<tr><td>${nome}</td><td>${media.toFixed(1).replace('.', ',')} (${totalVistos} vistos)</td><td>${rec !== "" ? rec.toFixed(1).replace('.', ',') : "-"}</td><td style="font-weight:bold; color:var(--accent)">${notaFinalForm}</td></tr>`;
+                for(let v=1; v<=5; v++){
+                    let mNota = colunasMaiorNota[v];
+                    if (mNota !== null) {
+                        // CORREÇÃO CRUCIAL: Apenas realiza a somatória simples dos vistos lançados
+                        somaAluno += mNota;
+                        temAlgumVisto = true;
+                        html += `<td>${parseFloat(mNota).toFixed(1).replace('.', ',')}</td>`;
+                    } else {
+                        html += `<td>-</td>`;
+                    }
+                }
+                
+                let notaFinalSemRec = temAlgumVisto ? somaAluno : 0;
+                let notaRec = rec[idx] !== undefined ? rec[idx] : null;
+                let notaFinalComRec = notaFinalSemRec;
+                
+                if(notaRec !== null && notaRec > notaFinalSemRec) {
+                    notaFinalComRec = notaRec;
+                }
+                
+                let strFinal = notaFinalComRec.toFixed(1).replace('.', ',');
+                let strRec = notaRec !== null ? notaRec.toFixed(1).replace('.', ',') : "-";
+                
+                html += `<td><strong>${notaFinalSemRec.toFixed(1).replace('.', ',')}</strong></td>
+                         <td>${strRec}</td>
+                         <td style="color:var(--accent); font-weight:bold; font-size:1rem;">${strFinal}</td></tr>`;
+                         
+                notasParaCopiaGlobal.push(strFinal);
+                listaNomesENotasGlobal.push(`${nome}\t${strFinal}`);
             });
-
-            container.innerHTML = html + "</tbody></table>";
+            
+            document.getElementById('relatorio-lista').innerHTML = html + "</tbody></table>";
         }
 
         function copiarNotasApenasNumeros() {
-            if(notasParaCopiaGlobal.length === 0) return alert("Nenhuma nota para copiar.");
-            navigator.clipboard.writeText(notasParaCopiaGlobal.join('\n')).then(() => alert("Notas copiadas (Apenas Números)!"));
+            if(notasParaCopiaGlobal.length === 0) { alert("Nenhuma nota gerada para copiar!"); return; }
+            const texto = notasParaCopiaGlobal.join("\n");
+            navigator.clipboard.writeText(texto).then(() => alert("Apenas as notas numéricas foram copiadas em coluna!"));
         }
 
         function copiarListaNomesENotas() {
-            if(listaNomesENotasGlobal.length === 0) return alert("Nenhuma lista para copiar.");
-            navigator.clipboard.writeText(listaNomesENotasGlobal.join('\n')).then(() => alert("Lista copiada (Nomes + Notas)!"));
+            if(listaNomesENotasGlobal.length === 0) { alert("Nenhuma lista gerada para copiar!"); return; }
+            const texto = listaNomesENotasGlobal.join("\n");
+            navigator.clipboard.writeText(texto).then(() => alert("Lista de Nomes e Notas copiada com sucesso!"));
         }
 
-        // --- ABA: AJUSTES / GERENCIAMENTO DE ALUNOS (c) ---
+        // --- ABA AJUSTES (EDITOR DE ALUNOS) ---
         async function renderizarEditorAlunos() {
             const t = limparT(document.getElementById('turma').value);
-            const container = document.getElementById('editor-alunos-lista');
-            if(!t) { container.innerHTML = "Selecione uma turma para editar os alunos."; return; }
-
-            const sA = await db.ref('turmas/'+t).once('value');
-            const alunos = sA.val() || [];
-
-            let html = '';
+            if(!t) { document.getElementById('editor-alunos-lista').innerHTML = "Escolha uma turma nos controles acima..."; return; }
+            
+            const snap = await db.ref('turmas/'+t).once('value');
+            const alunos = snap.val() || [];
+            
+            if(alunos.length === 0) {
+                document.getElementById('editor-alunos-lista').innerHTML = "<p style='color:#64748b;'>Nenhum aluno cadastrado nesta turma.</p>";
+                return;
+            }
+            
+            let html = '<div style="margin-top:10px;">';
             alunos.forEach((nome, idx) => {
-                html += `<div class="ajuste-aluno-row">
+                html += `
+                <div class="ajuste-aluno-row">
                     <span class="ajuste-aluno-nome">${idx + 1}. ${nome}</span>
                     <div class="ajuste-botoes-container">
-                        <button onclick="moverAluno('${t}', ${idx}, -1)" class="btn-movimentacao btn-up">▲</button>
-                        <button onclick="moverAluno('${t}', ${idx}, 1)" class="btn-movimentacao btn-down">▼</button>
-                        <button onclick="removerAluno('${t}', ${idx})" class="btn-movimentacao btn-del-aluno">×</button>
+                        <button onclick="moverAlunoAjuste('${idx}', 'up')" class="btn-movimentacao btn-up" title="Subir uma posição">↑</button>
+                        <button onclick="moverAlunoAjuste('${idx}', 'down')" class="btn-movimentacao btn-down" title="Descer uma posição">↓</button>
+                        <button onclick="moverAlunoAjuste('${idx}', 'last')" class="btn-movimentacao btn-last" title="Mover para o final da lista">⤓</button>
+                        <button onclick="deletarAlunoAjuste('${idx}', '${nome}')" class="btn-movimentacao btn-del-aluno" title="Remover Aluno">×</button>
                     </div>
                 </div>`;
             });
-            container.innerHTML = html || "Nenhum aluno cadastrado.";
+            html += '</div>';
+            document.getElementById('editor-alunos-lista').innerHTML = html;
         }
 
         async function adicionarAlunoIndividual() {
             const t = limparT(document.getElementById('turma').value);
-            const nomeInp = document.getElementById('novo-aluno-nome');
-            const nome = nomeInp.value.trim();
-            if(!t || !nome) return alert("Selecione a turma e digite o nome!");
-
-            const sA = await db.ref('turmas/'+t).once('value');
-            let alunos = sA.val() || [];
-            alunos.push(nome);
-            await db.ref('turmas/'+t).set(alunos);
-            nomeInp.value = "";
-            renderizarEditorAlunos();
-            carregarAlunos();
-        }
-
-        async function moverAluno(t, idx, direcao) {
-            const sA = await db.ref('turmas/'+t).once('value');
-            let alunos = sA.val() || [];
-            let novoIdx = idx + direcao;
-            if(novoIdx < 0 || novoIdx >= alunos.length) return;
+            const novoNome = document.getElementById('novo-aluno-nome').value.replace(/\s+/g, " ").trim();
             
-            let temp = alunos[idx];
-            alunos[idx] = alunos[novoIdx];
-            alunos[novoIdx] = temp;
-
-            await db.ref('turmas/'+t).set(alunos);
-            renderizarEditorAlunos();
-            carregarAlunos();
-        }
-
-        async function removerAluno(t, idx) {
-            if(confirm("Tem certeza que deseja remover este aluno? Isso desalinhará os vistos antigos se não reimportar migrando.")) {
-                const sA = await db.ref('turmas/'+t).once('value');
-                let alunos = sA.val() || [];
-                alunos.splice(idx, 1);
-                await db.ref('turmas/'+t).set(alunos);
+            if(!t) { alert("Selecione uma turma primeiro!"); return; }
+            if(!novoNome) { alert("Digite o nome do aluno!"); return; }
+            
+            if(confirm(`Deseja adicionar o aluno "${novoNome}" ao final desta turma?`)) {
+                const snap = await db.ref('turmas/'+t).once('value');
+                let listaAlunos = snap.val() || [];
+                listaAlunos.push(novoNome);
+                
+                await db.ref('turmas/'+t).set(listaAlunos);
+                document.getElementById('novo-aluno-nome').value = "";
                 renderizarEditorAlunos();
                 carregarAlunos();
+                alert(`Aluno "${novoNome}" adicionado com sucesso!`);
             }
         }
 
-        async function importarComMigracao() {
+        async function moverAlunoAjuste(indexStr, direcao) {
             const t = limparT(document.getElementById('turma').value);
-            const texto = document.getElementById('imp').value.trim();
-            if(!t || !texto) return alert("Selecione a turma e cole a nova listagem!");
-
-            const novasLinhas = texto.split('\n').map(l => l.replace(/^\d+[\s.-]*/, "").trim()).filter(l => l !== "");
+            const idx = parseInt(indexStr);
+            const snap = await db.ref('turmas/'+t).once('value');
+            let alunos = snap.val() || [];
             
-            // Lógica interna para atualizar preservando referências passadas
-            await db.ref('turmas/'+t).set(novasLinhas);
-            document.getElementById('imp').value = "";
-            alert("Lista de alunos atualizada!");
+            if(direcao === 'up' && idx > 0) {
+                let temp = alunos[idx]; alunos[idx] = alunos[idx-1]; alunos[idx-1] = temp;
+                await remapearVistosAoMover(t, idx, idx-1);
+            } else if(direcao === 'down' && idx < alunos.length - 1) {
+                let temp = alunos[idx]; alunos[idx] = alunos[idx+1]; alunos[idx+1] = temp;
+                await remapearVistosAoMover(t, idx, idx+1);
+            } else if(direcao === 'last' && idx < alunos.length - 1) {
+                let arrNotasBackup = [];
+                for(let b of ['1B','2B','3B','4B']) {
+                    const sV = await db.ref(`vistos/${t}/${b}`).once('value');
+                    const sR = await db.ref(`recuperacao/${t}/${b}`).once('value');
+                    arrNotasBackup.push({ b: b, vistos: sV.val() || {}, rec: sR.val() || {} });
+                }
+                
+                let oAluno = alunos.splice(idx, 1)[0];
+                alunos.push(oAluno);
+                
+                await db.ref('turmas/'+t).set(alunos);
+                
+                for(let bk of arrNotasBackup) {
+                    let novosVistos = {};
+                    Object.keys(bk.vistos).forEach(d => {
+                        novosVistos[d] = {};
+                        Object.keys(bk.vistos[d]).forEach(iStr => {
+                            let i = parseInt(iStr);
+                            if(i === idx) { novosVistos[d][alunos.length-1] = bk.vistos[d][iStr]; }
+                            else if(i > idx) { novosVistos[d][i-1] = bk.vistos[d][iStr]; }
+                            else { novosVistos[d][i] = bk.vistos[d][iStr]; }
+                        });
+                    });
+                    let novaRec = {};
+                    Object.keys(bk.rec).forEach(iStr => {
+                        let i = parseInt(iStr);
+                        if(i === idx) { novaRec[alunos.length-1] = bk.rec[iStr]; }
+                        else if(i > idx) { novaRec[i-1] = bk.rec[iStr]; }
+                        else { novaRec[i] = bk.rec[iStr]; }
+                    });
+                    await db.ref(`vistos/${t}/${bk.b}`).set(novosVistos);
+                    await db.ref(`recuperacao/${t}/${bk.b}`).set(novaRec);
+                }
+                renderizarEditorAlunos(); carregarAlunos(); return;
+            } else { return; }
+            
+            await db.ref('turmas/'+t).set(alunos);
             renderizarEditorAlunos();
             carregarAlunos();
+        }
+
+        async function remapearVistosAoMover(t, iOrig, iDest) {
+            for(let b of ['1B','2B','3B','4B']) {
+                const sV = await db.ref(`vistos/${t}/${b}`).once('value');
+                const vDados = sV.val() || {};
+                Object.keys(vDados).forEach(d => {
+                    let nOrig = vDados[d][iOrig] !== undefined ? vDados[d][iOrig] : null;
+                    let nDest = vDados[d][iDest] !== undefined ? vDados[d][iDest] : null;
+                    if(nOrig !== null) vDados[d][iDest] = nOrig; else delete vDados[d][iDest];
+                    if(nDest !== null) vDados[d][iOrig] = nDest; else delete vDados[d][iOrig];
+                });
+                await db.ref(`vistos/${t}/${b}`).set(vDados);
+
+                const sR = await db.ref(`recuperacao/${t}/${b}`).once('value');
+                const rDados = sR.val() || {};
+                let rOrig = rDados[iOrig] !== undefined ? rDados[iOrig] : null;
+                let rDest = rDados[iDest] !== undefined ? rDados[iDest] : null;
+                if(rOrig !== null) rDados[iDest] = rOrig; else delete rDados[iDest];
+                if(rDest !== null) rDados[iOrig] = rDest; else delete rDados[iOrig];
+                await db.ref(`recuperacao/${t}/${b}`).set(rDados);
+            }
+        }
+
+        async function deletarAlunoAjuste(idxStr, nomeAluno) {
+            const t = limparT(document.getElementById('turma').value);
+            const idx = parseInt(idxStr);
+            if(confirm(`⚠️ PERIGO MÁXIMO:\n\nDeseja mesmo DELETAR permanentemente o aluno "${nomeAluno}"?\nEsta ação vai remover o aluno da lista e deslocar as notas de todos os alunos seguintes para manter o alinhamento correto em TODOS os bimestres!`)) {
+                const snap = await db.ref('turmas/'+t).once('value');
+                let alunos = snap.val() || [];
+                alunos.splice(idx, 1);
+                await db.ref('turmas/'+t).set(alunos);
+                
+                for(let b of ['1B','2B','3B','4B']) {
+                    const sV = await db.ref(`vistos/${t}/${b}`).once('value');
+                    const vDados = sV.val() || {};
+                    let novosVistos = {};
+                    Object.keys(vDados).forEach(d => {
+                        novosVistos[d] = {};
+                        Object.keys(vDados[d]).forEach(iStr => {
+                            let i = parseInt(iStr);
+                            if(i > idx) { novosVistos[d][i-1] = vDados[d][iStr]; }
+                            else if(i < idx) { novosVistos[d][i] = vDados[d][iStr]; }
+                        });
+                    });
+                    await db.ref(`vistos/${t}/${b}`).set(novosVistos);
+
+                    const sR = await db.ref(`recuperacao/${t}/${b}`).once('value');
+                    const rDados = sR.val() || {};
+                    let novaRec = {};
+                    Object.keys(rDados).forEach(iStr => {
+                        let i = parseInt(iStr);
+                        if(i > idx) { novaRec[i-1] = rDados[iStr]; }
+                        else if(i < idx) { novaRec[i] = rDados[iStr]; }
+                    });
+                    await db.ref(`recuperacao/${t}/${b}`).set(novaRec);
+                }
+                renderizarEditorAlunos(); carregarAlunos(); alert("Aluno removido e índices corrigidos!");
+            }
+        }
+
+        // --- SISTEMA INTELIGENTE DE MIGRAÇÃO ---
+        async function importarComMigracao() {
+            const t = limparT(document.getElementById('turma').value);
+            const textoCru = document.getElementById('imp').value;
+            if(!t) { alert("Selecione a turma primeiro!"); return; }
+            if(!textoCru.trim()) { alert("Cole a nova lista de alunos!"); return; }
+            
+            const novasLinhas = textoCru.split('\n').map(l => l.replace(/^[0-9\s.-]+/, "").replace(/\s+/g, " ").trim()).filter(l => l.length > 0);
+            if(novasLinhas.length === 0) { alert("Nenhum aluno válido detectado!"); return; }
+            
+            if(!confirm(`Iniciar processamento de migração estrutural para a turma ${document.getElementById('turma').value}?`)) return;
+            
+            const snapAntigo = await db.ref('turmas/'+t).once('value');
+            const listaAntiga = snapAntigo.val() || [];
+            
+            let backupBimestres = [];
+            for(let b of ['1B','2B','3B','4B']) {
+                const sV = await db.ref(`vistos/${t}/${b}`).once('value');
+                const sR = await db.ref(`recuperacao/${t}/${b}`).once('value');
+                backupBimestres.push({ b: b, vistos: sV.val() || {}, rec: sR.val() || {} });
+            }
+            
+            await db.ref('turmas/'+t).set(novasLinhas);
+            
+            for(let bk of backupBimestres) {
+                let novosVistosBimestre = {};
+                let novaRecBimestre = {};
+                
+                Object.keys(bk.vistos).forEach(dataChave => {
+                    novosVistosBimestre[dataChave] = {};
+                    novasLinhas.forEach((novoNome, novoIdx) => {
+                        let antigoIdx = listaAntiga.indexOf(novoNome);
+                        if(antigoIdx !== -1 && bk.vistos[dataChave][antigoIdx] !== undefined) {
+                            novosVistosBimestre[dataChave][novoIdx] = bk.vistos[dataChave][antigoIdx];
+                        }
+                    });
+                });
+                
+                novasLinhas.forEach((novoNome, novoIdx) => {
+                    let antigoIdx = listaAntiga.indexOf(novoNome);
+                    if(antigoIdx !== -1 && bk.rec[antigoIdx] !== undefined) {
+                        novaRecBimestre[novoIdx] = bk.rec[antigoIdx];
+                    }
+                });
+                
+                await db.ref(`vistos/${t}/${bk.b}`).set(novosVistosBimestre);
+                await db.ref(`recuperacao/${t}/${bk.b}`).set(novaRecBimestre);
+            }
+            
+            document.getElementById('imp').value = "";
+            atualizarTudo();
+            alert("Sucesso! Lista atualizada e todos os vistos foram preservados e reindexados adequadamente.");
         }
     </script>
 </body>
