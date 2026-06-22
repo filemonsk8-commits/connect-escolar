@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.23 | Prof. Eduardo</title>
+    <title>Connect Escolar v3.9.24 | Prof. Eduardo</title>
     
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -107,7 +107,7 @@
 
     <div id="login-screen" class="hidden">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.23</h2>
+            <h2>Connect Escolar v3.9.24</h2>
             <input type="password" id="pass" inputmode="numeric" pattern="[0-9]*" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -399,18 +399,27 @@
             }
         }
 
-        function salvarVistos() { 
+        async function salvarVistos() { 
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
             
-            let dados = {}; 
+            // Forçamos uma leitura prévia da quantidade exata de alunos para estruturar o objeto sem buracos
+            const sA = await db.ref('turmas/'+t).once('value');
+            const totalAlunos = (sA.val() || []).length;
+            
+            let dados = {};
+            // Inicializa todos os índices de alunos possíveis como objetos vazios para que o nó Firebase não quebre
+            for(let a=0; a<totalAlunos; a++) {
+                dados[a] = { "placeholder_controle": true }; 
+            }
+            
             document.querySelectorAll('.input-v').forEach(inp => { 
-                const i = inp.dataset.idx; 
-                const v = inp.dataset.v; 
+                const i = parseInt(inp.dataset.idx); 
+                const v = parseInt(inp.dataset.v); 
                 let val = inp.value.replace(',', '.');
                 
                 if(val !== "" && !isNaN(val)) {
-                    if(!dados[i]) dados[i] = {}; 
+                    if(dados[i]["placeholder_controle"]) delete dados[i]["placeholder_controle"];
                     dados[i][v] = parseFloat(val); 
                 }
             }); 
@@ -542,7 +551,7 @@
             });
         }
 
-        function prairiesEdicaoD(id, conteudoBase64, dataOriginal) {
+        function prepararEdicaoD(id, conteudoBase64, dataOriginal) {
             const conteudo = decodeURIComponent(escape(atob(conteudoBase64)));
             document.getElementById('diario-id-atual').value = id;
             document.getElementById('cont').value = conteudo;
@@ -614,16 +623,29 @@
             document.getElementById('lista-rec').innerHTML = html + '</table>';
         }
 
-        function salvarRec() {
+        async function salvarRec() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-            let dados = {}; 
+            if(!t) return;
+
+            const sA = await db.ref('turmas/'+t).once('value');
+            const totalAlunos = (sA.val() || []).length;
+
+            let dados = {};
+            // Populando base limpa para a árvore não sumir
+            for(let a=0; a<totalAlunos; a++) {
+                dados[a] = -1; 
+            }
+
             document.querySelectorAll('.input-rec').forEach(inp => {
-                const i = inp.dataset.idx; 
+                const i = parseInt(inp.dataset.idx); 
                 let val = inp.value.replace(',', '.');
-                if(val !== "" && !isNaN(val)) dados[i] = parseFloat(val);
+                if(val !== "" && !isNaN(val)) {
+                    dados[i] = parseFloat(val);
+                }
             });
+
             db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => {
-                alert('Recuperação salva!');
+                alert('Recuperação salva com sucesso!');
                 carregarRec();
             });
         }
@@ -654,7 +676,11 @@
                 let somas = [0,0,0,0,0,0];
                 Object.keys(vistos).forEach(data => {
                     const dia = vistos[data][idx] || {};
-                    for(let v=1;v<=5;v++) { if(dia[v] !== undefined) somas[v] += parseFloat(dia[v]); }
+                    for(let v=1;v<=5;v++) { 
+                        if(dia[v] !== undefined && !isNaN(dia[v])) { 
+                            somas[v] += parseFloat(dia[v]); 
+                        } 
+                    }
                 });
 
                 let totalBimestre = 0;
@@ -662,7 +688,8 @@
                 
                 totalBimestre = Math.min(totalBimestre, 10.0);
 
-                let rec = recs[idx] !== undefined ? parseFloat(recs[idx]) : "";
+                // Busca a recuperação tratando valores padrão de proteção (-1)
+                let rec = (recs[idx] !== undefined && recs[idx] !== -1) ? parseFloat(recs[idx]) : "";
                 let notaFinal = totalBimestre;
                 if(rec !== "" && rec > totalBimestre) { notaFinal = rec; }
 
