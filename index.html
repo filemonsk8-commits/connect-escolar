@@ -45,7 +45,7 @@
         
         .input-v, .input-rec { width: 50px; height: 30px; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; padding: 2px; }
         .input-v::placeholder, .input-rec::placeholder { color: var(--danger); opacity: 0.7; font-weight: bold; }
-        .nota-lançada { color: var(--danger) !important; font-weight: bold; border-color: var(--danger) !important; }
+        .nota-lançada, .input-rec { color: var(--danger) !important; font-weight: bold; border-color: var(--danger) !important; }
         
         .alerta-bloqueio { background: #fee2e2; border: 1px solid #fca5a5; color: var(--danger); padding: 10px; border-radius: 8px; text-align: center; font-size: 0.85rem; font-weight: bold; margin-bottom: 10px; animation: pulse 2s infinite; }
         
@@ -364,10 +364,8 @@
                     }
 
                     html += `<div class="visto-container">
-                                <input type="number" 
+                                <input type="text" 
                                        inputmode="decimal" 
-                                       step="0.1" 
-                                       pattern="[0-9]*"
                                        class="input-v ${valOrig!==""?"nota-lançada":""}" 
                                        data-idx="${idx}" 
                                        data-v="${v}" 
@@ -403,12 +401,22 @@
 
         function salvarVistos() { 
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
-            let dados = {}; document.querySelectorAll('.input-v').forEach(inp => { 
-                const i = inp.dataset.idx; const v = inp.dataset.v; let val = inp.value.replace(',', '.');
-                if(!dados[i]) dados[i] = {}; if(val !== "" && !isNaN(val)) dados[i][v] = parseFloat(val); 
+            if(!t) return;
+            
+            let dados = {}; 
+            document.querySelectorAll('.input-v').forEach(inp => { 
+                const i = inp.dataset.idx; 
+                const v = inp.dataset.v; 
+                let val = inp.value.replace(',', '.');
+                
+                if(val !== "" && !isNaN(val)) {
+                    if(!dados[i]) dados[i] = {}; 
+                    dados[i][v] = parseFloat(val); 
+                }
             }); 
+            
             db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { 
-                alert('Salvo!'); 
+                alert('Vistos salvos com sucesso!'); 
                 dataOficialmenteAberta = true; 
                 carregarAlunos(); 
             }); 
@@ -534,7 +542,7 @@
             });
         }
 
-        function prepararEdicaoD(id, conteudoBase64, dataOriginal) {
+        function prairiesEdicaoD(id, conteudoBase64, dataOriginal) {
             const conteudo = decodeURIComponent(escape(atob(conteudoBase64)));
             document.getElementById('diario-id-atual').value = id;
             document.getElementById('cont').value = conteudo;
@@ -582,7 +590,7 @@
             });
         }
 
-        // --- LÓGICA DE RECUPERAÇÃO (MODIFICADA PARA MOSTRAR EM VERMELHO) ---
+        // --- LÓGICA DE RECUPERAÇÃO ---
         async function carregarRec() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             if(!t) return;
@@ -594,10 +602,8 @@
                 let valOrig = recs[idx] !== undefined ? recs[idx] : "";
                 let valForm = valOrig !== "" ? parseFloat(valOrig).toFixed(1).replace('.', ',') : "";
                 html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0; font-size:0.85rem;">${nome}</td><td style="text-align:right">
-                    <input type="number" 
+                    <input type="text" 
                            inputmode="decimal" 
-                           step="0.1" 
-                           pattern="[0-9]*" 
                            class="input-rec ${valOrig!==""?"nota-lançada":""}" 
                            data-idx="${idx}" 
                            value="${valForm}" 
@@ -610,11 +616,16 @@
 
         function salvarRec() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
-            let dados = {}; document.querySelectorAll('.input-rec').forEach(inp => {
-                const i = inp.dataset.idx; let val = inp.value.replace(',', '.');
+            let dados = {}; 
+            document.querySelectorAll('.input-rec').forEach(inp => {
+                const i = inp.dataset.idx; 
+                let val = inp.value.replace(',', '.');
                 if(val !== "" && !isNaN(val)) dados[i] = parseFloat(val);
             });
-            db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => alert('Recuperação salva!'));
+            db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => {
+                alert('Recuperação salva!');
+                carregarRec();
+            });
         }
 
         // --- LÓGICA DE FECHAMENTO ---
