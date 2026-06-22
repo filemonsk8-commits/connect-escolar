@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link class="no-print" rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063176.png">
     
-    <link class="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiUzEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNavmJsZSIKICAgIH0KICBdCn0=">
+    <link class="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgIn0lcmRfdXJsIjogIi4iLCKGlGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiUzEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNavmJsZSIKICAgIH0KICBdCn0=">
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -533,10 +533,6 @@
             });
         }
 
-        function abrirEdicaoD(id, conteudoBase64, dataOriginal) {
-            prepararEdicaoD(id, conteudoBase64, dataOriginal);
-        }
-
         function prepararEdicaoD(id, conteudoBase64, dataOriginal) {
             const conteudo = decodeURIComponent(escape(atob(conteudoBase64)));
             document.getElementById('diario-id-atual').value = id;
@@ -558,53 +554,6 @@
                 carregarHistorico();
                 alert("Registro de diário deletado!");
             }
-        }
-
-        // --- LÓGICA DE RECUPERAÇÃO ---
-        async function carregarRec() {
-            const t = limparT(document.getElementById('turma').value); 
-            const b = document.getElementById('bimestre').value;
-            if(!t) return;
-
-            const [sA, sR] = await Promise.all([
-                db.ref('turmas/'+t).once('value'),
-                db.ref(`recuperacao/${t}/${b}`).once('value')
-            ]);
-
-            const alunos = sA.val() || [];
-            const dadosRec = sR.val() || {};
-
-            let html = '<table style="width:100%; border-collapse:collapse;">';
-            alunos.forEach((nome, idx) => {
-                let valOrig = dadosRec[idx] !== undefined ? dadosRec[idx] : "";
-                let valForm = valOrig !== "" ? parseFloat(valOrig).toFixed(1).replace('.', ',') : "";
-
-                html += `<tr style="border-bottom:1px solid #eee">
-                            <td style="padding:10px 0; font-size:0.85rem;">${nome}</td>
-                            <td style="text-align:right">
-                                <input type="number" 
-                                       step="0.1"
-                                       inputmode="decimal" 
-                                       class="input-rec" 
-                                       data-idx="${idx}" 
-                                       value="${valForm}" 
-                                       onblur="formatarAoSair(this)">
-                            </td>
-                         </tr>`;
-            });
-            document.getElementById('lista-rec').innerHTML = html + '</table>';
-        }
-
-        function salvarRec() {
-            const t = limparT(document.getElementById('turma').value); 
-            const b = document.getElementById('bimestre').value;
-            let dados = {}; 
-            document.querySelectorAll('.input-rec').forEach(inp => {
-                const i = inp.dataset.idx; 
-                let val = inp.value.replace(',', '.');
-                if(val !== "" && !isNaN(val)) dados[i] = parseFloat(val);
-            });
-            db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => { alert('Recuperação salva!'); });
         }
     </script>
 </body>
