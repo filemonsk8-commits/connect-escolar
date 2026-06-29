@@ -365,6 +365,7 @@
 
                     html += `<div class="visto-container">
                                 <input type="text" 
+                                       inputmode="decimal" 
                                        class="input-v ${valOrig!==""?"nota-lançada":""}" 
                                        data-idx="${idx}" 
                                        data-v="${v}" 
@@ -381,27 +382,7 @@
             carregarHistoricoVistos();
         }
 
-        function extrairValorDoTitulo(colunaIndex) {
-            const inputHeader = document.getElementById('h' + colunaIndex);
-            if (!inputHeader) return 1.0;
-            const texto = inputHeader.value;
-            // Procura por números inteiros ou decimais no título (ex: 2,5 ou 3 ou 1.5)
-            const match = texto.replace(',', '.').match(/([0-9]+(\.[0-9]+)?)/);
-            return match ? parseFloat(match[0]) : 1.0;
-        }
-
         function formatarAoSair(inp) {
-            let entrada = inp.value.trim().toUpperCase();
-            let vCol = parseInt(inp.dataset.v);
-            
-            // Tratamento das letras C e I
-            if (entrada === 'C') {
-                let valorMax = extrairValorDoTitulo(vCol);
-                inp.value = valorMax.toFixed(1).replace('.', ',');
-            } else if (entrada === 'I') {
-                inp.value = "0,0";
-            }
-
             let v = inp.value.replace(',', '.');
             if(v !== "" && !isNaN(v)) { 
                 inp.value = parseFloat(v).toFixed(1).replace('.', ','); 
@@ -422,10 +403,12 @@
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
             
+            // Forçamos uma leitura prévia da quantidade exata de alunos para estruturar o objeto sem buracos
             const sA = await db.ref('turmas/'+t).once('value');
             const totalAlunos = (sA.val() || []).length;
             
             let dados = {};
+            // Inicializa todos os índices de alunos possíveis como objetos vazios para que o nó Firebase não quebre
             for(let a=0; a<totalAlunos; a++) {
                 dados[a] = { "placeholder_controle": true }; 
             }
@@ -453,10 +436,7 @@
             if(!t) return;
             let dados = {};
             for(let i=1; i<=5; i++) { dados['h'+i] = document.getElementById('h'+i).value; }
-            db.ref(`headers/${t}/${b}`).set(dados).then(() => {
-                // Atualiza a tela para reajustar placeholders se o professor mudar o valor do cabeçalho
-                carregarAlunos();
-            });
+            db.ref(`headers/${t}/${b}`).set(dados);
         }
 
         function carregarHistoricoVistos() {
@@ -569,6 +549,307 @@
 
                 listaContainer.innerHTML = html;
             });
+        }
+
+        function prepararEdicaoD(id, conteudoBase64, dataOriginal) {
+            const conteudo = decodeURIComponent(escape(atob(conteudoBase64)));
+            document.getElementById('diario-id-atual').value = id;
+            document.getElementById('cont').value = conteudo;
+            document.getElementById('data').value = dataOriginal;
+            
+            document.getElementById('status-edicao').style.display = "block";
+            document.getElementById('btn-cancelar-diario').classList.remove('hidden');
+            document.getElementById('btn-salvar-diario').innerText = "Atualizar Registro";
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function deletarDiario(id, dataStr) {
+            if (confirm(`Deseja realmente excluir o diário do dia ${dataStr}?`)) {
+                const t = limparT(document.getElementById('turma').value);
+                const b = document.getElementById('bimestre').value;
+                await db.ref(`diario/${t}/${b}/${id}`).remove();
+                carregarHistorico();
+                alert("Diário removido!");
+            }
+        }
+
+        function gerarRelatorioDiario() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            const container = document.getElementById('lista-rel-diario');
+
+            if(!t) { container.innerHTML = "Escolha uma turma..."; return; }
+
+            db.ref(`diario/${t}/${b}`).once('value', snapshot => {
+                const dados = snapshot.val();
+                if(!dados) { container.innerHTML = "Nenhum diário registrado."; return; }
+
+                const registros = Object.keys(dados).map(id => ({ id, ...dados[id] }))
+                                        .sort((a,b) => new Date(a.data) - new Date(b.data));
+
+                let html = `<h2>Diário de Classe - ${document.getElementById('turma').value} (${b})</h2>`;
+                html += `<table class="report-table"><thead><tr><th>Data</th><th>Conteúdo Lecionado</th></tr></thead><tbody>`;
+                
+                registros.forEach(r => {
+                    html += `<tr><td style="white-space:nowrap; font-weight:bold;">${r.data.split('-').reverse().join('/')}</td><td>${r.conteudo || r.conteúdo || ""}</td></tr>`;
+                });
+                
+                container.innerHTML = html + "</tbody></table>";
+            });
+        }
+
+        // --- LÓGICA DE RECUPERAÇÃO ---
+        async function carregarRec() {
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            if(!t) return;
+            const [sA, sR] = await Promise.all([db.ref('turmas/'+t).once('value'), db.ref(`recuperacao/${t}/${b}`).once('value')]);
+            const alunos = sA.val() || []; const recs = sR.val() || {};
+            
+            let html = '<table style="width:100%; border-collapse:collapse;">';
+            alunos.forEach((nome, idx) => {
+                let valOrig = recs[idx] !== undefined ? recs[idx] : "";
+                let valForm = valOrig !== "" ? parseFloat(valOrig).toFixed(1).replace('.', ',') : "";
+                html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0; font-size:0.85rem;">${nome}</td><td style="text-align:right">
+                    <input type="text" 
+                           inputmode="decimal" 
+                           class="input-rec ${valOrig!==""?"nota-lançada":""}" 
+                           data-idx="${idx}" 
+                           value="${valForm}" 
+                           onchange="formatarAoSair(this)"
+                           onblur="formatarAoSair(this)">
+                </td></tr>`;
+            });
+            document.getElementById('lista-rec').innerHTML = html + '</table>';
+        }
+
+        async function salvarRec() {
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            if(!t) return;
+
+            const sA = await db.ref('turmas/'+t).once('value');
+            const totalAlunos = (sA.val() || []).length;
+
+            let dados = {};
+            // Populando base limpa para a árvore não sumir
+            for(let a=0; a<totalAlunos; a++) {
+                dados[a] = -1; 
+            }
+
+            document.querySelectorAll('.input-rec').forEach(inp => {
+                const i = parseInt(inp.dataset.idx); 
+                let val = inp.value.replace(',', '.');
+                if(val !== "" && !isNaN(val)) {
+                    dados[i] = parseFloat(val);
+                }
+            });
+
+            db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => {
+                alert('Recuperação salva com sucesso!');
+                carregarRec();
+            });
+        }
+
+        // --- LÓGICA DE FECHAMENTO ---
+        async function gerarRelatorio() {
+            const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
+            if(!t) { document.getElementById('relatorio-lista').innerHTML = "Escolha uma turma..."; return; }
+
+            const [sH, sA, sV, sR] = await Promise.all([
+                db.ref(`headers/${t}/${b}`).once('value'),
+                db.ref('turmas/'+t).once('value'),
+                db.ref(`vistos/${t}/${b}`).once('value'),
+                db.ref(`recuperacao/${t}/${b}`).once('value')
+            ]);
+
+            const h = sH.val() || {}; const alunos = sA.val() || []; const vistos = sV.val() || {}; const recs = sR.val() || {};
+            
+            notasParaCopiaGlobal = [];
+            listaNomesENotasGlobal = [];
+
+            let html = `<h2>Fechamento de Notas - ${document.getElementById('turma').value} (${b})</h2>`;
+            html += `<table class="report-table"><thead><tr><th>Estudante</th>`;
+            for(let i=1;i<=5;i++) html += `<th>${h['h'+i] || 'Ativ. '+i}</th>`;
+            html += `<th>Soma</th><th>Rec</th><th>Nota Final</th></tr></thead><tbody>`;
+
+            alunos.forEach((nome, idx) => {
+                let somas = [0,0,0,0,0,0];
+                Object.keys(vistos).forEach(data => {
+                    const dia = vistos[data][idx] || {};
+                    for(let v=1;v<=5;v++) { 
+                        if(dia[v] !== undefined && !isNaN(dia[v])) { 
+                            somas[v] += parseFloat(dia[v]); 
+                        } 
+                    }
+                });
+
+                let totalBimestre = 0;
+                for(let v=1;v<=5;v++) totalBimestre += somas[v];
+                
+                totalBimestre = Math.min(totalBimestre, 10.0);
+
+                // Busca a recuperação tratando valores padrão de proteção (-1)
+                let rec = (recs[idx] !== undefined && recs[idx] !== -1) ? parseFloat(recs[idx]) : "";
+                let notaFinal = totalBimestre;
+                if(rec !== "" && rec > totalBimestre) { notaFinal = rec; }
+
+                notasParaCopiaGlobal.push(notaFinal.toFixed(1).replace('.', ','));
+                listaNomesENotasGlobal.push(`${nome}\t${notaFinal.toFixed(1).replace('.', ',')}`);
+
+                html += `<tr><td>${nome}</td>`;
+                for(let v=1;v<=5;v++) html += `<td>${somas[v] > 0 ? somas[v].toFixed(1).replace('.', ',') : '-'}</td>`;
+                html += `<td><strong>${totalBimestre.toFixed(1).replace('.', ',')}</strong></td>
+                         <td style="color:#64748b">${rec !== "" ? rec.toFixed(1).replace('.', ',') : '-'}</td>
+                         <td><span class="nota-lançada" style="font-size:0.95rem;">${notaFinal.toFixed(1).replace('.', ',')}</span></td></tr>`;
+            });
+
+            document.getElementById('relatorio-lista').innerHTML = html + "</tbody></table>";
+        }
+
+        function copiarNotasApenasNumeros() {
+            if(notasParaCopiaGlobal.length === 0) { alert("Nenhuma nota disponível para copiar."); return; }
+            const texto = notasParaCopiaGlobal.join('\n');
+            navigator.clipboard.writeText(texto).then(() => alert("Apenas as notas foram copiadas em coluna!"));
+        }
+
+        function copiarListaNomesENotas() {
+            if(listaNomesENotasGlobal.length === 0) { alert("Nenhuma lista disponível para copiar."); return; }
+            const texto = listaNomesENotasGlobal.join('\n');
+            navigator.clipboard.writeText(texto).then(() => alert("Lista de Nomes + Notas copiada com sucesso!"));
+        }
+
+        // --- LÓGICA DE AJUSTES E GESTÃO DE ALUNOS ---
+        async function renderizarEditorAlunos() {
+            const t = limparT(document.getElementById('turma').value);
+            if(!t) { document.getElementById('editor-alunos-lista').innerHTML = "Escolha uma turma..."; return; }
+            const sA = await db.ref('turmas/'+t).once('value');
+            const alunos = sA.val() || [];
+            
+            let html = '';
+            alunos.forEach((nome, idx) => {
+                html += `
+                <div class="ajuste-aluno-row">
+                    <span class="ajuste-aluno-nome">${idx + 1}. ${nome}</span>
+                    <div class="ajuste-botoes-container">
+                        <button onclick="moverAluno('${idx}', -1)" class="btn-movimentacao btn-up" title="Subir uma posição">↑</button>
+                        <button onclick="moverAluno('${idx}', 1)" class="btn-movimentacao btn-down" title="Descer uma posição">↓</button>
+                        <button onclick="moverAlunoParaFinal('${idx}')" class="btn-movimentacao btn-last" title="Mover para o final da lista">⤓</button>
+                        <button onclick="removerAlunoIndividual('${idx}', '${nome}')" class="btn-movimentacao btn-del-aluno" title="Excluir aluno">×</button>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('editor-alunos-lista').innerHTML = html || "Nenhum aluno cadastrado.";
+        }
+
+        async function moverAluno(idx, direcao) {
+            idx = parseInt(idx); const novaPos = idx + direcao;
+            const t = limparT(document.getElementById('turma').value);
+            const sA = await db.ref('turmas/'+t).once('value');
+            let arr = sA.val() || [];
+            if(novaPos < 0 || novaPos >= arr.length) return;
+            
+            let temporario = arr[idx]; arr[idx] = arr[novaPos]; arr[novaPos] = temporario;
+            await realizarRemapeamentoGeralVistosEAlunos(t, arr);
+            renderizarEditorAlunos();
+        }
+
+        async function moverAlunoParaFinal(idx) {
+            idx = parseInt(idx);
+            const t = limparT(document.getElementById('turma').value);
+            const sA = await db.ref('turmas/'+t).once('value');
+            let arr = sA.val() || [];
+            if(idx === arr.length - 1) return;
+            
+            let elemento = arr.splice(idx, 1)[0]; arr.push(elemento);
+            await realizarRemapeamentoGeralVistosEAlunos(t, arr);
+            renderizarEditorAlunos();
+        }
+
+        async function adicionarAlunoIndividual() {
+            const t = limparT(document.getElementById('turma').value);
+            const nomeNovo = document.getElementById('novo-aluno-nome').value.trim();
+            if(!t) { alert("Selecione a turma antes!"); return; }
+            if(!nomeNovo) { alert("Digite o nome do aluno."); return; }
+            
+            const sA = await db.ref('turmas/'+t).once('value');
+            let arr = sA.val() || []; arr.push(nomeNovo);
+            await db.ref('turmas/'+t).set(arr);
+            document.getElementById('novo-aluno-nome').value = "";
+            renderizarEditorAlunos();
+            alert("Aluno incluído no final da listagem!");
+        }
+
+        async function removerAlunoIndividual(idx, nome) {
+            if(confirm(`ATENÇÃO:\nDeseja remover o(a) aluno(a) "${nome}"?\nAs notas dele serão apagadas e a lista reordenada automaticamente.`)) {
+                idx = parseInt(idx); const t = limparT(document.getElementById('turma').value);
+                const sA = await db.ref('turmas/'+t).once('value');
+                let arr = sA.val() || []; arr.splice(idx, 1);
+                await realizarRemapeamentoGeralVistosEAlunos(t, arr);
+                renderizarEditorAlunos();
+            }
+        }
+
+        async function importarComMigracao() {
+            const t = limparT(document.getElementById('turma').value);
+            const textoBruto = document.getElementById('imp').value;
+            if(!t) { alert("Selecione uma turma primeiro!"); return; }
+            if(!textoBruto.trim()) { alert("Cole os nomes para atualização!"); return; }
+            
+            const novosAlunos = textoBruto.split('\n').map(n => n.replace(/^\d+[\s.-]*/, "").trim()).filter(n => n.length > 0);
+            if(confirm(`Deseja rodar a migração automática?\nO sistema vai parear os nomes iguais/semelhantes e reindexar todas as notas cadastradas.`)) {
+                await realizarRemapeamentoGeralVistosEAlunos(t, novosAlunos);
+                document.getElementById('imp').value = "";
+                renderizarEditorAlunos();
+                alert("Lista updated e notas migradas perfeitamente!");
+            }
+        }
+
+        async function realizarRemapeamentoGeralVistosEAlunos(turmaLimpa, novaListaAlunos) {
+            const [sListaAntiga, sTodosVistos, sTodasRecs] = await Promise.all([
+                db.ref('turmas/'+turmaLimpa).once('value'),
+                db.ref('vistos/'+turmaLimpa).once('value'),
+                db.ref('recuperacao/'+turmaLimpa).once('value')
+            ]);
+
+            const listaAntiga = sListaAntiga.val() || [];
+            const arvoreVistosAntiga = sTodosVistos.val() || {};
+            const arvoreRecsAntiga = sTodasRecs.val() || {};
+
+            let novaArvoreVistos = {};
+            let novaArvoreRecs = {};
+
+            const encontrarIndiceAntigo = (nomeNovo) => {
+                let exato = listaAntiga.indexOf(nomeNovo); if(exato !== -1) return exato;
+                let simplificar = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                return listaAntiga.findIndex(nA => simplificar(nA) === simplificar(nomeNovo));
+            };
+
+            Object.keys(arvoreVistosAntiga).forEach(bimestre => {
+                novaArvoreVistos[bimestre] = {};
+                Object.keys(arvoreVistosAntiga[bimestre]).forEach(data => {
+                    novaArvoreVistos[bimestre][data] = {};
+                    novaListaAlunos.forEach((nomeNovo, idxNovo) => {
+                        let idxAntigo = encontrarIndiceAntigo(nomeNovo);
+                        if(idxAntigo !== -1 && arvoreVistosAntiga[bimestre][data][idxAntigo] !== undefined) {
+                            novaArvoreVistos[bimestre][data][idxNovo] = arvoreVistosAntiga[bimestre][data][idxAntigo];
+                        }
+                    });
+                });
+            });
+
+            Object.keys(arvoreRecsAntiga).forEach(bimestre => {
+                novaArvoreRecs[bimestre] = {};
+                novaListaAlunos.forEach((nomeNovo, idxNovo) => {
+                    let idxAntigo = encontrarIndiceAntigo(nomeNovo);
+                    if(idxAntigo !== -1 && arvoreRecsAntiga[bimestre][idxAntigo] !== undefined) {
+                        novaArvoreRecs[bimestre][idxNovo] = arvoreRecsAntiga[bimestre][idxAntigo];
+                    }
+                });
+            });
+
+            await db.ref('turmas/'+turmaLimpa).set(novaListaAlunos);
+            await db.ref('vistos/'+turmaLimpa).set(novaArvoreVistos);
+            await db.ref('recuperacao/'+turmaLimpa).set(novaArvoreRecs);
         }
     </script>
 </body>
