@@ -91,6 +91,16 @@
         .btn-last { background: #1e293b; }
         .btn-del-aluno { background: var(--danger); margin-left: 4px; }
 
+        /* Estilos da Agenda de Cadernos */
+        .agenda-card-aluno { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+        .agenda-aluno-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; }
+        .agenda-grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .badge-status { padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: white; }
+        .bg-pendente { background: #64748b; }
+        .bg-aguardando { background: #f59e0b; }
+        .bg-em_correcao { background: #3b82f6; }
+        .bg-concluido { background: #22c55e; }
+
         @media print { .no-print, nav, header, .btn-main, #welcome-cover, #login-screen { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
     </style>
 </head>
@@ -116,6 +126,7 @@
     <div id="app" class="hidden">
         <nav class="tabs no-print">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
+            <button class="tab-btn" onclick="aba('ag')">AGENDA CADERNOS</button>
             <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
             <button class="tab-btn" onclick="aba('rd')">RELATÓRIO DIÁRIO</button>
             <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
@@ -145,6 +156,15 @@
                 <div id="lista-container">Escolha a turma acima...</div>
                 <button id="btn-salvar-vistos" onclick="salvarVistos()" class="btn-main btn-blue no-print">Salvar Notas</button>
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
+            </div>
+
+            <!-- NOVA ABA: AGENDA DE CORREÇÃO DE CADERNOS -->
+            <div id="aba-ag" class="card hidden">
+                <h3>Agenda de Correção dos Cadernos</h3>
+                <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Marque os prazos, observações e acompanhe o progresso de recolhimento e vistoria dos cadernos da turma.</p>
+                
+                <div id="lista-agenda-cadernos">Escolha uma turma para visualizar a agenda...</div>
+                <button onclick="salvarAgendaCadernos()" class="btn-main btn-blue no-print">Salvar Agenda de Cadernos</button>
             </div>
 
             <div id="aba-d" class="card hidden">
@@ -233,6 +253,7 @@
             const abaAtiva = selectAba ? selectAba.innerText : '';
             
             if(abaAtiva === 'DIÁRIO') { cancelarEdicaoD(); carregarHistorico(); }
+            if(abaAtiva === 'AGENDA CADERNOS') carregarAgendaCadernos();
             if(abaAtiva === 'RELATÓRIO DIÁRIO') gerarRelatorioDiario();
             if(abaAtiva === 'FECHAMENTO') gerarRelatorio();
             if(abaAtiva === 'RECUPERAÇÃO') carregarRec();
@@ -282,6 +303,7 @@
             event.currentTarget.classList.add('active'); 
             
             setTimeout(() => {
+                if(a === 'ag') carregarAgendaCadernos();
                 if(a === 'rd') gerarRelatorioDiario(); 
                 if(a === 'l') gerarRelatorio(); 
                 if(a === 'r') carregarRec(); 
@@ -403,12 +425,10 @@
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
             
-            // Forçamos uma leitura prévia da quantidade exata de alunos para estruturar o objeto sem buracos
             const sA = await db.ref('turmas/'+t).once('value');
             const totalAlunos = (sA.val() || []).length;
             
             let dados = {};
-            // Inicializa todos os índices de alunos possíveis como objetos vazios para que o nó Firebase não quebre
             for(let a=0; a<totalAlunos; a++) {
                 dados[a] = { "placeholder_controle": true }; 
             }
@@ -470,6 +490,96 @@
             document.getElementById('data').value = d;
             dataOficialmenteAberta = true; 
             carregarAlunos();
+        }
+
+        // --- LÓGICA DA AGENDA DE CORREÇÃO DE CADERNOS ---
+        async function carregarAgendaCadernos() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            const container = document.getElementById('lista-agenda-cadernos');
+
+            if(!t) { container.innerHTML = "Escolha uma turma acima..."; return; }
+
+            const [sA, sAg] = await Promise.all([
+                db.ref('turmas/'+t).once('value'),
+                db.ref(`agenda_cadernos/${t}/${b}`).once('value')
+            ]);
+
+            const alunos = sA.val() || [];
+            const agendaData = sAg.val() || {};
+
+            let html = '';
+            alunos.forEach((nome, idx) => {
+                const item = agendaData[idx] || {};
+                const status = item.status || 'pendente';
+                const dataPrev = item.dataPrev || '';
+                const obs = item.obs || '';
+
+                let statusBadgeClass = 'bg-pendente';
+                if(status === 'aguardando') statusBadgeClass = 'bg-aguardando';
+                if(status === 'em_correcao') statusBadgeClass = 'bg-em_correcao';
+                if(status === 'concluido') statusBadgeClass = 'bg-concluido';
+
+                html += `
+                <div class="agenda-card-aluno">
+                    <div class="agenda-aluno-header">
+                        <span>${idx + 1}. ${nome}</span>
+                        <span id="badge-status-${idx}" class="badge-status ${statusBadgeClass}">${status.replace('_', ' ')}</span>
+                    </div>
+                    <div class="agenda-grid-inputs">
+                        <select id="ag-status-${idx}" onchange="atualizarBadgeStatusAgenda(${idx})">
+                            <option value="pendente" ${status==='pendente'?'selected':''}>Pendente</option>
+                            <option value="aguardando" ${status==='aguardando'?'selected':''}>Aguardando Entrega</option>
+                            <option value="em_correcao" ${status==='em_correcao'?'selected':''}>Em Correção</option>
+                            <option value="concluido" ${status==='concluido'?'selected':''}>Concluído / Devolvido</option>
+                        </select>
+                        <input type="date" id="ag-date-${idx}" value="${dataPrev}">
+                    </div>
+                    <input type="text" id="ag-obs-${idx}" placeholder="Observações/Anotações..." value="${obs}">
+                </div>`;
+            });
+
+            container.innerHTML = html || "Nenhum aluno cadastrado nesta turma.";
+        }
+
+        function atualizarBadgeStatusAgenda(idx) {
+            const select = document.getElementById(`ag-status-${idx}`);
+            const badge = document.getElementById(`badge-status-${idx}`);
+            const val = select.value;
+
+            badge.className = 'badge-status ';
+            if(val === 'pendente') badge.classList.add('bg-pendente');
+            if(val === 'aguardando') badge.classList.add('bg-aguardando');
+            if(val === 'em_correcao') badge.classList.add('bg-em_correcao');
+            if(val === 'concluido') badge.classList.add('bg-concluido');
+
+            badge.innerText = val.replace('_', ' ');
+        }
+
+        async function salvarAgendaCadernos() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            if(!t) return;
+
+            const sA = await db.ref('turmas/'+t).once('value');
+            const totalAlunos = (sA.val() || []).length;
+
+            let dados = {};
+            for(let i=0; i<totalAlunos; i++) {
+                const st = document.getElementById(`ag-status-${i}`);
+                if(st) {
+                    dados[i] = {
+                        status: document.getElementById(`ag-status-${i}`).value,
+                        dataPrev: document.getElementById(`ag-date-${i}`).value,
+                        obs: document.getElementById(`ag-obs-${i}`).value.trim()
+                    };
+                }
+            }
+
+            db.ref(`agenda_cadernos/${t}/${b}`).set(dados).then(() => {
+                alert("Agenda de cadernos salva com sucesso!");
+                carregarAgendaCadernos();
+            });
         }
 
         // --- LÓGICA DO DIÁRIO ---
@@ -631,7 +741,6 @@
             const totalAlunos = (sA.val() || []).length;
 
             let dados = {};
-            // Populando base limpa para a árvore não sumir
             for(let a=0; a<totalAlunos; a++) {
                 dados[a] = -1; 
             }
@@ -688,7 +797,6 @@
                 
                 totalBimestre = Math.min(totalBimestre, 10.0);
 
-                // Busca a recuperação tratando valores padrão de proteção (-1)
                 let rec = (recs[idx] !== undefined && recs[idx] !== -1) ? parseFloat(recs[idx]) : "";
                 let notaFinal = totalBimestre;
                 if(rec !== "" && rec > totalBimestre) { notaFinal = rec; }
@@ -805,18 +913,21 @@
         }
 
         async function realizarRemapeamentoGeralVistosEAlunos(turmaLimpa, novaListaAlunos) {
-            const [sListaAntiga, sTodosVistos, sTodasRecs] = await Promise.all([
+            const [sListaAntiga, sTodosVistos, sTodasRecs, sTodaAgenda] = await Promise.all([
                 db.ref('turmas/'+turmaLimpa).once('value'),
                 db.ref('vistos/'+turmaLimpa).once('value'),
-                db.ref('recuperacao/'+turmaLimpa).once('value')
+                db.ref('recuperacao/'+turmaLimpa).once('value'),
+                db.ref('agenda_cadernos/'+turmaLimpa).once('value')
             ]);
 
             const listaAntiga = sListaAntiga.val() || [];
             const arvoreVistosAntiga = sTodosVistos.val() || {};
             const arvoreRecsAntiga = sTodasRecs.val() || {};
+            const arvoreAgendaAntiga = sTodaAgenda.val() || {};
 
             let novaArvoreVistos = {};
             let novaArvoreRecs = {};
+            let novaArvoreAgenda = {};
 
             const encontrarIndiceAntigo = (nomeNovo) => {
                 let exato = listaAntiga.indexOf(nomeNovo); if(exato !== -1) return exato;
@@ -847,9 +958,20 @@
                 });
             });
 
+            Object.keys(arvoreAgendaAntiga).forEach(bimestre => {
+                novaArvoreAgenda[bimestre] = {};
+                novaListaAlunos.forEach((nomeNovo, idxNovo) => {
+                    let idxAntigo = encontrarIndiceAntigo(nomeNovo);
+                    if(idxAntigo !== -1 && arvoreAgendaAntiga[bimestre][idxAntigo] !== undefined) {
+                        novaArvoreAgenda[bimestre][idxNovo] = arvoreAgendaAntiga[bimestre][idxAntigo];
+                    }
+                });
+            });
+
             await db.ref('turmas/'+turmaLimpa).set(novaListaAlunos);
             await db.ref('vistos/'+turmaLimpa).set(novaArvoreVistos);
             await db.ref('recuperacao/'+turmaLimpa).set(novaArvoreRecs);
+            await db.ref('agenda_cadernos/'+turmaLimpa).set(novaArvoreAgenda);
         }
     </script>
 </body>
