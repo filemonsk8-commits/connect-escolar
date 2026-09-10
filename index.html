@@ -158,7 +158,7 @@
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
 
-            <!-- NOVA ABA: AGENDA DE CORREÇÃO DE CADERNOS -->
+            <!-- ABA: AGENDA DE CORREÇÃO DE CADERNOS -->
             <div id="aba-ag" class="card hidden">
                 <h3>Agenda de Correção dos Cadernos</h3>
                 <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Marque os prazos, observações e acompanhe o progresso de recolhimento e vistoria dos cadernos da turma.</p>
@@ -496,6 +496,7 @@
         async function carregarAgendaCadernos() {
             const t = limparT(document.getElementById('turma').value);
             const b = document.getElementById('bimestre').value;
+            const dataCalendario = document.getElementById('data').value;
             const container = document.getElementById('lista-agenda-cadernos');
 
             if(!t) { container.innerHTML = "Escolha uma turma acima..."; return; }
@@ -512,7 +513,7 @@
             alunos.forEach((nome, idx) => {
                 const item = agendaData[idx] || {};
                 const status = item.status || 'pendente';
-                const dataPrev = item.dataPrev || '';
+                const dataPrev = item.dataPrev || dataCalendario;
                 const obs = item.obs || '';
 
                 let statusBadgeClass = 'bg-pendente';
@@ -545,7 +546,13 @@
         function atualizarBadgeStatusAgenda(idx) {
             const select = document.getElementById(`ag-status-${idx}`);
             const badge = document.getElementById(`badge-status-${idx}`);
+            const inputData = document.getElementById(`ag-date-${idx}`);
+            const dataCalendario = document.getElementById('data').value;
             const val = select.value;
+
+            if (inputData && dataCalendario) {
+                inputData.value = dataCalendario;
+            }
 
             badge.className = 'badge-status ';
             if(val === 'pendente') badge.classList.add('bg-pendente');
