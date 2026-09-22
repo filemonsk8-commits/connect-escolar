@@ -919,13 +919,35 @@
             }
         }
 
-        // Função de filtro que remove números/ícones do início e descarta linhas com o caractere '!'
+        // Função otimizada para filtrar ruídos, termos de sistema e descartar linhas com '!'
         function limparENormalizarLista(textoBruto) {
+            const termosInvalidos = [
+                "connect", "escolar", "bimestre", "turma", "diario", "vistos", 
+                "relatorio", "recuperacao", "ajustes", "professor", "pagina", 
+                "presenca", "falta", "total", "aluno", "materia", "disciplina"
+            ];
+
             return textoBruto
                 .split('\n')
-                .filter(linha => !linha.includes('!')) // Remove alunos/linhas que contenham '!'
-                .map(linha => linha.replace(/^\d+[\s.-]*/, "").replace(/[ⓘⓘℹ️]/g, "").trim())
-                .filter(nome => nome.length > 2);
+                // Remove linhas vazias ou que contenham o caractere '!'
+                .filter(linha => linha.trim() !== "" && !linha.includes('!'))
+                .map(linha => {
+                    return linha
+                        .replace(/^\d+[\s.-]*/, "")               // Remove numeração de chamada (ex: "01 - ", "1.")
+                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, "") // Mantém apenas letras e espaços
+                        .replace(/\s+/g, " ")                       // Remove espaços extras
+                        .trim();
+                })
+                .filter(nome => {
+                    if (nome.length < 3) return false;
+
+                    const nomeMin = nome.toLowerCase();
+                    const contemTermoInvalido = termosInvalidos.some(termo => nomeMin.includes(termo));
+                    if (contemTermoInvalido) return false;
+
+                    // Garante que é um nome composto apenas por letras e acentos válidos
+                    return /^[a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]+$/.test(nome);
+                });
         }
 
         // Processamento OCR de Imagem com Tesseract.js
