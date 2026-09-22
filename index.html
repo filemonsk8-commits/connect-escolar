@@ -10,10 +10,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link class="no-print" rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063176.png">
     
-    <link class="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zLXBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiUzEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNavmJsZSIKICAgIH0KICBdCn0=">
+    <link class="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zIHBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiUzEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNavmJsZSIKICAgIH0KICBdCn0=">
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <!-- Biblioteca OCR Tesseract.js para leitura de imagem -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
     <style>
         :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; --danger: #ef4444; --success: #22c55e; --warning: #f59e0b; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
@@ -197,6 +200,7 @@
                 </div>
             </div>
 
+            <!-- ABA DE AJUSTES ATUALIZADA -->
             <div id="aba-c" class="card hidden">
                 <h3>Ajustes de Turma</h3>
                 <div id="editor-alunos-lista"></div>
@@ -208,9 +212,19 @@
                     <button onclick="adicionarAlunoIndividual()" class="btn-main btn-blue" style="margin-top: 0; width: auto; white-space: nowrap; padding: 0 20px;">Adicionar</button>
                 </div>
 
+                <h4>Atualizar Lista via Imagem (OCR)</h4>
+                <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
+                    Envie uma foto ou print da chamada/lista de alunos. O sistema reconhecerá o texto e removerá automaticamente registros com o símbolo <strong>!</strong>.
+                </p>
+                <input type="file" id="ocr-image-input" accept="image/*" style="margin-bottom: 8px;">
+                <button onclick="processarImagemAlunos()" id="btn-ocr" class="btn-main btn-green" style="margin-top:0; margin-bottom:15px;">
+                    📷 Extrair Nomes da Imagem
+                </button>
+                <div id="ocr-status" style="font-size:0.8rem; font-weight:bold; color:var(--accent); margin-bottom:10px;"></div>
+
                 <h4>Importação/Atualização com Preservação de Vistos</h4>
                 <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
-                    Use este campo para colar a lista inteira modificada. O sistema detectará o nome antigo de cada aluno e moverá as notas correspondentes para os índices corretos em <strong>todos os bimestres cadastrados</strong>.
+                    Cole a lista de alunos atualizada aqui. O sistema filtrará nomes que contêm o símbolo <strong>!</strong>, preservará as notas dos alunos e reordenará os bimestres automaticamente.
                 </p>
                 <textarea id="imp" style="height:120px;" placeholder="Cole a listagem completa atualizada aqui."></textarea>
                 <button onclick="importarComMigracao()" class="btn-main btn-orange">Atualizar Lista Migrando Vistos</button>
@@ -885,6 +899,7 @@
             const nomeNovo = document.getElementById('novo-aluno-nome').value.trim();
             if(!t) { alert("Selecione a turma antes!"); return; }
             if(!nomeNovo) { alert("Digite o nome do aluno."); return; }
+            if(nomeNovo.includes('!')) { alert("Nomes contendo o símbolo '!' não são permitidos."); return; }
             
             const sA = await db.ref('turmas/'+t).once('value');
             let arr = sA.val() || []; arr.push(nomeNovo);
@@ -904,18 +919,65 @@
             }
         }
 
+        // Função de filtro que remove números/ícones do início e descarta linhas com o caractere '!'
+        function limparENormalizarLista(textoBruto) {
+            return textoBruto
+                .split('\n')
+                .filter(linha => !linha.includes('!')) // Remove alunos/linhas que contenham '!'
+                .map(linha => linha.replace(/^\d+[\s.-]*/, "").replace(/[ⓘⓘℹ️]/g, "").trim())
+                .filter(nome => nome.length > 2);
+        }
+
+        // Processamento OCR de Imagem com Tesseract.js
+        async function processarImagemAlunos() {
+            const fileInput = document.getElementById('ocr-image-input');
+            const statusDiv = document.getElementById('ocr-status');
+            const btnOcr = document.getElementById('btn-ocr');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("Por favor, selecione um arquivo de imagem da lista primeiro!");
+                return;
+            }
+
+            const imageFile = fileInput.files[0];
+            statusDiv.innerText = "⏳ Processando imagem... Por favor, aguarde.";
+            btnOcr.disabled = true;
+
+            try {
+                const worker = await Tesseract.createWorker('por');
+                const ret = await worker.recognize(imageFile);
+                await worker.terminate();
+
+                const nomesFiltrados = limparENormalizarLista(ret.data.text);
+                document.getElementById('imp').value = nomesFiltrados.join('\n');
+                statusDiv.innerText = `✅ Sucesso! ${nomesFiltrados.length} alunos extraídos (sem o símbolo '!').`;
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerText = "❌ Erro ao ler a imagem. Tente uma foto com melhor nitidez.";
+            } finally {
+                btnOcr.disabled = false;
+            }
+        }
+
         async function importarComMigracao() {
             const t = limparT(document.getElementById('turma').value);
             const textoBruto = document.getElementById('imp').value;
             if(!t) { alert("Selecione uma turma primeiro!"); return; }
-            if(!textoBruto.trim()) { alert("Cole os nomes para atualização!"); return; }
+            if(!textoBruto.trim()) { alert("Cole os nomes ou extraia via imagem!"); return; }
             
-            const novosAlunos = textoBruto.split('\n').map(n => n.replace(/^\d+[\s.-]*/, "").trim()).filter(n => n.length > 0);
-            if(confirm(`Deseja rodar a migração automática?\nO sistema vai parear os nomes iguais/semelhantes e reindexar todas as notas cadastradas.`)) {
+            const novosAlunos = limparENormalizarLista(textoBruto);
+
+            if(novosAlunos.length === 0) {
+                alert("Nenhum aluno válido encontrado para importação.");
+                return;
+            }
+
+            if(confirm(`Deseja rodar a migração automática de ${novosAlunos.length} alunos?\nO sistema vai parear os nomes e reindexar todas as notas cadastradas.`)) {
                 await realizarRemapeamentoGeralVistosEAlunos(t, novosAlunos);
                 document.getElementById('imp').value = "";
+                document.getElementById('ocr-status').innerText = "";
                 renderizarEditorAlunos();
-                alert("Lista updated e notas migradas perfeitamente!");
+                alert("Lista atualizada e notas migradas com sucesso!");
             }
         }
 
