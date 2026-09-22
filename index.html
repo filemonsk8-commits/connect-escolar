@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.24 | Prof. Eduardo</title>
+    <title>Connect Escolar v3.9.25 | Prof. Eduardo</title>
     
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -94,7 +94,6 @@
         .btn-last { background: #1e293b; }
         .btn-del-aluno { background: var(--danger); margin-left: 4px; }
 
-        /* Estilos da Agenda de Cadernos */
         .agenda-card-aluno { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
         .agenda-aluno-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; }
         .agenda-grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
@@ -120,7 +119,7 @@
 
     <div id="login-screen" class="hidden">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.24</h2>
+            <h2>Connect Escolar v3.9.25</h2>
             <input type="password" id="pass" inputmode="numeric" pattern="[0-9]*" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -144,8 +143,8 @@
                 </select>
                 <select id="bimestre" onchange="atualizarTudo()">
                     <option value="1B">1º Bimestre</option>
-                    <option value="2B" selected>2º Bimestre</option>
-                    <option value="3B">3º Bimestre</option>
+                    <option value="2B">2º Bimestre</option>
+                    <option value="3B" selected>3º Bimestre</option>
                     <option value="4B">4º Bimestre</option>
                 </select>
                 <input type="date" id="data" onchange="marcarDataComoNaoAberta(); carregarAlunos();">
@@ -200,7 +199,7 @@
                 </div>
             </div>
 
-            <!-- ABA DE AJUSTES ATUALIZADA -->
+            <!-- ABA DE AJUSTES -->
             <div id="aba-c" class="card hidden">
                 <h3>Ajustes de Turma</h3>
                 <div id="editor-alunos-lista"></div>
@@ -214,7 +213,7 @@
 
                 <h4>Atualizar Lista via Imagem (OCR)</h4>
                 <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
-                    Envie uma foto ou print da chamada/lista de alunos. O sistema reconhecerá o texto e removerá automaticamente registros com o símbolo <strong>!</strong>.
+                    Envie uma captura de tela do SIAP. O sistema filtrará alunos inativos marcados com o ícone <strong>!</strong>.
                 </p>
                 <input type="file" id="ocr-image-input" accept="image/*" style="margin-bottom: 8px;">
                 <button onclick="processarImagemAlunos()" id="btn-ocr" class="btn-main btn-green" style="margin-top:0; margin-bottom:15px;">
@@ -224,9 +223,9 @@
 
                 <h4>Importação/Atualização com Preservação de Vistos</h4>
                 <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
-                    Cole a lista de alunos atualizada aqui. O sistema filtrará nomes que contêm o símbolo <strong>!</strong>, preservará as notas dos alunos e reordenará os bimestres automaticamente.
+                    Cole a lista copiada do SIAP aqui. Linhas com o símbolo <strong>!</strong> (alunos transferidos/inativos) e cabeçalhos serão descartados automaticamente.
                 </p>
-                <textarea id="imp" style="height:120px;" placeholder="Cole a listagem completa atualizada aqui."></textarea>
+                <textarea id="imp" style="height:120px;" placeholder="Cole a listagem do SIAP aqui."></textarea>
                 <button onclick="importarComMigracao()" class="btn-main btn-orange">Atualizar Lista Migrando Vistos</button>
             </div>
         </div>
@@ -506,7 +505,7 @@
             carregarAlunos();
         }
 
-        // --- LÓGICA DA AGENDA DE CORREÇÃO DE CADERNOS ---
+        // --- AGENDA DE CORREÇÃO DE CADERNOS ---
         async function carregarAgendaCadernos() {
             const t = limparT(document.getElementById('turma').value);
             const b = document.getElementById('bimestre').value;
@@ -603,7 +602,7 @@
             });
         }
 
-        // --- LÓGICA DO DIÁRIO ---
+        // --- DIÁRIO ---
         function salvarD() {
             const t = limparT(document.getElementById('turma').value);
             const b = document.getElementById('bimestre').value;
@@ -730,7 +729,7 @@
             });
         }
 
-        // --- LÓGICA DE RECUPERAÇÃO ---
+        // --- RECUPERAÇÃO ---
         async function carregarRec() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             if(!t) return;
@@ -780,7 +779,7 @@
             });
         }
 
-        // --- LÓGICA DE FECHAMENTO ---
+        // --- FECHAMENTO ---
         async function gerarRelatorio() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             if(!t) { document.getElementById('relatorio-lista').innerHTML = "Escolha uma turma..."; return; }
@@ -847,7 +846,7 @@
             navigator.clipboard.writeText(texto).then(() => alert("Lista de Nomes + Notas copiada com sucesso!"));
         }
 
-        // --- LÓGICA DE AJUSTES E GESTÃO DE ALUNOS ---
+        // --- AJUSTES E FILTROS DO SIAP ---
         async function renderizarEditorAlunos() {
             const t = limparT(document.getElementById('turma').value);
             if(!t) { document.getElementById('editor-alunos-lista').innerHTML = "Escolha uma turma..."; return; }
@@ -919,23 +918,27 @@
             }
         }
 
-        // Função otimizada para filtrar ruídos, termos de sistema e descartar linhas com '!'
+        // Função otimizada para descartar inativos do SIAP com '!' e ignorar cabeçalhos
         function limparENormalizarLista(textoBruto) {
             const termosInvalidos = [
                 "connect", "escolar", "bimestre", "turma", "diario", "vistos", 
                 "relatorio", "recuperacao", "ajustes", "professor", "pagina", 
-                "presenca", "falta", "total", "aluno", "materia", "disciplina"
+                "presenca", "falta", "total", "aluno", "materia", "disciplina", 
+                "frequencia", "historico", "detalhado", "siap", "governo", "goias"
             ];
 
             return textoBruto
                 .split('\n')
-                // Remove linhas vazias ou que contenham o caractere '!'
-                .filter(linha => linha.trim() !== "" && !linha.includes('!'))
+                // Remove linhas vazias ou com o caractere '!' (marcador de inativo no SIAP)
+                .filter(linha => {
+                    const linhaLimpa = linha.trim();
+                    return linhaLimpa !== "" && !linhaLimpa.includes('!');
+                })
                 .map(linha => {
                     return linha
-                        .replace(/^\d+[\s.-]*/, "")               // Remove numeração de chamada (ex: "01 - ", "1.")
-                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, "") // Mantém apenas letras e espaços
-                        .replace(/\s+/g, " ")                       // Remove espaços extras
+                        .replace(/^\d+[\s.-]*/, "")               // Remove numeração (ex: "01 - ", "1.")
+                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, "") // Remove símbolos e números isolados
+                        .replace(/\s+/g, " ")                       // Remove espaços duplos
                         .trim();
                 })
                 .filter(nome => {
@@ -945,7 +948,6 @@
                     const contemTermoInvalido = termosInvalidos.some(termo => nomeMin.includes(termo));
                     if (contemTermoInvalido) return false;
 
-                    // Garante que é um nome composto apenas por letras e acentos válidos
                     return /^[a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]+$/.test(nome);
                 });
         }
@@ -972,7 +974,7 @@
 
                 const nomesFiltrados = limparENormalizarLista(ret.data.text);
                 document.getElementById('imp').value = nomesFiltrados.join('\n');
-                statusDiv.innerText = `✅ Sucesso! ${nomesFiltrados.length} alunos extraídos (sem o símbolo '!').`;
+                statusDiv.innerText = `✅ Sucesso! ${nomesFiltrados.length} alunos ativos extraídos (sem inativos com '!').`;
             } catch (err) {
                 console.error(err);
                 statusDiv.innerText = "❌ Erro ao ler a imagem. Tente uma foto com melhor nitidez.";
@@ -990,7 +992,7 @@
             const novosAlunos = limparENormalizarLista(textoBruto);
 
             if(novosAlunos.length === 0) {
-                alert("Nenhum aluno válido encontrado para importação.");
+                alert("Nenhum aluno ativo válido encontrado para importação.");
                 return;
             }
 
