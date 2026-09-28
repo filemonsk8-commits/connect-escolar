@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.25 | Prof. Eduardo</title>
+    <title>Connect Escolar v3.9.26 | Prof. Eduardo</title>
     
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <!-- Biblioteca OCR Tesseract.js para leitura de imagem -->
+    <!-- Biblioteca OCR Tesseract.js -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
@@ -119,7 +119,7 @@
 
     <div id="login-screen" class="hidden">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.25</h2>
+            <h2>Connect Escolar v3.9.26</h2>
             <input type="password" id="pass" inputmode="numeric" pattern="[0-9]*" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -213,7 +213,7 @@
 
                 <h4>Atualizar Lista via Imagem (OCR)</h4>
                 <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
-                    Envie uma captura de tela do SIAP. O sistema filtrará alunos inativos marcados com o ícone <strong>!</strong>.
+                    Envie a captura de tela do SIAP. O filtro removerá automaticamente cabeçalhos e alunos inativos com <strong>!</strong>.
                 </p>
                 <input type="file" id="ocr-image-input" accept="image/*" style="margin-bottom: 8px;">
                 <button onclick="processarImagemAlunos()" id="btn-ocr" class="btn-main btn-green" style="margin-top:0; margin-bottom:15px;">
@@ -223,9 +223,9 @@
 
                 <h4>Importação/Atualização com Preservação de Vistos</h4>
                 <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
-                    Cole a lista copiada do SIAP aqui. Linhas com o símbolo <strong>!</strong> (alunos transferidos/inativos) e cabeçalhos serão descartados automaticamente.
+                    Cole a lista ou confira os nomes extraídos do OCR abaixo antes de aplicar a migração.
                 </p>
-                <textarea id="imp" style="height:120px;" placeholder="Cole a listagem do SIAP aqui."></textarea>
+                <textarea id="imp" style="height:120px;" placeholder="Os nomes aparecerão aqui após a leitura da imagem ou colagem manual."></textarea>
                 <button onclick="importarComMigracao()" class="btn-main btn-orange">Atualizar Lista Migrando Vistos</button>
             </div>
         </div>
@@ -918,41 +918,45 @@
             }
         }
 
-        // Função otimizada para descartar inativos do SIAP com '!' e ignorar cabeçalhos
+        // Filtro otimizado para remover cabeçalhos SIAP, ícones de alerta e inativos
         function limparENormalizarLista(textoBruto) {
-            const termosInvalidos = [
-                "connect", "escolar", "bimestre", "turma", "diario", "vistos", 
-                "relatorio", "recuperacao", "ajustes", "professor", "pagina", 
-                "presenca", "falta", "total", "aluno", "materia", "disciplina", 
-                "frequencia", "historico", "detalhado", "siap", "governo", "goias"
+            const termosInvalidados = [
+                "siap", "frequencia", "frequência", "conteudos", "conteúdos", "notas", "acesso",
+                "remoto", "setembro", "cadastrado", "letivo", "ensino", "medio", "médio", 
+                "sociologia", "componente", "curricular", "serie", "série", "semestre", 
+                "turma", "bimestre", "historico", "detalhado", "escola", "educacao", "educação",
+                "dias", "aulas", "previstas", "ministradas", "selecionada", "ano", "base",
+                "dados", "preenchimento", "obrigatorio", "obrigatoriamente", "menu", "sistema"
             ];
 
             return textoBruto
                 .split('\n')
-                // Remove linhas vazias ou com o caractere '!' (marcador de inativo no SIAP)
-                .filter(linha => {
-                    const linhaLimpa = linha.trim();
-                    return linhaLimpa !== "" && !linhaLimpa.includes('!');
-                })
+                .map(linha => linha.trim())
+                // Descarta linhas vazias e linhas com '!' (inativos/transferidos)
+                .filter(linha => linha !== "" && !linha.includes('!'))
                 .map(linha => {
                     return linha
-                        .replace(/^\d+[\s.-]*/, "")               // Remove numeração (ex: "01 - ", "1.")
-                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, "") // Remove símbolos e números isolados
-                        .replace(/\s+/g, " ")                       // Remove espaços duplos
+                        .replace(/^\d+[\s.-]*/, "")                                  // Remove numeração (ex: "01 -", "1.")
+                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, "")    // Remove símbolos e números
+                        .replace(/\s+/g, " ")                                         // Remove espaços duplos
                         .trim();
                 })
                 .filter(nome => {
-                    if (nome.length < 3) return false;
+                    if (nome.length < 5) return false;
 
                     const nomeMin = nome.toLowerCase();
-                    const contemTermoInvalido = termosInvalidos.some(termo => nomeMin.includes(termo));
-                    if (contemTermoInvalido) return false;
+                    
+                    // Exclui a linha caso contenha qualquer palavra do cabeçalho SIAP
+                    const contemLixoInterface = termosInvalidados.some(termo => nomeMin.includes(termo));
+                    if (contemLixoInterface) return false;
 
-                    return /^[a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]+$/.test(nome);
+                    // Exige que seja um nome próprio válido (ao menos 2 palavras de letras)
+                    const partes = nome.split(' ');
+                    return partes.length >= 2 && partes.every(p => /^[a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ]+$/.test(p));
                 });
         }
 
-        // Processamento OCR de Imagem com Tesseract.js
+        // Processamento OCR de Imagem com Tesseract.js (Modo Bloco Único)
         async function processarImagemAlunos() {
             const fileInput = document.getElementById('ocr-image-input');
             const statusDiv = document.getElementById('ocr-status');
@@ -964,20 +968,31 @@
             }
 
             const imageFile = fileInput.files[0];
-            statusDiv.innerText = "⏳ Processando imagem... Por favor, aguarde.";
+            statusDiv.innerText = "⏳ Processando imagem e filtrando cabeçalhos... Aguarde.";
             btnOcr.disabled = true;
 
             try {
                 const worker = await Tesseract.createWorker('por');
+                
+                await worker.setParameters({
+                    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK,
+                });
+
                 const ret = await worker.recognize(imageFile);
                 await worker.terminate();
 
                 const nomesFiltrados = limparENormalizarLista(ret.data.text);
-                document.getElementById('imp').value = nomesFiltrados.join('\n');
-                statusDiv.innerText = `✅ Sucesso! ${nomesFiltrados.length} alunos ativos extraídos (sem inativos com '!').`;
+
+                if (nomesFiltrados.length === 0) {
+                    statusDiv.innerText = "⚠️ Nenhum nome válido foi identificado. Verifique a nitidez ou corte a imagem focando apenas na lista.";
+                    document.getElementById('imp').value = "";
+                } else {
+                    document.getElementById('imp').value = nomesFiltrados.join('\n');
+                    statusDiv.innerText = `✅ Sucesso! ${nomesFiltrados.length} alunos ativos extraídos com precisão.`;
+                }
             } catch (err) {
                 console.error(err);
-                statusDiv.innerText = "❌ Erro ao ler a imagem. Tente uma foto com melhor nitidez.";
+                statusDiv.innerText = "❌ Erro ao ler a imagem. Tente tirar um print focando apenas nos nomes dos alunos.";
             } finally {
                 btnOcr.disabled = false;
             }
