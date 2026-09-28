@@ -918,7 +918,7 @@
             }
         }
 
-        // Filtro otimizado para remover cabeçalhos SIAP, ícones de alerta e inativos com !
+        // Filtro aprimorado para barrar ruídos de OCR e linhas com exclamações distorcidas pelo Tesseract
         function limparENormalizarLista(textoBruto) {
             const termosInvalidados = [
                 "siap", "frequencia", "frequência", "conteudos", "conteúdos", "notas", "acesso",
@@ -934,39 +934,48 @@
             return textoBruto
                 .split('\n')
                 .map(linha => linha.trim())
-                // Descarta linhas vazias e linhas com '!' (alunos inativos/transferidos do SIAP)
+                // 1. Descarta linhas vazias e linhas que contenham '!'
                 .filter(linha => linha !== "" && !linha.includes('!'))
                 .map(linha => {
                     let limpa = linha
-                        .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração inicial e hífens
+                        .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração inicial
                         .replace(/[\d]/g, "")                                         // Remove números residuais
-                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Substitui pontuações/símbolos por espaço
-                        .replace(/\s+/g, " ")                                         // Remove espaços duplos
+                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Remove símbolos/pontuações
+                        .replace(/\s+/g, " ")                                         // Remove espaços múltiplos
                         .trim();
 
-                    // Formata para Capital Case (ex: "Bruno Carvalho Lacerda")
+                    // Formata para Capital Case
                     if (limpa.length > 0) {
                         const preposicoes = ["de", "da", "do", "das", "dos", "e"];
-                        limpa = limpa.toLowerCase().split(' ').map((p, index) => {
-                            if (p.length === 0) return "";
-                            if (index > 0 && preposicoes.includes(p)) return p;
-                            return p.charAt(0).toUpperCase() + p.slice(1);
+                        
+                        // Filtra palavras que sejam apenas letras soltas residuais do OCR (ex: 'O', 'F', 'N')
+                        const palavrasValidas = limpa.split(' ').filter(p => {
+                            if (p.length === 1 && !preposicoes.includes(p.toLowerCase())) return false;
+                            return true;
+                        });
+
+                        limpa = palavrasValidas.map((p, index) => {
+                            const pMin = p.toLowerCase();
+                            if (pMin.length === 0) return "";
+                            if (index > 0 && preposicoes.includes(pMin)) return pMin;
+                            return pMin.charAt(0).toUpperCase() + pMin.slice(1);
                         }).join(' ');
                     }
 
                     return limpa;
                 })
                 .filter(nome => {
-                    if (nome.length < 4) return false;
+                    // 2. O nome total deve ter pelo menos 6 caracteres válidos
+                    if (nome.length < 6) return false;
 
                     const nomeMin = nome.toLowerCase();
                     
-                    // Exclui a linha caso contenha qualquer palavra do cabeçalho do SIAP
+                    // 3. Descarta se for palavra/cabeçalho da interface do SIAP
                     const contemLixoInterface = termosInvalidados.some(termo => nomeMin.includes(termo));
                     if (contemLixoInterface) return false;
 
-                    // Garante que haja pelo menos Nome e Sobrenome
-                    const partes = nome.split(' ');
+                    // 4. Exige pelo menos 2 palavras com no mínimo 2 letras cada
+                    const partes = nome.split(' ').filter(p => p.length >= 2);
                     return partes.length >= 2;
                 });
         }
