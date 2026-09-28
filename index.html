@@ -918,7 +918,7 @@
             }
         }
 
-        // Filtro otimizado para remover cabeçalhos SIAP, ícones de alerta e inativos
+        // Filtro otimizado para remover cabeçalhos SIAP, ícones de alerta e inativos com !
         function limparENormalizarLista(textoBruto) {
             const termosInvalidados = [
                 "siap", "frequencia", "frequência", "conteudos", "conteúdos", "notas", "acesso",
@@ -926,33 +926,48 @@
                 "sociologia", "componente", "curricular", "serie", "série", "semestre", 
                 "turma", "bimestre", "historico", "detalhado", "escola", "educacao", "educação",
                 "dias", "aulas", "previstas", "ministradas", "selecionada", "ano", "base",
-                "dados", "preenchimento", "obrigatorio", "obrigatoriamente", "menu", "sistema"
+                "dados", "preenchimento", "obrigatorio", "obrigatoriamente", "menu", "sistema",
+                "imprimir", "exportar", "aluno", "alunos", "estudante", "situação", "situacao", 
+                "matrícula", "matricula", "salvar", "cancelar", "tancredo", "vespertino"
             ];
 
             return textoBruto
                 .split('\n')
                 .map(linha => linha.trim())
-                // Descarta linhas vazias e linhas com '!' (inativos/transferidos)
+                // Descarta linhas vazias e linhas com '!' (alunos inativos/transferidos do SIAP)
                 .filter(linha => linha !== "" && !linha.includes('!'))
                 .map(linha => {
-                    return linha
-                        .replace(/^\d+[\s.-]*/, "")                                  // Remove numeração (ex: "01 -", "1.")
-                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, "")    // Remove símbolos e números
+                    let limpa = linha
+                        .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração inicial e hífens
+                        .replace(/[\d]/g, "")                                         // Remove números residuais
+                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Substitui pontuações/símbolos por espaço
                         .replace(/\s+/g, " ")                                         // Remove espaços duplos
                         .trim();
+
+                    // Formata para Capital Case (ex: "Bruno Carvalho Lacerda")
+                    if (limpa.length > 0) {
+                        const preposicoes = ["de", "da", "do", "das", "dos", "e"];
+                        limpa = limpa.toLowerCase().split(' ').map((p, index) => {
+                            if (p.length === 0) return "";
+                            if (index > 0 && preposicoes.includes(p)) return p;
+                            return p.charAt(0).toUpperCase() + p.slice(1);
+                        }).join(' ');
+                    }
+
+                    return limpa;
                 })
                 .filter(nome => {
-                    if (nome.length < 5) return false;
+                    if (nome.length < 4) return false;
 
                     const nomeMin = nome.toLowerCase();
                     
-                    // Exclui a linha caso contenha qualquer palavra do cabeçalho SIAP
+                    // Exclui a linha caso contenha qualquer palavra do cabeçalho do SIAP
                     const contemLixoInterface = termosInvalidados.some(termo => nomeMin.includes(termo));
                     if (contemLixoInterface) return false;
 
-                    // Exige que seja um nome próprio válido (ao menos 2 palavras de letras)
+                    // Garante que haja pelo menos Nome e Sobrenome
                     const partes = nome.split(' ');
-                    return partes.length >= 2 && partes.every(p => /^[a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ]+$/.test(p));
+                    return partes.length >= 2;
                 });
         }
 
