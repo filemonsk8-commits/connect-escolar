@@ -211,7 +211,7 @@
 
                 <h4>Atualizar Lista via Imagem (OCR)</h4>
                 <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
-                    Envie a captura de tela do SIAP. O filtro removerá automaticamente cabeçalhos e alunos inativos com o símbolo de informação.
+                    Envie a captura de tela do SIAP. O filtro removerá automaticamente cabeçalhos e alunos inativos marcados com o ícone de informação azul.
                 </p>
                 <input type="file" id="ocr-image-input" accept="image/*" style="margin-bottom: 8px;">
                 <button onclick="processarImagemAlunos()" id="btn-ocr" class="btn-main btn-green" style="margin-top:0; margin-bottom:15px;">
@@ -910,7 +910,7 @@
             }
         }
 
-        // Filtro aprimorado para barrar ruídos, abreviações incompletas, símbolos de status (ⓘ/i) e fragmentos do OCR
+        // Limpeza rigorosa para eliminar fragmentos do ícone (i) e ruídos de leitura
         function limparENormalizarLista(textoBruto) {
             const termosInvalidados = [
                 "siap", "frequencia", "frequência", "conteudos", "conteúdos", "notas", "acesso",
@@ -928,34 +928,37 @@
             return textoBruto
                 .split('\n')
                 .map(linha => linha.trim())
-                // 1. Captura o ícone ⓘ e todas as variações lidas pelo OCR
                 .filter(linha => {
                     if (!linha) return false;
+                    // Deteta o ícone e qualquer variação comum produzida pelo OCR
                     const temSimboloInativo = /[!ⓘ]|[\(\[\{\Vert{}][ij10o!]?[\)\]\}\|]/i.test(linha) ||
+                                              /\b(info|inativo)\b/i.test(linha) ||
                                               /\s+[ij10o!]\s*$/i.test(linha);
                     return !temSimboloInativo;
                 })
                 .map(linha => {
                     let limpa = linha
-                        .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração inicial (ex: "13. ")
-                        .replace(/[\(\[\{\Vert{}].*?[\)\]\}\|]/g, "")                       // Remove pontuações/símbolos entre parênteses ou colchetes
-                        .replace(/[\d]/g, "")                                         // Remove números residuais
-                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Remove pontuações/símbolos extras
-                        .replace(/\s+/g, " ")                                         // Remove espaços múltiplos
+                        .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração inicial
+                        .replace(/[\(\[\{\Vert{}].*?[\)\]\}\|]/g, "")                       // Remove trechos entre parênteses ou colchetes
+                        .replace(/[\d]/g, "")                                         // Remove dígitos
+                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Remove pontuações e caracteres estranhos
+                        .replace(/\s+/g, " ")                                         // Normaliza espaços
                         .trim();
 
                     if (limpa.length > 0) {
                         let palavras = limpa.split(' ');
 
-                        // Remove letras soltas no final da linha oriundas do ícone (i)
-                        if (palavras.length > 1) {
+                        // Remove caracteres soltos no final resultantes de fragmentos do ícone (i)
+                        while (palavras.length > 1) {
                             const ultima = palavras[palavras.length - 1].toLowerCase();
                             if (ultima.length === 1 && !preposicoes.includes(ultima)) {
                                 palavras.pop();
+                            } else {
+                                break;
                             }
                         }
 
-                        // Filtra letras isoladas resultantes de falhas de leitura
+                        // Remove letras soltas residuais no meio do nome
                         const palavrasValidas = palavras.filter(p => {
                             if (p.length === 1 && !preposicoes.includes(p.toLowerCase())) return false;
                             return true;
@@ -987,8 +990,7 @@
                     const partes = nome.split(' ').filter(p => p.length >= 2);
                     if (partes.length < 2) return false;
 
-                    const possuiPalavraLonga = partes.some(p => p.length >= 4 && !preposicoes.includes(p.toLowerCase()));
-                    return possuiPalavraLonga;
+                    return partes.some(p => p.length >= 4 && !preposicoes.includes(p.toLowerCase()));
                 });
         }
 
@@ -1003,11 +1005,10 @@
             }
 
             const imageFile = fileInput.files[0];
-            statusDiv.innerText = "⏳ Processando imagem e filtrando cabeçalhos... Aguarde.";
+            statusDiv.innerText = "⏳ Processando imagem e removendo ícones inativos... Aguarde.";
             btnOcr.disabled = true;
 
             try {
-                // Carrega e pré-processa a imagem em alto contraste via Canvas antes do OCR
                 const img = new Image();
                 const objectUrl = URL.createObjectURL(imageFile);
                 
@@ -1026,13 +1027,26 @@
                 const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const data = imgData.data;
 
-                // Binarização da imagem (Preto e Branco puro)
+                // Pré-processamento avançado do Canvas:
+                // Converte azul (cor do ícone ⓘ) em branco puro para 'apagar' o ícone antes de ir para o OCR
                 for (let i = 0; i < data.length; i += 4) {
-                    const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                    const v = avg < 180 ? 0 : 255;
-                    data[i] = v;
-                    data[i + 1] = v;
-                    data[i + 2] = v;
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+
+                    // Se detetar tom azulado dominante (comum no ícone de informação do SIAP)
+                    if (b > 100 && b > r * 1.2 && b > g * 1.1) {
+                        data[i] = 255;
+                        data[i + 1] = 255;
+                        data[i + 2] = 255;
+                    } else {
+                        // Binarização em alto contraste para o restante do texto
+                        const avg = (r + g + b) / 3;
+                        const v = avg < 160 ? 0 : 255;
+                        data[i] = v;
+                        data[i + 1] = v;
+                        data[i + 2] = v;
+                    }
                 }
                 ctx.putImageData(imgData, 0, 0);
 
