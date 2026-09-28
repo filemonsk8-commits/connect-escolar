@@ -160,7 +160,6 @@
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
 
-            <!-- ABA: AGENDA DE CORREÇÃO DE CADERNOS -->
             <div id="aba-ag" class="card hidden">
                 <h3>Agenda de Correção dos Cadernos</h3>
                 <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Marque os prazos, observações e acompanhe o progresso de recolhimento e vistoria dos cadernos da turma.</p>
@@ -199,7 +198,6 @@
                 </div>
             </div>
 
-            <!-- ABA DE AJUSTES -->
             <div id="aba-c" class="card hidden">
                 <h3>Ajustes de Turma</h3>
                 <div id="editor-alunos-lista"></div>
@@ -326,7 +324,6 @@
             }, 50);
         }
 
-        // --- LÓGICA DE VISTOS ---
         async function carregarAlunos() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value; const d = document.getElementById('data').value;
             if(!t) return;
@@ -505,7 +502,6 @@
             carregarAlunos();
         }
 
-        // --- AGENDA DE CORREÇÃO DE CADERNOS ---
         async function carregarAgendaCadernos() {
             const t = limparT(document.getElementById('turma').value);
             const b = document.getElementById('bimestre').value;
@@ -602,7 +598,6 @@
             });
         }
 
-        // --- DIÁRIO ---
         function salvarD() {
             const t = limparT(document.getElementById('turma').value);
             const b = document.getElementById('bimestre').value;
@@ -729,7 +724,6 @@
             });
         }
 
-        // --- RECUPERAÇÃO ---
         async function carregarRec() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             if(!t) return;
@@ -779,7 +773,6 @@
             });
         }
 
-        // --- FECHAMENTO ---
         async function gerarRelatorio() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             if(!t) { document.getElementById('relatorio-lista').innerHTML = "Escolha uma turma..."; return; }
@@ -846,7 +839,6 @@
             navigator.clipboard.writeText(texto).then(() => alert("Lista de Nomes + Notas copiada com sucesso!"));
         }
 
-        // --- AJUSTES E FILTROS DO SIAP ---
         async function renderizarEditorAlunos() {
             const t = limparT(document.getElementById('turma').value);
             if(!t) { document.getElementById('editor-alunos-lista').innerHTML = "Escolha uma turma..."; return; }
@@ -918,7 +910,7 @@
             }
         }
 
-        // Filtro aprimorado para barrar ruídos de OCR e linhas com exclamações distorcidas pelo Tesseract
+        // Filtro aprimorado para barrar ruídos, abreviações incompletas e fragmentos do OCR
         function limparENormalizarLista(textoBruto) {
             const termosInvalidados = [
                 "siap", "frequencia", "frequência", "conteudos", "conteúdos", "notas", "acesso",
@@ -931,24 +923,23 @@
                 "matrícula", "matricula", "salvar", "cancelar", "tancredo", "vespertino"
             ];
 
+            const preposicoes = ["de", "da", "do", "das", "dos", "e"];
+
             return textoBruto
                 .split('\n')
                 .map(linha => linha.trim())
-                // 1. Descarta linhas vazias e linhas que contenham '!'
+                // 1. Descarta linhas vazias ou com exclamação (inativos)
                 .filter(linha => linha !== "" && !linha.includes('!'))
                 .map(linha => {
                     let limpa = linha
                         .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração inicial
                         .replace(/[\d]/g, "")                                         // Remove números residuais
-                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Remove símbolos/pontuações
+                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Remove pontuações/símbolos
                         .replace(/\s+/g, " ")                                         // Remove espaços múltiplos
                         .trim();
 
-                    // Formata para Capital Case
                     if (limpa.length > 0) {
-                        const preposicoes = ["de", "da", "do", "das", "dos", "e"];
-                        
-                        // Filtra palavras que sejam apenas letras soltas residuais do OCR (ex: 'O', 'F', 'N')
+                        // Filtra letras isoladas resultantes de falhas de leitura
                         const palavrasValidas = limpa.split(' ').filter(p => {
                             if (p.length === 1 && !preposicoes.includes(p.toLowerCase())) return false;
                             return true;
@@ -960,27 +951,34 @@
                             if (index > 0 && preposicoes.includes(pMin)) return pMin;
                             return pMin.charAt(0).toUpperCase() + pMin.slice(1);
                         }).join(' ');
+
+                        // Se a linha terminar numa preposição solta (ex: "Eme de"), remove essa preposição final
+                        let partesTemp = limpa.split(' ');
+                        while (partesTemp.length > 0 && preposicoes.includes(partesTemp[partesTemp.length - 1].toLowerCase())) {
+                            partesTemp.pop();
+                        }
+                        limpa = partesTemp.join(' ');
                     }
 
                     return limpa;
                 })
                 .filter(nome => {
-                    // 2. O nome total deve ter pelo menos 6 caracteres válidos
                     if (nome.length < 6) return false;
 
                     const nomeMin = nome.toLowerCase();
-                    
-                    // 3. Descarta se for palavra/cabeçalho da interface do SIAP
                     const contemLixoInterface = termosInvalidados.some(termo => nomeMin.includes(termo));
                     if (contemLixoInterface) return false;
 
-                    // 4. Exige pelo menos 2 palavras com no mínimo 2 letras cada
                     const partes = nome.split(' ').filter(p => p.length >= 2);
-                    return partes.length >= 2;
+                    if (partes.length < 2) return false;
+
+                    // Exige que pelo menos UMA palavra do nome tenha no mínimo 4 letras
+                    // Isso elimina fragmentos como "Eme de" ou "Enado da Es"
+                    const possuiPalavraLonga = partes.some(p => p.length >= 4 && !preposicoes.includes(p.toLowerCase()));
+                    return possuiPalavraLonga;
                 });
         }
 
-        // Processamento OCR de Imagem com Tesseract.js (Modo Bloco Único)
         async function processarImagemAlunos() {
             const fileInput = document.getElementById('ocr-image-input');
             const statusDiv = document.getElementById('ocr-status');
