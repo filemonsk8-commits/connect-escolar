@@ -928,23 +928,35 @@
             return textoBruto
                 .split('\n')
                 .map(linha => linha.trim())
-                // 1. Descarta linhas vazias e linhas contendo o símbolo de inativo/informação (!, ⓘ, (i), [i], etc.)
+                // 1. Captura o ícone ⓘ e todas as variações lidas pelo OCR
                 .filter(linha => {
                     if (!linha) return false;
-                    const temSimboloInativo = /[!ⓘ]|\((i\vert{}info)\)|\[(i\vert{}info)\]/i.test(linha);
+                    const temSimboloInativo = /[!ⓘ]|[\(\[\{\Vert{}][ij10o!]?[\)\]\}\|]/i.test(linha) ||
+                                              /\s+[ij10o!]\s*$/i.test(linha);
                     return !temSimboloInativo;
                 })
                 .map(linha => {
                     let limpa = linha
-                        .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração e ponto inicial (ex: "23. ")
+                        .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração inicial (ex: "13. ")
+                        .replace(/[\(\[\{\Vert{}].*?[\)\]\}\|]/g, "")                       // Remove pontuações/símbolos entre parênteses ou colchetes
                         .replace(/[\d]/g, "")                                         // Remove números residuais
                         .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Remove pontuações/símbolos extras
                         .replace(/\s+/g, " ")                                         // Remove espaços múltiplos
                         .trim();
 
                     if (limpa.length > 0) {
+                        let palavras = limpa.split(' ');
+
+                        // Remove letras soltas no final da linha oriundas do ícone (i)
+                        if (palavras.length > 1) {
+                            const ultima = palavras[palavras.length - 1].toLowerCase();
+                            if (ultima.length === 1 && !preposicoes.includes(ultima)) {
+                                palavras.pop();
+                            }
+                        }
+
                         // Filtra letras isoladas resultantes de falhas de leitura
-                        const palavrasValidas = limpa.split(' ').filter(p => {
+                        const palavrasValidas = palavras.filter(p => {
                             if (p.length === 1 && !preposicoes.includes(p.toLowerCase())) return false;
                             return true;
                         });
@@ -956,7 +968,6 @@
                             return pMin.charAt(0).toUpperCase() + pMin.slice(1);
                         }).join(' ');
 
-                        // Se a linha terminar numa preposição solta (ex: "Eme de"), remove essa preposição final
                         let partesTemp = limpa.split(' ');
                         while (partesTemp.length > 0 && preposicoes.includes(partesTemp[partesTemp.length - 1].toLowerCase())) {
                             partesTemp.pop();
@@ -976,7 +987,6 @@
                     const partes = nome.split(' ').filter(p => p.length >= 2);
                     if (partes.length < 2) return false;
 
-                    // Exige que pelo menos UMA palavra do nome tenha no mínimo 4 letras
                     const possuiPalavraLonga = partes.some(p => p.length >= 4 && !preposicoes.includes(p.toLowerCase()));
                     return possuiPalavraLonga;
                 });
@@ -997,14 +1007,43 @@
             btnOcr.disabled = true;
 
             try {
-                const worker = await Tesseract.createWorker('por');
+                // Carrega e pré-processa a imagem em alto contraste via Canvas antes do OCR
+                const img = new Image();
+                const objectUrl = URL.createObjectURL(imageFile);
                 
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = objectUrl;
+                });
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+
+                ctx.drawImage(img, 0, 0);
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imgData.data;
+
+                // Binarização da imagem (Preto e Branco puro)
+                for (let i = 0; i < data.length; i += 4) {
+                    const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                    const v = avg < 180 ? 0 : 255;
+                    data[i] = v;
+                    data[i + 1] = v;
+                    data[i + 2] = v;
+                }
+                ctx.putImageData(imgData, 0, 0);
+
+                const worker = await Tesseract.createWorker('por');
                 await worker.setParameters({
                     tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK,
                 });
 
-                const ret = await worker.recognize(imageFile);
+                const ret = await worker.recognize(canvas.toDataURL('image/png'));
                 await worker.terminate();
+                URL.revokeObjectURL(objectUrl);
 
                 const nomesFiltrados = limparENormalizarLista(ret.data.text);
 
