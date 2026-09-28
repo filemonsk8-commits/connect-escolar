@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.27 | Prof. Eduardo</title>
+    <title>Connect Escolar v3.9.26 | Prof. Eduardo</title>
     
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -119,7 +119,7 @@
 
     <div id="login-screen" class="hidden">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.27</h2>
+            <h2>Connect Escolar v3.9.26</h2>
             <input type="password" id="pass" inputmode="numeric" pattern="[0-9]*" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -211,7 +211,7 @@
 
                 <h4>Atualizar Lista via Imagem (OCR)</h4>
                 <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
-                    Envie a captura de tela do SIAP. O sistema lerá os nomes com clareza e descartará automaticamente linhas de alunos inativos.
+                    Envie a captura de tela do SIAP. O filtro removerá automaticamente cabeçalhos e alunos inativos com o símbolo de informação.
                 </p>
                 <input type="file" id="ocr-image-input" accept="image/*" style="margin-bottom: 8px;">
                 <button onclick="processarImagemAlunos()" id="btn-ocr" class="btn-main btn-green" style="margin-top:0; margin-bottom:15px;">
@@ -890,6 +890,7 @@
             const nomeNovo = document.getElementById('novo-aluno-nome').value.trim();
             if(!t) { alert("Selecione a turma antes!"); return; }
             if(!nomeNovo) { alert("Digite o nome do aluno."); return; }
+            if(nomeNovo.includes('!') || /[ⓘ]|\((i\vert{}info)\)|\[(i\vert{}info)\]/i.test(nomeNovo)) { alert("Nomes contendo símbolos de inativo/informação não são permitidos."); return; }
             
             const sA = await db.ref('turmas/'+t).once('value');
             let arr = sA.val() || []; arr.push(nomeNovo);
@@ -909,7 +910,7 @@
             }
         }
 
-        // Filtro limpo e direto
+        // Filtro aprimorado para barrar ruídos, abreviações incompletas, símbolos de status (ⓘ/i) e fragmentos do OCR
         function limparENormalizarLista(textoBruto) {
             const termosInvalidados = [
                 "siap", "frequencia", "frequência", "conteudos", "conteúdos", "notas", "acesso",
@@ -927,45 +928,57 @@
             return textoBruto
                 .split('\n')
                 .map(linha => linha.trim())
+                // 1. Descarta linhas vazias e linhas contendo o símbolo de inativo/informação (!, ⓘ, (i), [i], etc.)
                 .filter(linha => {
                     if (!linha) return false;
-                    // Ignora linhas que contêm o ícone ou marcadores de inatividade
-                    const contemIconeInativo = /[!ⓘ]|[\(\[\{\Vert{}][ij10o!]?[\)\]\}\|]/i.test(linha) ||
-                                               /\b(info|inativo)\b/i.test(linha);
-                    return !contemIconeInativo;
+                    const temSimboloInativo = /[!ⓘ]|\((i\vert{}info)\)|\[(i\vert{}info)\]/i.test(linha);
+                    return !temSimboloInativo;
                 })
                 .map(linha => {
                     let limpa = linha
-                        .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração inicial
-                        .replace(/[\(\[\{\Vert{}].*?[\)\]\}\|]/g, "")                       // Remove trechos entre parênteses ou colchetes
-                        .replace(/[\d]/g, "")                                         // Remove números soltos
-                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Mantém apenas letras latinas com acentos
-                        .replace(/\s+/g, " ")                                         // Normaliza espaços múltiplos
+                        .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração e ponto inicial (ex: "23. ")
+                        .replace(/[\d]/g, "")                                         // Remove números residuais
+                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Remove pontuações/símbolos extras
+                        .replace(/\s+/g, " ")                                         // Remove espaços múltiplos
                         .trim();
 
                     if (limpa.length > 0) {
-                        let palavras = limpa.split(' ');
+                        // Filtra letras isoladas resultantes de falhas de leitura
+                        const palavrasValidas = limpa.split(' ').filter(p => {
+                            if (p.length === 1 && !preposicoes.includes(p.toLowerCase())) return false;
+                            return true;
+                        });
 
-                        // Capitaliza corretamente cada nome
-                        limpa = palavras.map((p, index) => {
+                        limpa = palavrasValidas.map((p, index) => {
                             const pMin = p.toLowerCase();
                             if (pMin.length === 0) return "";
                             if (index > 0 && preposicoes.includes(pMin)) return pMin;
                             return pMin.charAt(0).toUpperCase() + pMin.slice(1);
                         }).join(' ');
+
+                        // Se a linha terminar numa preposição solta (ex: "Eme de"), remove essa preposição final
+                        let partesTemp = limpa.split(' ');
+                        while (partesTemp.length > 0 && preposicoes.includes(partesTemp[partesTemp.length - 1].toLowerCase())) {
+                            partesTemp.pop();
+                        }
+                        limpa = partesTemp.join(' ');
                     }
 
                     return limpa;
                 })
                 .filter(nome => {
-                    if (nome.length < 5) return false;
+                    if (nome.length < 6) return false;
 
                     const nomeMin = nome.toLowerCase();
                     const contemLixoInterface = termosInvalidados.some(termo => nomeMin.includes(termo));
                     if (contemLixoInterface) return false;
 
                     const partes = nome.split(' ').filter(p => p.length >= 2);
-                    return partes.length >= 2;
+                    if (partes.length < 2) return false;
+
+                    // Exige que pelo menos UMA palavra do nome tenha no mínimo 4 letras
+                    const possuiPalavraLonga = partes.some(p => p.length >= 4 && !preposicoes.includes(p.toLowerCase()));
+                    return possuiPalavraLonga;
                 });
         }
 
@@ -980,12 +993,12 @@
             }
 
             const imageFile = fileInput.files[0];
-            statusDiv.innerText = "⏳ Processando imagem com alta precisão... Aguarde.";
+            statusDiv.innerText = "⏳ Processando imagem e filtrando cabeçalhos... Aguarde.";
             btnOcr.disabled = true;
 
             try {
-                // Passa a imagem diretamente ao Tesseract sem filtros destruidores de pixels
                 const worker = await Tesseract.createWorker('por');
+                
                 await worker.setParameters({
                     tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK,
                 });
@@ -996,15 +1009,15 @@
                 const nomesFiltrados = limparENormalizarLista(ret.data.text);
 
                 if (nomesFiltrados.length === 0) {
-                    statusDiv.innerText = "⚠️ Nenhum nome foi identificado. Tente enviar um print com corte mais próximo dos nomes.";
+                    statusDiv.innerText = "⚠️ Nenhum nome válido foi identificado. Verifique a nitidez ou corte a imagem focando apenas na lista.";
                     document.getElementById('imp').value = "";
                 } else {
                     document.getElementById('imp').value = nomesFiltrados.join('\n');
-                    statusDiv.innerText = `✅ Sucesso! ${nomesFiltrados.length} alunos extraídos com clareza.`;
+                    statusDiv.innerText = `✅ Sucesso! ${nomesFiltrados.length} alunos ativos extraídos com precisão.`;
                 }
             } catch (err) {
                 console.error(err);
-                statusDiv.innerText = "❌ Erro ao processar imagem.";
+                statusDiv.innerText = "❌ Erro ao ler a imagem. Tente tirar um print focando apenas nos nomes dos alunos.";
             } finally {
                 btnOcr.disabled = false;
             }
@@ -1082,7 +1095,7 @@
                 novaArvoreAgenda[bimestre] = {};
                 novaListaAlunos.forEach((nomeNovo, idxNovo) => {
                     let idxAntigo = encontrarIndiceAntigo(nomeNovo);
-                    if(idxAntigo !== -1 && arvoreAgendaAntiga[bimestre][idxNovo] !== undefined) {
+                    if(idxAntigo !== -1 && arvoreAgendaAntiga[bimestre][idxAntigo] !== undefined) {
                         novaArvoreAgenda[bimestre][idxNovo] = arvoreAgendaAntiga[bimestre][idxAntigo];
                     }
                 });
