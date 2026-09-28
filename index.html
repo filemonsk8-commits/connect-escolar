@@ -211,7 +211,7 @@
 
                 <h4>Atualizar Lista via Imagem (OCR)</h4>
                 <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
-                    Envie a captura de tela do SIAP. O filtro removerá automaticamente cabeçalhos e alunos inativos com <strong>!</strong>.
+                    Envie a captura de tela do SIAP. O filtro removerá automaticamente cabeçalhos e alunos inativos com o símbolo de informação.
                 </p>
                 <input type="file" id="ocr-image-input" accept="image/*" style="margin-bottom: 8px;">
                 <button onclick="processarImagemAlunos()" id="btn-ocr" class="btn-main btn-green" style="margin-top:0; margin-bottom:15px;">
@@ -890,7 +890,7 @@
             const nomeNovo = document.getElementById('novo-aluno-nome').value.trim();
             if(!t) { alert("Selecione a turma antes!"); return; }
             if(!nomeNovo) { alert("Digite o nome do aluno."); return; }
-            if(nomeNovo.includes('!')) { alert("Nomes contendo o símbolo '!' não são permitidos."); return; }
+            if(nomeNovo.includes('!') || /[ⓘ]|\((i\vert{}info)\)|\[(i\vert{}info)\]/i.test(nomeNovo)) { alert("Nomes contendo símbolos de inativo/informação não são permitidos."); return; }
             
             const sA = await db.ref('turmas/'+t).once('value');
             let arr = sA.val() || []; arr.push(nomeNovo);
@@ -910,7 +910,7 @@
             }
         }
 
-        // Filtro aprimorado para barrar ruídos, abreviações incompletas e fragmentos do OCR
+        // Filtro aprimorado para barrar ruídos, abreviações incompletas, símbolos de status (ⓘ/i) e fragmentos do OCR
         function limparENormalizarLista(textoBruto) {
             const termosInvalidados = [
                 "siap", "frequencia", "frequência", "conteudos", "conteúdos", "notas", "acesso",
@@ -928,13 +928,17 @@
             return textoBruto
                 .split('\n')
                 .map(linha => linha.trim())
-                // 1. Descarta linhas vazias ou com exclamação (inativos)
-                .filter(linha => linha !== "" && !linha.includes('!'))
+                // 1. Descarta linhas vazias e linhas contendo o símbolo de inativo/informação (!, ⓘ, (i), [i], etc.)
+                .filter(linha => {
+                    if (!linha) return false;
+                    const temSimboloInativo = /[!ⓘ]|\((i\vert{}info)\)|\[(i\vert{}info)\]/i.test(linha);
+                    return !temSimboloInativo;
+                })
                 .map(linha => {
                     let limpa = linha
-                        .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração inicial
+                        .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração e ponto inicial (ex: "23. ")
                         .replace(/[\d]/g, "")                                         // Remove números residuais
-                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Remove pontuações/símbolos
+                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Remove pontuações/símbolos extras
                         .replace(/\s+/g, " ")                                         // Remove espaços múltiplos
                         .trim();
 
@@ -973,7 +977,6 @@
                     if (partes.length < 2) return false;
 
                     // Exige que pelo menos UMA palavra do nome tenha no mínimo 4 letras
-                    // Isso elimina fragmentos como "Eme de" ou "Enado da Es"
                     const possuiPalavraLonga = partes.some(p => p.length >= 4 && !preposicoes.includes(p.toLowerCase()));
                     return possuiPalavraLonga;
                 });
