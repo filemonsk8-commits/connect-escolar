@@ -93,6 +93,7 @@
         .btn-down { background: #475569; }
         .btn-last { background: #1e293b; }
         .btn-del-aluno { background: var(--danger); margin-left: 4px; }
+        .btn-transf-aluno { background: #94a3b8; }
 
         .agenda-card-aluno { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
         .agenda-aluno-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; }
@@ -369,7 +370,10 @@
             
             let html = '<table style="width:100%; border-collapse:collapse;">';
             alunos.forEach((nome, idx) => {
-                html += `<tr style="border-bottom:1px solid #eee"><td style="padding:10px 0; font-size:0.85rem;">${nome}</td><td style="text-align:right">`;
+                const ehTransferido = nome.toLowerCase().includes('(transferido)') || nome.toLowerCase().includes('(inativo)');
+                const estiloNome = ehTransferido ? 'style="padding:10px 0; font-size:0.85rem; color:#94a3b8; text-decoration:line-through;"' : 'style="padding:10px 0; font-size:0.85rem;"';
+
+                html += `<tr style="border-bottom:1px solid #eee"><td ${estiloNome}>${nome}</td><td style="text-align:right">`;
                 
                 for(let v=1; v<=5; v++){
                     let valOrig = (diaVistos[idx] && diaVistos[idx][v] !== undefined) ? diaVistos[idx][v] : "";
@@ -378,7 +382,7 @@
                     let placeholderNota = "";
                     let estiloInlineeo = "";
                     
-                    if (valForm === "") {
+                    if (valForm === "" && !ehTransferido) {
                         Object.keys(todosVistosBimestre).forEach(dataChave => {
                             if (dataChave !== d && todosVistosBimestre[dataChave][idx] && todosVistosBimestre[dataChave][idx][v] !== undefined) {
                                 let notaEncontrada = todosVistosBimestre[dataChave][idx][v];
@@ -388,7 +392,10 @@
                     }
 
                     let travadoAttr = "";
-                    if (!podeEditar) {
+                    if (ehTransferido) {
+                        travadoAttr = "disabled";
+                        estiloInlineeo = `style="background: #e2e8f0; color: #94a3b8; font-weight: normal; cursor: not-allowed;"`;
+                    } else if (!podeEditar) {
                         travadoAttr = "disabled";
                         estiloInlineeo = `style="background: #f1f5f9; color: var(--danger); font-weight: bold; cursor: not-allowed;"`;
                     } else if (placeholderNota !== "" && valForm === "") {
@@ -398,11 +405,11 @@
                     html += `<div class="visto-container">
                                 <input type="text" 
                                        inputmode="decimal" 
-                                       class="input-v ${valOrig!==""?"nota-lançada":""}" 
+                                       class="input-v ${valOrig!=="" && !ehTransferido ?"nota-lançada":""}" 
                                        data-idx="${idx}" 
                                        data-v="${v}" 
                                        value="${valForm}" 
-                                       placeholder="${placeholderNota}" 
+                                       placeholder="${ehTransferido ? '-' : placeholderNota}" 
                                        ${estiloInlineeo}
                                        ${travadoAttr}
                                        onblur="formatarAoSair(this)">
@@ -444,6 +451,7 @@
             }
             
             document.querySelectorAll('.input-v').forEach(inp => { 
+                if(inp.disabled) return;
                 const i = parseInt(inp.dataset.idx); 
                 const v = parseInt(inp.dataset.v); 
                 let val = inp.value.replace(',', '.');
@@ -855,6 +863,7 @@
                         <button onclick="moverAluno('${idx}', 1)" class="btn-movimentacao btn-down" title="Descer uma posição">↓</button>
                         <button onclick="moverAlunoParaFinal('${idx}')" class="btn-movimentacao btn-last" title="Mover para o final da lista">⤓</button>
                         <button onclick="removerAlunoIndividual('${idx}', '${nome}')" class="btn-movimentacao btn-del-aluno" title="Excluir aluno">×</button>
+                        <button onclick="marcarAlunoTransferido('${idx}', '${nome}')" class="btn-movimentacao btn-transf-aluno" title="Marcar como transferido">T</button>
                     </div>
                 </div>`;
             });
@@ -907,6 +916,22 @@
                 let arr = sA.val() || []; arr.splice(idx, 1);
                 await realizarRemapeamentoGeralVistosEAlunos(t, arr);
                 renderizarEditorAlunos();
+            }
+        }
+
+        async function marcarAlunoTransferido(idx, nome) {
+            if(confirm(`Deseja marcar o(a) aluno(a) "${nome}" como TRANSFERIDO?\nO nome continuará na lista sinalizado como transferido e os campos de nota serão bloqueados.`)) {
+                idx = parseInt(idx);
+                const t = limparT(document.getElementById('turma').value);
+                const sA = await db.ref('turmas/'+t).once('value');
+                let arr = sA.val() || [];
+                
+                let nomeLimpo = nome.replace(/\s*\((transferido\vert{}inativo)\)/i, "").trim();
+                arr[idx] = `${nomeLimpo} (Transferido)`;
+
+                await realizarRemapeamentoGeralVistosEAlunos(t, arr);
+                renderizarEditorAlunos();
+                alert("Aluno marcado como transferido com sucesso!");
             }
         }
 
