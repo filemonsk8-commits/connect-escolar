@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link class="no-print" rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063176.png">
     
-    <link class="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImh0dHBzOi8vY2RuLWljb25zIHBuZy5mbGF0aWNvbi5jb20vNTEyLzMwNjMvMzA2MzE3Ni5wbmciLAogICAgICAic2l6ZXMiOiAiUzEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNavmJsZSIKICAgIH0KICBdCn0=">
+    <link class="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvbm5lY3QgRXNjb2xhciIsCiAgInNob3J0X25hbWUiOiAiQ29ubmVjdCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZjhmYWZjIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAgICAgInNyYyI6ICJodHRwczovL2Nkbi1pY29ucyBwbmcuZmxhdGljb24uY29tLzUxMi8zMDYzLzMwNjMxNzYucG5nIiwKICAgICAgInNpemVzIjogIlMxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciLAogICAgICAicHVycG9zZSI6ICJhbnkgbWFzS3ZibGUiCiAgICB9CiAgXQp9">
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -94,6 +94,7 @@
         .btn-last { background: #1e293b; }
         .btn-del-aluno { background: var(--danger); margin-left: 4px; }
         .btn-transf-aluno { background: #94a3b8; }
+        .btn-transf-ativo { background: var(--success); }
 
         .agenda-card-aluno { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
         .agenda-aluno-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; }
@@ -855,15 +856,19 @@
             
             let html = '';
             alunos.forEach((nome, idx) => {
+                const ehTransferido = nome.toLowerCase().includes('(transferido)') || nome.toLowerCase().includes('(inativo)');
+                const btnClasse = ehTransferido ? "btn-transf-ativo" : "btn-transf-aluno";
+                const btnTitulo = ehTransferido ? "Desfazer transferência (Reativar aluno)" : "Marcar como transferido";
+
                 html += `
                 <div class="ajuste-aluno-row">
-                    <span class="ajuste-aluno-nome">${idx + 1}. ${nome}</span>
+                    <span class="ajuste-aluno-nome" ${ehTransferido ? 'style="color:#94a3b8; text-decoration:line-through;"' : ''}>${idx + 1}. ${nome}</span>
                     <div class="ajuste-botoes-container">
                         <button onclick="moverAluno('${idx}', -1)" class="btn-movimentacao btn-up" title="Subir uma posição">↑</button>
                         <button onclick="moverAluno('${idx}', 1)" class="btn-movimentacao btn-down" title="Descer uma posição">↓</button>
                         <button onclick="moverAlunoParaFinal('${idx}')" class="btn-movimentacao btn-last" title="Mover para o final da lista">⤓</button>
                         <button onclick="removerAlunoIndividual('${idx}', '${nome}')" class="btn-movimentacao btn-del-aluno" title="Excluir aluno">×</button>
-                        <button onclick="marcarAlunoTransferido('${idx}', '${nome}')" class="btn-movimentacao btn-transf-aluno" title="Marcar como transferido">T</button>
+                        <button onclick="alternarAlunoTransferido('${idx}', '${nome}')" class="btn-movimentacao ${btnClasse}" title="${btnTitulo}">T</button>
                     </div>
                 </div>`;
             });
@@ -919,19 +924,29 @@
             }
         }
 
-        async function marcarAlunoTransferido(idx, nome) {
-            if(confirm(`Deseja marcar o(a) aluno(a) "${nome}" como TRANSFERIDO?\nO nome continuará na lista sinalizado como transferido e os campos de nota serão bloqueados.`)) {
-                idx = parseInt(idx);
-                const t = limparT(document.getElementById('turma').value);
-                const sA = await db.ref('turmas/'+t).once('value');
-                let arr = sA.val() || [];
-                
-                let nomeLimpo = nome.replace(/\s*\((transferido\vert{}inativo)\)/i, "").trim();
-                arr[idx] = `${nomeLimpo} (Transferido)`;
+        async function alternarAlunoTransferido(idx, nome) {
+            idx = parseInt(idx);
+            const t = limparT(document.getElementById('turma').value);
+            const sA = await db.ref('turmas/'+t).once('value');
+            let arr = sA.val() || [];
+            
+            const ehTransferido = nome.toLowerCase().includes('(transferido)') || nome.toLowerCase().includes('(inativo)');
+            let nomeLimpo = nome.replace(/\s*\((transferido\vert{}inativo)\)/i, "").trim();
 
-                await realizarRemapeamentoGeralVistosEAlunos(t, arr);
-                renderizarEditorAlunos();
-                alert("Aluno marcado como transferido com sucesso!");
+            if (ehTransferido) {
+                if(confirm(`Deseja REATIVAR o(a) aluno(a) "${nomeLimpo}"?\nA marcação de transferido será removida e os lançamentos serão liberados novamente.`)) {
+                    arr[idx] = nomeLimpo;
+                    await realizarRemapeamentoGeralVistosEAlunos(t, arr);
+                    renderizarEditorAlunos();
+                    alert("Aluno reativado com sucesso!");
+                }
+            } else {
+                if(confirm(`Deseja marcar o(a) aluno(a) "${nomeLimpo}" como TRANSFERIDO?\nO nome continuará na lista sinalizado como transferido e os campos de nota serão bloqueados.`)) {
+                    arr[idx] = `${nomeLimpo} (Transferido)`;
+                    await realizarRemapeamentoGeralVistosEAlunos(t, arr);
+                    renderizarEditorAlunos();
+                    alert("Aluno marcado como transferido com sucesso!");
+                }
             }
         }
 
