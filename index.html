@@ -867,8 +867,8 @@
                         <button onclick="moverAluno('${idx}', -1)" class="btn-movimentacao btn-up" title="Subir uma posição">↑</button>
                         <button onclick="moverAluno('${idx}', 1)" class="btn-movimentacao btn-down" title="Descer uma posição">↓</button>
                         <button onclick="moverAlunoParaFinal('${idx}')" class="btn-movimentacao btn-last" title="Mover para o final da lista">⤓</button>
-                        <button onclick="removerAlunoIndividual('${idx}', '${nome}')" class="btn-movimentacao btn-del-aluno" title="Excluir aluno">×</button>
-                        <button onclick="alternarAlunoTransferido('${idx}', '${nome}')" class="btn-movimentacao ${btnClasse}" title="${btnTitulo}">T</button>
+                        <button onclick="removerAlunoIndividual('${idx}', '${nome.replace(/'/g, "\\'")}')" class="btn-movimentacao btn-del-aluno" title="Excluir aluno">×</button>
+                        <button onclick="alternarAlunoTransferido('${idx}', '${nome.replace(/'/g, "\\'")}')" class="btn-movimentacao ${btnClasse}" title="${btnTitulo}">T</button>
                     </div>
                 </div>`;
             });
@@ -950,7 +950,6 @@
             }
         }
 
-        // Filtro aprimorado para barrar ruídos, abreviações incompletas, símbolos de status (ⓘ/i) e fragmentos do OCR
         function limparENormalizarLista(textoBruto) {
             const termosInvalidados = [
                 "siap", "frequencia", "frequência", "conteudos", "conteúdos", "notas", "acesso",
@@ -968,7 +967,6 @@
             return textoBruto
                 .split('\n')
                 .map(linha => linha.trim())
-                // 1. Descarta linhas vazias e linhas contendo o símbolo de inativo/informação (!, ⓘ, (i), [i], etc.)
                 .filter(linha => {
                     if (!linha) return false;
                     const temSimboloInativo = /[!ⓘ]|\((i\vert{}info)\)|\[(i\vert{}info)\]/i.test(linha);
@@ -976,14 +974,13 @@
                 })
                 .map(linha => {
                     let limpa = linha
-                        .replace(/^[\d\s.\-–—]+/, "")                                 // Remove numeração e ponto inicial (ex: "23. ")
-                        .replace(/[\d]/g, "")                                         // Remove números residuais
-                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")    // Remove pontuações/símbolos extras
-                        .replace(/\s+/g, " ")                                         // Remove espaços múltiplos
+                        .replace(/^[\d\s.\-–—]+/, "")
+                        .replace(/[\d]/g, "")
+                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")
+                        .replace(/\s+/g, " ")
                         .trim();
 
                     if (limpa.length > 0) {
-                        // Filtra letras isoladas resultantes de falhas de leitura
                         const palavrasValidas = limpa.split(' ').filter(p => {
                             if (p.length === 1 && !preposicoes.includes(p.toLowerCase())) return false;
                             return true;
@@ -996,7 +993,6 @@
                             return pMin.charAt(0).toUpperCase() + pMin.slice(1);
                         }).join(' ');
 
-                        // Se a linha terminar numa preposição solta (ex: "Eme de"), remove essa preposição final
                         let partesTemp = limpa.split(' ');
                         while (partesTemp.length > 0 && preposicoes.includes(partesTemp[partesTemp.length - 1].toLowerCase())) {
                             partesTemp.pop();
@@ -1016,7 +1012,6 @@
                     const partes = nome.split(' ').filter(p => p.length >= 2);
                     if (partes.length < 2) return false;
 
-                    // Exige que pelo menos UMA palavra do nome tenha no mínimo 4 letras
                     const possuiPalavraLonga = partes.some(p => p.length >= 4 && !preposicoes.includes(p.toLowerCase()));
                     return possuiPalavraLonga;
                 });
@@ -1102,10 +1097,11 @@
             let novaArvoreRecs = {};
             let novaArvoreAgenda = {};
 
+            const normalizarParaBusca = (s) => s.replace(/\s*\((transferido\vert{}inativo)\)/i, "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
             const encontrarIndiceAntigo = (nomeNovo) => {
-                let exato = listaAntiga.indexOf(nomeNovo); if(exato !== -1) return exato;
-                let simplificar = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                return listaAntiga.findIndex(nA => simplificar(nA) === simplificar(nomeNovo));
+                let nomeNormBuscado = normalizarParaBusca(nomeNovo);
+                return listaAntiga.findIndex(nA => normalizarParaBusca(nA) === nomeNormBuscado);
             };
 
             Object.keys(arvoreVistosAntiga).forEach(bimestre => {
