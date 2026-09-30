@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.26 | Prof. Eduardo</title>
+    <title>Connect Escolar v3.9.27 | Prof. Eduardo</title>
     
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -85,14 +85,15 @@
         .btn-cover { background: var(--accent); color: white; border: none; padding: 16px 32px; font-size: 1rem; font-weight: 700; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4); transition: transform 0.2s; width: 100%; max-width: 250px; }
         .btn-cover:active { transform: scale(0.98); }
 
-        .ajuste-aluno-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; gap: 10px; }
+        .ajuste-aluno-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9; gap: 6px; }
         .ajuste-aluno-nome { font-size: 0.85rem; font-weight: 500; color: #334155; flex-grow: 1; }
-        .ajuste-botoes-container { display: flex; gap: 4px; }
-        .btn-movimentacao { border: none; width: 28px; height: 28px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; }
+        .ajuste-botoes-container { display: flex; gap: 3px; }
+        .btn-movimentacao { border: none; min-width: 26px; height: 28px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+        .btn-first { background: #0284c7; }
         .btn-up { background: #64748b; }
         .btn-down { background: #475569; }
         .btn-last { background: #1e293b; }
-        .btn-del-aluno { background: var(--danger); margin-left: 4px; }
+        .btn-del-aluno { background: var(--danger); margin-left: 2px; }
         .btn-transf-aluno { background: #94a3b8; }
         .btn-transf-ativo { background: var(--success); }
 
@@ -121,7 +122,7 @@
 
     <div id="login-screen" class="hidden">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.26</h2>
+            <h2>Connect Escolar v3.9.27</h2>
             <input type="password" id="pass" inputmode="numeric" pattern="[0-9]*" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -864,6 +865,7 @@
                 <div class="ajuste-aluno-row">
                     <span class="ajuste-aluno-nome" ${ehTransferido ? 'style="color:#94a3b8; text-decoration:line-through;"' : ''}>${idx + 1}. ${nome}</span>
                     <div class="ajuste-botoes-container">
+                        <button onclick="moverAlunoParaPrimeiro('${idx}')" class="btn-movimentacao btn-first" title="Mover para o topo (1º da lista)">↑↑</button>
                         <button onclick="moverAluno('${idx}', -1)" class="btn-movimentacao btn-up" title="Subir uma posição">↑</button>
                         <button onclick="moverAluno('${idx}', 1)" class="btn-movimentacao btn-down" title="Descer uma posição">↓</button>
                         <button onclick="moverAlunoParaFinal('${idx}')" class="btn-movimentacao btn-last" title="Mover para o final da lista">⤓</button>
@@ -873,6 +875,19 @@
                 </div>`;
             });
             document.getElementById('editor-alunos-lista').innerHTML = html || "Nenhum aluno cadastrado.";
+        }
+
+        async function moverAlunoParaPrimeiro(idx) {
+            idx = parseInt(idx);
+            if(idx === 0) return;
+            const t = limparT(document.getElementById('turma').value);
+            const sA = await db.ref('turmas/'+t).once('value');
+            let arr = sA.val() || [];
+            
+            let elemento = arr.splice(idx, 1)[0]; 
+            arr.unshift(elemento);
+            await realizarRemapeamentoGeralVistosEAlunos(t, arr);
+            renderizarEditorAlunos();
         }
 
         async function moverAluno(idx, direcao) {
@@ -930,8 +945,8 @@
             const sA = await db.ref('turmas/'+t).once('value');
             let arr = sA.val() || [];
             
+            let nomeLimpo = nome.replace(/\s*\((transferido\vert{}inativo)\)/ig, "").trim();
             const ehTransferido = nome.toLowerCase().includes('(transferido)') || nome.toLowerCase().includes('(inativo)');
-            let nomeLimpo = nome.replace(/\s*\((transferido\vert{}inativo)\)/i, "").trim();
 
             if (ehTransferido) {
                 if(confirm(`Deseja REATIVAR o(a) aluno(a) "${nomeLimpo}"?\nA marcação de transferido será removida e os lançamentos serão liberados novamente.`)) {
@@ -1097,7 +1112,7 @@
             let novaArvoreRecs = {};
             let novaArvoreAgenda = {};
 
-            const normalizarParaBusca = (s) => s.replace(/\s*\((transferido\vert{}inativo)\)/i, "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const normalizarParaBusca = (s) => String(s || "").replace(/\s*\((transferido\vert{}inativo)\)/ig, "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
             const encontrarIndiceAntigo = (nomeNovo) => {
                 let nomeNormBuscado = normalizarParaBusca(nomeNovo);
