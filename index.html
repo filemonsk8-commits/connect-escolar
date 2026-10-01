@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.29 | Prof. Eduardo</title>
+    <title>Connect Escolar v3.9.30 | Prof. Eduardo</title>
     
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -124,13 +124,14 @@
 
     <div id="login-screen" class="hidden">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.29</h2>
+            <h2>Connect Escolar v3.9.30</h2>
             <input type="password" id="pass" inputmode="numeric" pattern="[0-9]*" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
     </div>
 
     <div id="app" class="hidden">
+        <!-- ABA CADASTRO COLOCADA COMO ÚLTIMA AQUI -->
         <nav class="tabs no-print">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
             <button class="tab-btn" onclick="aba('ag')">AGENDA CADERNOS</button>
@@ -138,8 +139,8 @@
             <button class="tab-btn" onclick="aba('rd')">RELATÓRIO DIÁRIO</button>
             <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
             <button class="tab-btn" onclick="aba('l')">FECHAMENTO</button>
-            <button class="tab-btn" onclick="aba('cad')">CADASTRO</button>
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
+            <button class="tab-btn" onclick="aba('cad')">CADASTRO</button>
         </nav>
 
         <header class="no-print">
@@ -204,10 +205,29 @@
                 </div>
             </div>
 
-            <!-- ABA CADASTRO: GERENCIAMENTO DE TURMAS E RESET -->
+            <div id="aba-c" class="card hidden">
+                <h3>Ajustes de Estudantes</h3>
+                <div id="editor-alunos-lista"></div>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+                
+                <h4>Adicionar Único Aluno</h4>
+                <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+                    <input type="text" id="novo-aluno-nome" placeholder="Digite o nome completo do aluno...">
+                    <button onclick="adicionarAlunoIndividual()" class="btn-main btn-blue" style="margin-top: 0; width: auto; white-space: nowrap; padding: 0 20px;">Adicionar</button>
+                </div>
+
+                <h4>Importação/Atualização com Preservação de Vistos</h4>
+                <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
+                    Cole a lista de nomes abaixo para aplicar a migração sem perder as notas já lançadas.
+                </p>
+                <textarea id="imp" style="height:140px;" placeholder="Cole a lista de alunos aqui (um por linha)..."></textarea>
+                <button onclick="importarComMigracao()" class="btn-main btn-orange">Atualizar Lista Migrando Vistos</button>
+            </div>
+
+            <!-- ABA CADASTRO: ÚLTIMA ABA COM GERENCIAMENTO, EDICÃO E EXCLUSÃO -->
             <div id="aba-cad" class="card hidden">
-                <h3>Cadastro & Gestão do Sistema</h3>
-                <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Cadastre novas turmas, remova turmas obsoletas e gerencie os resets de registros no Firebase.</p>
+                <h3>Cadastro & Gestão de Turmas</h3>
+                <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Cadastre novas turmas, edite nomes/categorias, exclua turmas obsoletas e gerencie resets do sistema.</p>
                 
                 <div class="sec-box">
                     <h4>➕ Cadastrar Nova Turma</h4>
@@ -224,7 +244,7 @@
                 </div>
 
                 <div class="sec-box">
-                    <h4>🗑️ Turmas Cadastradas no Sistema</h4>
+                    <h4>🗑️ Turmas Cadastradas (Editar / Excluir)</h4>
                     <div id="lista-turmas-cadastradas">Carregando turmas...</div>
                 </div>
 
@@ -245,25 +265,6 @@
                         <button onclick="resetarSistemaCompleto()" class="btn-main btn-red" style="margin-top:0; background:#991b1b;">Reset Geral de Todos os Vistos e Diários</button>
                     </div>
                 </div>
-            </div>
-
-            <div id="aba-c" class="card hidden">
-                <h3>Ajustes de Estudantes</h3>
-                <div id="editor-alunos-lista"></div>
-                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
-                
-                <h4>Adicionar Único Aluno</h4>
-                <div style="display: flex; gap: 8px; margin-bottom: 20px;">
-                    <input type="text" id="novo-aluno-nome" placeholder="Digite o nome completo do aluno...">
-                    <button onclick="adicionarAlunoIndividual()" class="btn-main btn-blue" style="margin-top: 0; width: auto; white-space: nowrap; padding: 0 20px;">Adicionar</button>
-                </div>
-
-                <h4>Importação/Atualização com Preservação de Vistos</h4>
-                <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
-                    Cole a lista de nomes abaixo para aplicar a migração sem perder as notas já lançadas.
-                </p>
-                <textarea id="imp" style="height:140px;" placeholder="Cole a lista de alunos aqui (um por linha)..."></textarea>
-                <button onclick="importarComMigracao()" class="btn-main btn-orange">Atualizar Lista Migrando Vistos</button>
             </div>
         </div>
     </div>
@@ -928,7 +929,7 @@
             navigator.clipboard.writeText(texto).then(() => alert("Lista de Nomes + Notas copiada com sucesso!"));
         }
 
-        /* ABA CADASTRO: GERENCIAMENTO DE TURMAS E MAINTENANCE */
+        /* ABA CADASTRO: GERENCIAMENTO DE TURMAS, EDIÇÃO E EXCLUSÃO */
         async function carregarGerenciamentoTurmas() {
             const container = document.getElementById('lista-turmas-cadastradas');
             container.innerHTML = "Carregando...";
@@ -944,13 +945,19 @@
             let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
             Object.keys(turmas).forEach(key => {
                 const item = turmas[key];
+                const nomeEscapado = item.nome.replace(/'/g, "\\'");
+                const catEscapada = item.cat.replace(/'/g, "\\'");
+                
                 html += `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
                     <div>
                         <strong style="font-size:0.85rem;">${item.nome}</strong>
                         <span style="font-size:0.75rem; color:#64748b; margin-left:6px;">(${item.cat})</span>
                     </div>
-                    <button onclick="excluirTurmaCadastrada('${key}', '${item.nome.replace(/'/g, "\\'")}')" class="btn-edit-small" style="background:var(--danger)">Excluir Turma</button>
+                    <div style="display:flex; gap:4px;">
+                        <button onclick="editarTurmaCadastrada('${key}', '${nomeEscapado}', '${catEscapada}')" class="btn-edit-small" style="background:var(--accent)">Editar</button>
+                        <button onclick="excluirTurmaCadastrada('${key}', '${nomeEscapado}')" class="btn-edit-small" style="background:var(--danger)">Excluir</button>
+                    </div>
                 </div>`;
             });
             container.innerHTML = html + '</div>';
@@ -978,8 +985,36 @@
             alert(`Turma "${nome}" cadastrada com sucesso!`);
         }
 
+        async function editarTurmaCadastrada(key, nomeAtual, catAtual) {
+            const novoNome = prompt("Edite o nome da turma:", nomeAtual);
+            if (novoNome === null) return;
+            const nomeFormatado = novoNome.trim();
+            if (!nomeFormatado) { alert("O nome da turma não pode ficar em branco!"); return; }
+
+            const novaCategoria = prompt("Digite a Categoria:\n1 = ENSINO FUNDAMENTAL\n2 = ENSINO MÉDIO\n3 = TÉCNICO (DG)\n4 = OUTROS", 
+                catAtual === "ENSINO FUNDAMENTAL" ? "1" : 
+                catAtual === "ENSINO MÉDIO" ? "2" : 
+                catAtual === "TÉCNICO (DG)" ? "3" : "4"
+            );
+
+            let catFinal = catAtual;
+            if (novaCategoria === "1") catFinal = "ENSINO FUNDAMENTAL";
+            else if (novaCategoria === "2") catFinal = "ENSINO MÉDIO";
+            else if (novaCategoria === "3") catFinal = "TÉCNICO (DG)";
+            else if (novaCategoria === "4") catFinal = "OUTROS";
+
+            await db.ref(`cadastros_turmas/${key}`).update({
+                nome: nomeFormatado,
+                cat: catFinal
+            });
+
+            await popularMenus();
+            carregarGerenciamentoTurmas();
+            alert("Turma atualizada com sucesso!");
+        }
+
         async function excluirTurmaCadastrada(key, nomeTurma) {
-            if(confirm(`ATENÇÃO:\nDeseja apagar a turma "${nomeTurma}" do sistema?\nOs alunos e históricos associados a esta turma permanecerão no Firebase se precisar recadastrar.`)) {
+            if(confirm(`ATENÇÃO:\nDeseja apagar a turma "${nomeTurma}" do sistema?\nOs alunos e históricos associados a esta turma permanecerão no Firebase caso precise recadastrar.`)) {
                 await db.ref(`cadastros_turmas/${key}`).remove();
                 await popularMenus();
                 carregarGerenciamentoTurmas();
@@ -1026,7 +1061,7 @@
         }
 
         async function resetarSistemaCompleto() {
-            const confirmacao = prompt("⚠️️ ZONA DE PERIGO!\nIsso vai apagar TODOS OS VISTOS e TODOS OS DIÁRIOS de TODAS as turmas.\nDigite 'RESETAR' em maiúsculas para confirmar:");
+            const confirmacao = prompt("⚠ ZONA DE PERIGO!\nIsso vai apagar TODOS OS VISTOS e TODOS OS DIÁRIOS de TODAS as turmas.\nDigite 'RESETAR' em maiúsculas para confirmar:");
             if(confirmacao === "RESETAR") {
                 await Promise.all([
                     db.ref('vistos').remove(),
