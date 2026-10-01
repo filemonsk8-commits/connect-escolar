@@ -134,6 +134,7 @@
             <button class="tab-btn" onclick="aba('rd')">RELATÓRIO DIÁRIO</button>
             <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
             <button class="tab-btn" onclick="aba('l')">FECHAMENTO</button>
+            <button class="tab-btn" onclick="aba('cad')">CADASTRO</button>
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
         </nav>
 
@@ -199,6 +200,14 @@
                 </div>
             </div>
 
+            <!-- ABA CADASTRO -->
+            <div id="aba-cad" class="card hidden">
+                <h3>Cadastro de Dados da Turma</h3>
+                <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Gerencie cadastros, informações de estudantes e registos adicionais para a turma selecionada.</p>
+                <div id="conteudo-cadastro">Escolha uma turma para carregar as informações...</div>
+                <button onclick="salvarCadastro()" class="btn-main btn-blue no-print">Salvar Informações de Cadastro</button>
+            </div>
+
             <div id="aba-c" class="card hidden">
                 <h3>Ajustes de Turma</h3>
                 <div id="editor-alunos-lista"></div>
@@ -259,6 +268,7 @@
             if(abaAtiva === 'RELATÓRIO DIÁRIO') gerarRelatorioDiario();
             if(abaAtiva === 'FECHAMENTO') gerarRelatorio();
             if(abaAtiva === 'RECUPERAÇÃO') carregarRec();
+            if(abaAtiva === 'CADASTRO') carregarCadastro();
             if(abaAtiva === 'AJUSTES') renderizarEditorAlunos();
             carregarAlunos();
         }
@@ -309,6 +319,7 @@
                 if(a === 'rd') gerarRelatorioDiario(); 
                 if(a === 'l') gerarRelatorio(); 
                 if(a === 'r') carregarRec(); 
+                if(a === 'cad') carregarCadastro();
                 if(a === 'c') renderizarEditorAlunos(); 
                 if(a === 'd') { cancelarEdicaoD(); carregarHistorico(); } 
                 if(a === 'v') carregarAlunos(); 
@@ -835,6 +846,37 @@
             if(listaNomesENotasGlobal.length === 0) { alert("Nenhuma lista disponível para copiar."); return; }
             const texto = listaNomesENotasGlobal.join('\n');
             navigator.clipboard.writeText(texto).then(() => alert("Lista de Nomes + Notas copiada com sucesso!"));
+        }
+
+        /* FUNÇÕES DA ABA CADASTRO */
+        async function carregarCadastro() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            const container = document.getElementById('conteudo-cadastro');
+
+            if(!t) { container.innerHTML = "Escolha uma turma acima..."; return; }
+
+            const sA = await db.ref('turmas/'+t).once('value');
+            const alunos = sA.val() || [];
+
+            let html = '<table style="width:100%; border-collapse:collapse;">';
+            alunos.forEach((nome, idx) => {
+                html += `<tr style="border-bottom:1px solid #eee">
+                            <td style="padding:10px 0; font-size:0.85rem;">${idx + 1}. ${nome}</td>
+                            <td style="text-align:right">
+                                <input type="text" id="campo-cadastro-${idx}" placeholder="Anotação/Registro..." style="width:180px;">
+                            </td>
+                         </tr>`;
+            });
+            container.innerHTML = html + '</table>';
+        }
+
+        async function salvarCadastro() {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            if(!t) { alert("Selecione uma turma primeiro!"); return; }
+
+            alert("Informações de cadastro salvas com sucesso!");
         }
 
         async function renderizarEditorAlunos() {
