@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar v3.9.27 | Prof. Eduardo</title>
+    <title>Connect Escolar v3.9.28 | Prof. Eduardo</title>
     
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -122,7 +122,7 @@
 
     <div id="login-screen" class="hidden">
         <div class="login-box">
-            <h2>Connect Escolar v3.9.27</h2>
+            <h2>Connect Escolar v3.9.28</h2>
             <input type="password" id="pass" inputmode="numeric" pattern="[0-9]*" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
             <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
@@ -984,51 +984,43 @@
                 .map(linha => linha.trim())
                 .filter(linha => {
                     if (!linha) return false;
+                    // Descarta se possuir o símbolo de inativo/informação (ex: ⓘ, !, [i])
                     const temSimboloInativo = /[!ⓘ]|\((i\vert{}info)\)|\[(i\vert{}info)\]/i.test(linha);
                     return !temSimboloInativo;
                 })
                 .map(linha => {
-                    let limpa = linha
-                        .replace(/^[\d\s.\-–—]+/, "")
-                        .replace(/[\d]/g, "")
-                        .replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")
-                        .replace(/\s+/g, " ")
-                        .trim();
+                    // Remove numerações do início (ex: "01 - ", "1. ", "123 ")
+                    let limpa = linha.replace(/^[\d\s.\-–—]+/, "");
+                    
+                    // Remove caracteres estranhos/símbolos mantendo letras acentuadas e espaços
+                    limpa = limpa.replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")
+                                 .replace(/\s+/g, " ")
+                                 .trim();
 
                     if (limpa.length > 0) {
-                        const palavrasValidas = limpa.split(' ').filter(p => {
-                            if (p.length === 1 && !preposicoes.includes(p.toLowerCase())) return false;
-                            return true;
-                        });
-
-                        limpa = palavrasValidas.map((p, index) => {
+                        // Formata Primeira Letra de cada nome para Maiúscula, preservando preposições
+                        const palavras = limpa.split(' ');
+                        limpa = palavras.map((p, index) => {
                             const pMin = p.toLowerCase();
                             if (pMin.length === 0) return "";
                             if (index > 0 && preposicoes.includes(pMin)) return pMin;
-                            return pMin.charAt(0).toUpperCase() + pMin.slice(1);
+                            return pMin.charAt(0).toUpperCase() + pMin.slice(1).toLowerCase();
                         }).join(' ');
-
-                        let partesTemp = limpa.split(' ');
-                        while (partesTemp.length > 0 && preposicoes.includes(partesTemp[partesTemp.length - 1].toLowerCase())) {
-                            partesTemp.pop();
-                        }
-                        limpa = partesTemp.join(' ');
                     }
 
                     return limpa;
                 })
                 .filter(nome => {
-                    if (nome.length < 6) return false;
+                    if (!nome) return false;
 
                     const nomeMin = nome.toLowerCase();
+                    // Filtra palavras de cabeçalho do sistema
                     const contemLixoInterface = termosInvalidados.some(termo => nomeMin.includes(termo));
                     if (contemLixoInterface) return false;
 
-                    const partes = nome.split(' ').filter(p => p.length >= 2);
-                    if (partes.length < 2) return false;
-
-                    const possuiPalavraLonga = partes.some(p => p.length >= 4 && !preposicoes.includes(p.toLowerCase()));
-                    return possuiPalavraLonga;
+                    // Exige ao menos duas palavras (Nome + Sobrenome)
+                    const partes = nome.split(' ').filter(p => p.length >= 1);
+                    return partes.length >= 2;
                 });
         }
 
