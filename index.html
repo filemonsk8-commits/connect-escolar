@@ -14,8 +14,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <!-- Biblioteca OCR Tesseract.js -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
         :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; --danger: #ef4444; --success: #22c55e; --warning: #f59e0b; }
@@ -212,21 +210,11 @@
                     <button onclick="adicionarAlunoIndividual()" class="btn-main btn-blue" style="margin-top: 0; width: auto; white-space: nowrap; padding: 0 20px;">Adicionar</button>
                 </div>
 
-                <h4>Atualizar Lista via Imagem (OCR)</h4>
-                <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
-                    Envie a captura de tela do SIAP. O filtro removerá automaticamente cabeçalhos e alunos inativos com o símbolo de informação.
-                </p>
-                <input type="file" id="ocr-image-input" accept="image/*" style="margin-bottom: 8px;">
-                <button onclick="processarImagemAlunos()" id="btn-ocr" class="btn-main btn-green" style="margin-top:0; margin-bottom:15px;">
-                    📷 Extrair Nomes da Imagem
-                </button>
-                <div id="ocr-status" style="font-size:0.8rem; font-weight:bold; color:var(--accent); margin-bottom:10px;"></div>
-
                 <h4>Importação/Atualização com Preservação de Vistos</h4>
                 <p style="font-size: 0.8rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">
-                    Cole a lista ou confira os nomes extraídos do OCR abaixo antes de aplicar a migração.
+                    Cole a lista de nomes abaixo para aplicar a migração sem perder as notas já lançadas.
                 </p>
-                <textarea id="imp" style="height:120px;" placeholder="Os nomes aparecerão aqui após a leitura da imagem ou colagem manual."></textarea>
+                <textarea id="imp" style="height:140px;" placeholder="Cole a lista de alunos aqui (um por linha)..."></textarea>
                 <button onclick="importarComMigracao()" class="btn-main btn-orange">Atualizar Lista Migrando Vistos</button>
             </div>
         </div>
@@ -984,21 +972,17 @@
                 .map(linha => linha.trim())
                 .filter(linha => {
                     if (!linha) return false;
-                    // Descarta se possuir o símbolo de inativo/informação (ex: ⓘ, !, [i])
                     const temSimboloInativo = /[!ⓘ]|\((i\vert{}info)\)|\[(i\vert{}info)\]/i.test(linha);
                     return !temSimboloInativo;
                 })
                 .map(linha => {
-                    // Remove numerações do início (ex: "01 - ", "1. ", "123 ")
                     let limpa = linha.replace(/^[\d\s.\-–—]+/, "");
                     
-                    // Remove caracteres estranhos/símbolos mantendo letras acentuadas e espaços
-                    limpa = limpa.replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, " ")
+                    limpa = limpa.replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s'\-]/g, " ")
                                  .replace(/\s+/g, " ")
                                  .trim();
 
                     if (limpa.length > 0) {
-                        // Formata Primeira Letra de cada nome para Maiúscula, preservando preposições
                         const palavras = limpa.split(' ');
                         limpa = palavras.map((p, index) => {
                             const pMin = p.toLowerCase();
@@ -1011,65 +995,21 @@
                     return limpa;
                 })
                 .filter(nome => {
-                    if (!nome) return false;
+                    if (!nome || nome.length < 2) return false;
 
                     const nomeMin = nome.toLowerCase();
-                    // Filtra palavras de cabeçalho do sistema
-                    const contemLixoInterface = termosInvalidados.some(termo => nomeMin.includes(termo));
+                    const contemLixoInterface = termosInvalidados.some(termo => nomeMin === termo || nomeMin.startsWith(termo + " "));
                     if (contemLixoInterface) return false;
 
-                    // Exige ao menos duas palavras (Nome + Sobrenome)
-                    const partes = nome.split(' ').filter(p => p.length >= 1);
-                    return partes.length >= 2;
+                    return true;
                 });
-        }
-
-        async function processarImagemAlunos() {
-            const fileInput = document.getElementById('ocr-image-input');
-            const statusDiv = document.getElementById('ocr-status');
-            const btnOcr = document.getElementById('btn-ocr');
-
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert("Por favor, selecione um arquivo de imagem da lista primeiro!");
-                return;
-            }
-
-            const imageFile = fileInput.files[0];
-            statusDiv.innerText = "⏳ Processando imagem e filtrando cabeçalhos... Aguarde.";
-            btnOcr.disabled = true;
-
-            try {
-                const worker = await Tesseract.createWorker('por');
-                
-                await worker.setParameters({
-                    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK,
-                });
-
-                const ret = await worker.recognize(imageFile);
-                await worker.terminate();
-
-                const nomesFiltrados = limparENormalizarLista(ret.data.text);
-
-                if (nomesFiltrados.length === 0) {
-                    statusDiv.innerText = "⚠️ Nenhum nome válido foi identificado. Verifique a nitidez ou corte a imagem focando apenas na lista.";
-                    document.getElementById('imp').value = "";
-                } else {
-                    document.getElementById('imp').value = nomesFiltrados.join('\n');
-                    statusDiv.innerText = `✅ Sucesso! ${nomesFiltrados.length} alunos ativos extraídos com precisão.`;
-                }
-            } catch (err) {
-                console.error(err);
-                statusDiv.innerText = "❌ Erro ao ler a imagem. Tente tirar um print focando apenas nos nomes dos alunos.";
-            } finally {
-                btnOcr.disabled = false;
-            }
         }
 
         async function importarComMigracao() {
             const t = limparT(document.getElementById('turma').value);
             const textoBruto = document.getElementById('imp').value;
             if(!t) { alert("Selecione uma turma primeiro!"); return; }
-            if(!textoBruto.trim()) { alert("Cole os nomes ou extraia via imagem!"); return; }
+            if(!textoBruto.trim()) { alert("Cole os nomes na caixa de texto!"); return; }
             
             const novosAlunos = limparENormalizarLista(textoBruto);
 
@@ -1081,7 +1021,6 @@
             if(confirm(`Deseja rodar a migração automática de ${novosAlunos.length} alunos?\nO sistema vai parear os nomes e reindexar todas as notas cadastradas.`)) {
                 await realizarRemapeamentoGeralVistosEAlunos(t, novosAlunos);
                 document.getElementById('imp').value = "";
-                document.getElementById('ocr-status').innerText = "";
                 renderizarEditorAlunos();
                 alert("Lista atualizada e notas migradas com sucesso!");
             }
