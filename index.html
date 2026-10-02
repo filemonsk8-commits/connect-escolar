@@ -326,6 +326,10 @@
             Object.keys(grupos).forEach(categoria => {
                 const g = document.createElement('optgroup');
                 g.label = categoria;
+                
+                // Ordenação alfabética e numérica correta das turmas dentro de cada grupo
+                grupos[categoria].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
                 grupos[categoria].forEach(nomeTurma => {
                     g.appendChild(new Option(nomeTurma, nomeTurma));
                 });
@@ -949,7 +953,7 @@
                 const catEscapada = item.cat.replace(/'/g, "\\'");
                 
                 html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+                <div style="display:flex; justify-space-between; align-items:center; padding:8px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
                     <div>
                         <strong style="font-size:0.85rem;">${item.nome}</strong>
                         <span style="font-size:0.75rem; color:#64748b; margin-left:6px;">(${item.cat})</span>
