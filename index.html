@@ -14,6 +14,8 @@
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <!-- SortableJS para habilitar Drag and Drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
     <style>
         :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; --danger: #ef4444; --success: #22c55e; --warning: #f59e0b; }
@@ -108,6 +110,11 @@
         .sec-box { border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: #ffffff; }
         .sec-box h4 { margin-top: 0; margin-bottom: 10px; font-size: 0.95rem; color: #1e293b; }
 
+        /* Estilo para a arrasto de turmas */
+        .turma-drag-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 6px; cursor: grab; user-select: none; }
+        .turma-drag-item:active { cursor: grabbing; background: #e2e8f0; }
+        .drag-handle { margin-right: 10px; color: #94a3b8; font-weight: bold; cursor: grab; }
+
         @media print { .no-print, nav, header, .btn-main, #welcome-cover, #login-screen { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
     </style>
 </head>
@@ -131,7 +138,6 @@
     </div>
 
     <div id="app" class="hidden">
-        <!-- ABA CADASTRO COLOCADA COMO ÚLTIMA AQUI -->
         <nav class="tabs no-print">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
             <button class="tab-btn" onclick="aba('ag')">AGENDA CADERNOS</button>
@@ -224,10 +230,9 @@
                 <button onclick="importarComMigracao()" class="btn-main btn-orange">Atualizar Lista Migrando Vistos</button>
             </div>
 
-            <!-- ABA CADASTRO: ÚLTIMA ABA COM GERENCIAMENTO, EDICÃO E EXCLUSÃO -->
             <div id="aba-cad" class="card hidden">
                 <h3>Cadastro & Gestão de Turmas</h3>
-                <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Cadastre novas turmas, edite nomes/categorias, exclua turmas obsoletas e gerencie resets do sistema.</p>
+                <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Cadastre novas turmas, edite, exclua ou <strong>arraste os itens para reordenar</strong> a exibição no menu.</p>
                 
                 <div class="sec-box">
                     <h4>➕ Cadastrar Nova Turma</h4>
@@ -244,7 +249,8 @@
                 </div>
 
                 <div class="sec-box">
-                    <h4>🗑️ Turmas Cadastradas (Editar / Excluir)</h4>
+                    <h4>☰ Reordenar / Editar / Excluir Turmas</h4>
+                    <p style="font-size: 0.75rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">Arraste pelo ícone <b>☰</b> para posicionar na ordem que preferir.</p>
                     <div id="lista-turmas-cadastradas">Carregando turmas...</div>
                 </div>
 
@@ -279,27 +285,28 @@
         let dataOficialmenteAberta = false;
         let notasParaCopiaGlobal = [];
         let listaNomesENotasGlobal = [];
+        let sortableInstance = null;
 
         const turmasPadrao = [
-            { cat: "ENSINO FUNDAMENTAL", nome: "9ºA Pensamento Comp" },
-            { cat: "ENSINO FUNDAMENTAL", nome: "9ºB Pensamento Comp" },
-            { cat: "ENSINO FUNDAMENTAL", nome: "9ºC Letramento Digital" },
-            { cat: "ENSINO FUNDAMENTAL", nome: "9ºD Letramento Digital" },
-            { cat: "ENSINO FUNDAMENTAL", nome: "9ºA História" },
-            { cat: "ENSINO FUNDAMENTAL", nome: "9ºB História" },
-            { cat: "ENSINO FUNDAMENTAL", nome: "9ºC História" },
-            { cat: "ENSINO MÉDIO", nome: "1ºB IFA" },
-            { cat: "ENSINO MÉDIO", nome: "1ºB Sociologia" },
-            { cat: "ENSINO MÉDIO", nome: "2ºB Sociologia" },
-            { cat: "ENSINO MÉDIO", nome: "2ºC Sociologia" },
-            { cat: "ENSINO MÉDIO", nome: "2ºD Sociologia" },
-            { cat: "ENSINO MÉDIO", nome: "2ºB Filosofia" },
-            { cat: "ENSINO MÉDIO", nome: "2ºC Filosofia" },
-            { cat: "TÉCNICO (DG)", nome: "1ºA DG História" },
-            { cat: "TÉCNICO (DG)", nome: "2ºA DG História" },
-            { cat: "TÉCNICO (DG)", nome: "2ºB DG História" },
-            { cat: "TÉCNICO (DG)", nome: "2ºA DG Filosofia" },
-            { cat: "TÉCNICO (DG)", nome: "2ºB DG Filosofia" }
+            { cat: "ENSINO FUNDAMENTAL", nome: "9ºA Pensamento Comp", ordem: 1 },
+            { cat: "ENSINO FUNDAMENTAL", nome: "9ºB Pensamento Comp", ordem: 2 },
+            { cat: "ENSINO FUNDAMENTAL", nome: "9ºC Letramento Digital", ordem: 3 },
+            { cat: "ENSINO FUNDAMENTAL", nome: "9ºD Letramento Digital", ordem: 4 },
+            { cat: "ENSINO FUNDAMENTAL", nome: "9ºA História", ordem: 5 },
+            { cat: "ENSINO FUNDAMENTAL", nome: "9ºB História", ordem: 6 },
+            { cat: "ENSINO FUNDAMENTAL", nome: "9ºC História", ordem: 7 },
+            { cat: "ENSINO MÉDIO", nome: "1ºB IFA", ordem: 8 },
+            { cat: "ENSINO MÉDIO", nome: "1ºB Sociologia", ordem: 9 },
+            { cat: "ENSINO MÉDIO", nome: "2ºB Sociologia", ordem: 10 },
+            { cat: "ENSINO MÉDIO", nome: "2ºC Sociologia", ordem: 11 },
+            { cat: "ENSINO MÉDIO", nome: "2ºD Sociologia", ordem: 12 },
+            { cat: "ENSINO MÉDIO", nome: "2ºB Filosofia", ordem: 13 },
+            { cat: "ENSINO MÉDIO", nome: "2ºC Filosofia", ordem: 14 },
+            { cat: "TÉCNICO (DG)", nome: "1ºA DG História", ordem: 15 },
+            { cat: "TÉCNICO (DG)", nome: "2ºA DG História", ordem: 16 },
+            { cat: "TÉCNICO (DG)", nome: "2ºB DG História", ordem: 17 },
+            { cat: "TÉCNICO (DG)", nome: "2ºA DG Filosofia", ordem: 18 },
+            { cat: "TÉCNICO (DG)", nome: "2ºB DG Filosofia", ordem: 19 }
         ];
 
         async function popularMenus() {
@@ -317,8 +324,11 @@
                 turmasCadastradas = objSalvar;
             }
 
+            // Ordena pelo atributo 'ordem'
+            let listaOrdenada = Object.values(turmasCadastradas).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+
             const grupos = {};
-            Object.values(turmasCadastradas).forEach(item => {
+            listaOrdenada.forEach(item => {
                 if(!grupos[item.cat]) grupos[item.cat] = [];
                 grupos[item.cat].push(item.nome);
             });
@@ -326,9 +336,6 @@
             Object.keys(grupos).forEach(categoria => {
                 const g = document.createElement('optgroup');
                 g.label = categoria;
-                
-                // Ordenação alfabética e numérica correta das turmas dentro de cada grupo
-                grupos[categoria].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
                 grupos[categoria].forEach(nomeTurma => {
                     g.appendChild(new Option(nomeTurma, nomeTurma));
@@ -933,7 +940,7 @@
             navigator.clipboard.writeText(texto).then(() => alert("Lista de Nomes + Notas copiada com sucesso!"));
         }
 
-        /* ABA CADASTRO: GERENCIAMENTO DE TURMAS, EDIÇÃO E EXCLUSÃO */
+        /* ABA CADASTRO: ARRASTAR, EDITAR E EXCLUIR TURMAS */
         async function carregarGerenciamentoTurmas() {
             const container = document.getElementById('lista-turmas-cadastradas');
             container.innerHTML = "Carregando...";
@@ -946,25 +953,63 @@
                 return;
             }
 
-            let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
-            Object.keys(turmas).forEach(key => {
-                const item = turmas[key];
+            // Converter em array para ordenar pelo parâmetro ordem
+            let lista = Object.keys(turmas).map(k => ({ key: k, ...turmas[k] }));
+            lista.sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+
+            let html = '<div id="sortable-turmas-list" style="display:flex; flex-direction:column;">';
+            lista.forEach(item => {
                 const nomeEscapado = item.nome.replace(/'/g, "\\'");
                 const catEscapada = item.cat.replace(/'/g, "\\'");
                 
                 html += `
-                <div style="display:flex; justify-space-between; align-items:center; padding:8px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
-                    <div>
-                        <strong style="font-size:0.85rem;">${item.nome}</strong>
-                        <span style="font-size:0.75rem; color:#64748b; margin-left:6px;">(${item.cat})</span>
+                <div class="turma-drag-item" data-key="${item.key}" data-cat="${catEscapada}" data-nome="${nomeEscapado}">
+                    <div style="display:flex; align-items:center;">
+                        <span class="drag-handle">☰</span>
+                        <div>
+                            <strong style="font-size:0.85rem;">${item.nome}</strong>
+                            <span style="font-size:0.75rem; color:#64748b; margin-left:6px;">(${item.cat})</span>
+                        </div>
                     </div>
                     <div style="display:flex; gap:4px;">
-                        <button onclick="editarTurmaCadastrada('${key}', '${nomeEscapado}', '${catEscapada}')" class="btn-edit-small" style="background:var(--accent)">Editar</button>
-                        <button onclick="excluirTurmaCadastrada('${key}', '${nomeEscapado}')" class="btn-edit-small" style="background:var(--danger)">Excluir</button>
+                        <button onclick="editarTurmaCadastrada('${item.key}', '${nomeEscapado}', '${catEscapada}')" class="btn-edit-small" style="background:var(--accent)">Editar</button>
+                        <button onclick="excluirTurmaCadastrada('${item.key}', '${nomeEscapado}')" class="btn-edit-small" style="background:var(--danger)">Excluir</button>
                     </div>
                 </div>`;
             });
             container.innerHTML = html + '</div>';
+
+            // Ativa o reordenamento via Drag-and-Drop
+            const elList = document.getElementById('sortable-turmas-list');
+            if (sortableInstance) sortableInstance.destroy();
+            
+            sortableInstance = new Sortable(elList, {
+                handle: '.drag-handle',
+                animation: 150,
+                onEnd: async function () {
+                    await salvarNovaOrdemTurmas();
+                }
+            });
+        }
+
+        async function salvarNovaOrdemTurmas() {
+            const itens = document.querySelectorAll('#sortable-turmas-list .turma-drag-item');
+            let updates = {};
+
+            itens.forEach((el, index) => {
+                const key = el.dataset.key;
+                const cat = el.dataset.cat;
+                const nome = el.dataset.nome;
+                
+                updates[`cadastros_turmas/${key}`] = {
+                    nome: nome,
+                    cat: cat,
+                    ordem: index + 1
+                };
+            });
+
+            await db.ref().update(updates);
+            await popularMenus();
         }
 
         async function cadastrarNovaTurma() {
@@ -979,8 +1024,9 @@
             const existe = Object.values(turmas).some(t => t.nome.toLowerCase() === nome.toLowerCase());
             if(existe) { alert("Já existe uma turma cadastrada com este nome!"); return; }
 
+            const qtd = Object.keys(turmas).length;
             const newRef = db.ref('cadastros_turmas').push();
-            await newRef.set({ nome: nome, cat: cat });
+            await newRef.set({ nome: nome, cat: cat, ordem: qtd + 1 });
 
             document.getElementById('cad-nome-turma').value = "";
             await popularMenus();
