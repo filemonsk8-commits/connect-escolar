@@ -16,6 +16,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <!-- SortableJS para habilitar Drag and Drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <!-- PDF.js para leitura e extração de texto de PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
     <style>
         :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; --danger: #ef4444; --success: #22c55e; --warning: #f59e0b; }
@@ -98,15 +100,6 @@
         .btn-transf-aluno { background: #94a3b8; }
         .btn-transf-ativo { background: var(--success); }
 
-        .agenda-card-aluno { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
-        .agenda-aluno-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; }
-        .agenda-grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-        .badge-status { padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: white; }
-        .bg-pendente { background: #64748b; }
-        .bg-aguardando { background: #f59e0b; }
-        .bg-em_correcao { background: #3b82f6; }
-        .bg-concluido { background: #22c55e; }
-
         .sec-box { border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: #ffffff; }
         .sec-box h4 { margin-top: 0; margin-bottom: 10px; font-size: 0.95rem; color: #1e293b; }
 
@@ -114,6 +107,12 @@
         .turma-drag-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 6px; cursor: grab; user-select: none; }
         .turma-drag-item:active { cursor: grabbing; background: #e2e8f0; }
         .drag-handle { margin-right: 10px; color: #94a3b8; font-weight: bold; cursor: grab; }
+
+        /* Estilos da Tabela de Horário de Aulas */
+        .horario-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.8rem; }
+        .horario-table th, .horario-table td { border: 1px solid #cbd5e1; padding: 6px; text-align: center; }
+        .horario-table th { background: #0f172a; color: white; font-size: 0.75rem; }
+        .horario-table input { font-size: 0.75rem; padding: 6px; border: 1px solid #e2e8f0; border-radius: 4px; text-align: center; }
 
         @media print { .no-print, nav, header, .btn-main, #welcome-cover, #login-screen { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
     </style>
@@ -140,7 +139,7 @@
     <div id="app" class="hidden">
         <nav class="tabs no-print">
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
-            <button class="tab-btn" onclick="aba('ag')">AGENDA CADERNOS</button>
+            <button class="tab-btn" onclick="aba('ag')">HORÁRIO</button>
             <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
             <button class="tab-btn" onclick="aba('rd')">RELATÓRIO DIÁRIO</button>
             <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
@@ -173,12 +172,36 @@
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
             </div>
 
+            <!-- ABA HORÁRIO DE AULAS DO PROFESSOR -->
             <div id="aba-ag" class="card hidden">
-                <h3>Agenda de Correção dos Cadernos</h3>
-                <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Marque os prazos, observações e acompanhe o progresso de recolhimento e vistoria dos cadernos da turma.</p>
+                <h3>Horário das Aulas do Professor</h3>
+                <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Organize onde você estará em cada aula da semana ou carregue o arquivo de horário em PDF/TXT.</p>
                 
-                <div id="lista-agenda-cadernos">Escolha uma turma para visualizar a agenda...</div>
-                <button onclick="salvarAgendaCadernos()" class="btn-main btn-blue no-print">Salvar Agenda de Cadernos</button>
+                <div class="sec-box no-print" style="background: #f1f5f9;">
+                    <h4 style="margin-bottom: 5px;">📄 Carregar Horário via Arquivo (PDF ou TXT)</h4>
+                    <p style="font-size: 0.75rem; color: #64748b; margin-top: 0;">Selecione o PDF ou TXT contendo sua grade para importação automática dos horários.</p>
+                    <input type="file" id="pdf-horario-file" accept=".pdf,.txt" onchange="processarArquivoHorario(this)">
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="horario-table">
+                        <thead>
+                            <tr>
+                                <th>Aula / Horário</th>
+                                <th>Segunda</th>
+                                <th>Terça</th>
+                                <th>Quarta</th>
+                                <th>Quinta</th>
+                                <th>Sexta</th>
+                            </tr>
+                        </thead>
+                        <tbody id="grid-horario-aulas">
+                            <!-- Preenchido via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <button onclick="salvarHorarioAulas()" class="btn-main btn-blue no-print">Salvar Horário de Aulas</button>
             </div>
 
             <div id="aba-d" class="card hidden">
@@ -276,6 +299,8 @@
     </div>
 
     <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
         const config = { databaseURL: "https://connect-escolar-fdef0-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(config);
         const db = firebase.database();
@@ -356,7 +381,7 @@
             const abaAtiva = selectAba ? selectAba.innerText : '';
             
             if(abaAtiva === 'DIÁRIO') { cancelarEdicaoD(); carregarHistorico(); }
-            if(abaAtiva === 'AGENDA CADERNOS') carregarAgendaCadernos();
+            if(abaAtiva === 'HORÁRIO') carregarHorarioAulas();
             if(abaAtiva === 'RELATÓRIO DIÁRIO') gerarRelatorioDiario();
             if(abaAtiva === 'FECHAMENTO') gerarRelatorio();
             if(abaAtiva === 'RECUPERAÇÃO') carregarRec();
@@ -407,7 +432,7 @@
             event.currentTarget.classList.add('active'); 
             
             setTimeout(() => {
-                if(a === 'ag') carregarAgendaCadernos();
+                if(a === 'ag') carregarHorarioAulas();
                 if(a === 'rd') gerarRelatorioDiario(); 
                 if(a === 'l') gerarRelatorio(); 
                 if(a === 'r') carregarRec(); 
@@ -603,100 +628,112 @@
             carregarAlunos();
         }
 
-        async function carregarAgendaCadernos() {
-            const t = limparT(document.getElementById('turma').value);
-            const b = document.getElementById('bimestre').value;
-            const dataCalendario = document.getElementById('data').value;
-            const container = document.getElementById('lista-agenda-cadernos');
+        /* --- ABA HORÁRIO DE AULAS DO PROFESSOR --- */
+        const horariosPadrao = ["1ª Aula", "2ª Aula", "3ª Aula", "4ª Aula", "5ª Aula", "6ª Aula"];
+        const diasSemana = ["seg", "ter", "qua", "qui", "sex"];
 
-            if(!t) { container.innerHTML = "Escolha uma turma acima..."; return; }
-
-            const [sA, sAg] = await Promise.all([
-                db.ref('turmas/'+t).once('value'),
-                db.ref(`agenda_cadernos/${t}/${b}`).once('value')
-            ]);
-
-            const alunos = sA.val() || [];
-            const agendaData = sAg.val() || {};
+        async function carregarHorarioAulas() {
+            const tbody = document.getElementById('grid-horario-aulas');
+            const sHor = await db.ref('horario_professor').once('value');
+            const dadosHorario = sHor.val() || {};
 
             let html = '';
-            alunos.forEach((nome, idx) => {
-                const item = agendaData[idx] || {};
-                const status = item.status || 'pendente';
-                const dataPrev = item.dataPrev || dataCalendario;
-                const obs = item.obs || '';
-
-                let statusBadgeClass = 'bg-pendente';
-                if(status === 'aguardando') statusBadgeClass = 'bg-aguardando';
-                if(status === 'em_correcao') statusBadgeClass = 'bg-em_correcao';
-                if(status === 'concluido') statusBadgeClass = 'bg-concluido';
-
-                html += `
-                <div class="agenda-card-aluno">
-                    <div class="agenda-aluno-header">
-                        <span>${idx + 1}. ${nome}</span>
-                        <span id="badge-status-${idx}" class="badge-status ${statusBadgeClass}">${status.replace('_', ' ')}</span>
-                    </div>
-                    <div class="agenda-grid-inputs">
-                        <select id="ag-status-${idx}" onchange="atualizarBadgeStatusAgenda(${idx})">
-                            <option value="pendente" ${status==='pendente'?'selected':''}>Pendente</option>
-                            <option value="aguardando" ${status==='aguardando'?'selected':''}>Aguardando Entrega</option>
-                            <option value="em_correcao" ${status==='em_correcao'?'selected':''}>Em Correção</option>
-                            <option value="concluido" ${status==='concluido'?'selected':''}>Concluído / Devolvido</option>
-                        </select>
-                        <input type="date" id="ag-date-${idx}" value="${dataPrev}">
-                    </div>
-                    <input type="text" id="ag-obs-${idx}" placeholder="Observações/Anotações..." value="${obs}">
-                </div>`;
+            horariosPadrao.forEach((hNome, hIndex) => {
+                html += `<tr>`;
+                html += `<td style="font-weight:bold; background:#f8fafc;">${hNome}</td>`;
+                diasSemana.forEach(dia => {
+                    let val = (dadosHorario[hIndex] && dadosHorario[hIndex][dia]) ? dadosHorario[hIndex][dia] : "";
+                    html += `<td>
+                        <input type="text" class="input-horario-aula" data-aula="${hIndex}" data-dia="${dia}" value="${val}" placeholder="Turma/Local...">
+                    </td>`;
+                });
+                html += `</tr>`;
             });
 
-            container.innerHTML = html || "Nenhum aluno cadastrado nesta turma.";
+            tbody.innerHTML = html;
         }
 
-        function atualizarBadgeStatusAgenda(idx) {
-            const select = document.getElementById(`ag-status-${idx}`);
-            const badge = document.getElementById(`badge-status-${idx}`);
-            const inputData = document.getElementById(`ag-date-${idx}`);
-            const dataCalendario = document.getElementById('data').value;
-            const val = select.value;
-
-            if (inputData && dataCalendario) {
-                inputData.value = dataCalendario;
-            }
-
-            badge.className = 'badge-status ';
-            if(val === 'pendente') badge.classList.add('bg-pendente');
-            if(val === 'aguardando') badge.classList.add('bg-aguardando');
-            if(val === 'em_correcao') badge.classList.add('bg-em_correcao');
-            if(val === 'concluido') badge.classList.add('bg-concluido');
-
-            badge.innerText = val.replace('_', ' ');
-        }
-
-        async function salvarAgendaCadernos() {
-            const t = limparT(document.getElementById('turma').value);
-            const b = document.getElementById('bimestre').value;
-            if(!t) return;
-
-            const sA = await db.ref('turmas/'+t).once('value');
-            const totalAlunos = (sA.val() || []).length;
-
+        async function salvarHorarioAulas() {
             let dados = {};
-            for(let i=0; i<totalAlunos; i++) {
-                const st = document.getElementById(`ag-status-${i}`);
-                if(st) {
-                    dados[i] = {
-                        status: document.getElementById(`ag-status-${i}`).value,
-                        dataPrev: document.getElementById(`ag-date-${i}`).value,
-                        obs: document.getElementById(`ag-obs-${i}`).value.trim()
-                    };
-                }
+            horariosPadrao.forEach((_, idx) => { dados[idx] = {}; });
+
+            document.querySelectorAll('.input-horario-aula').forEach(inp => {
+                const aula = inp.dataset.aula;
+                const dia = inp.dataset.dia;
+                dados[aula][dia] = inp.value.trim();
+            });
+
+            await db.ref('horario_professor').set(dados);
+            alert("Horário das aulas salvo com sucesso!");
+        }
+
+        async function processarArquivoHorario(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            if (file.type === "text/plain") {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preencherHorarioComTexto(e.target.result);
+                };
+                reader.readAsText(file);
+            } else if (file.type === "application/pdf") {
+                const fileReader = new FileReader();
+                fileReader.onload = async function() {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    let textoCompleto = "";
+
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const tokenized = await page.getTextContent();
+                        const pageText = tokenized.items.map(token => token.str).join(" ");
+                        textoCompleto += pageText + "\n";
+                    }
+
+                    preencherHorarioComTexto(textoCompleto);
+                };
+                fileReader.readAsArrayBuffer(file);
+            } else {
+                alert("Por favor, selecione um arquivo PDF ou TXT.");
+            }
+        }
+
+        function preencherHorarioComTexto(texto) {
+            const sTurmas = document.getElementById('turma');
+            let turmasOpcoes = [];
+            for (let i = 0; i < sTurmas.options.length; i++) {
+                if (sTurmas.options[i].value) turmasOpcoes.push(sTurmas.options[i].value);
             }
 
-            db.ref(`agenda_cadernos/${t}/${b}`).set(dados).then(() => {
-                alert("Agenda de cadernos salva com sucesso!");
-                carregarAgendaCadernos();
+            const linhas = texto.split('\n');
+            let inseridos = 0;
+
+            linhas.forEach(linha => {
+                turmasOpcoes.forEach(turma => {
+                    if (linha.toLowerCase().includes(turma.toLowerCase())) {
+                        diasSemana.forEach(dia => {
+                            if (linha.toLowerCase().includes(dia)) {
+                                horariosPadrao.forEach((_, hIndex) => {
+                                    if (linha.includes((hIndex + 1) + 'ª') || linha.includes((hIndex + 1) + 'a')) {
+                                        const el = document.querySelector(`.input-horario-aula[data-aula="${hIndex}"][data-dia="${dia}"]`);
+                                        if (el) {
+                                            el.value = turma;
+                                            inseridos++;
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
             });
+
+            if (inseridos > 0) {
+                alert(`Extração concluída! ${inseridos} horários preenchidos automaticamente.`);
+            } else {
+                alert("Leitura concluída! Caso alguns campos não tenham sido preenchidos automaticamente devido à formatação do arquivo, você pode digitá-los diretamente na tabela.");
+            }
         }
 
         function salvarD() {
@@ -1118,7 +1155,7 @@
                     db.ref('diario').remove(),
                     db.ref('recuperacao').remove(),
                     db.ref('headers').remove(),
-                    db.ref('agenda_cadernos').remove()
+                    db.ref('horario_professor').remove()
                 ]);
                 dataOficialmenteAberta = false;
                 carregarAlunos();
@@ -1317,21 +1354,18 @@
         }
 
         async function realizarRemapeamentoGeralVistosEAlunos(turmaLimpa, novaListaAlunos) {
-            const [sListaAntiga, sTodosVistos, sTodasRecs, sTodaAgenda] = await Promise.all([
+            const [sListaAntiga, sTodosVistos, sTodasRecs] = await Promise.all([
                 db.ref('turmas/'+turmaLimpa).once('value'),
                 db.ref('vistos/'+turmaLimpa).once('value'),
-                db.ref('recuperacao/'+turmaLimpa).once('value'),
-                db.ref('agenda_cadernos/'+turmaLimpa).once('value')
+                db.ref('recuperacao/'+turmaLimpa).once('value')
             ]);
 
             const listaAntiga = sListaAntiga.val() || [];
             const arvoreVistosAntiga = sTodosVistos.val() || {};
             const arvoreRecsAntiga = sTodasRecs.val() || {};
-            const arvoreAgendaAntiga = sTodaAgenda.val() || {};
 
             let novaArvoreVistos = {};
             let novaArvoreRecs = {};
-            let novaArvoreAgenda = {};
 
             const normalizarParaBusca = (s) => String(s || "").replace(/\s*\((transferido\vert{}inativo)\)/ig, "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
@@ -1363,20 +1397,9 @@
                 });
             });
 
-            Object.keys(arvoreAgendaAntiga).forEach(bimestre => {
-                novaArvoreAgenda[bimestre] = {};
-                novaListaAlunos.forEach((nomeNovo, idxNovo) => {
-                    let idxAntigo = encontrarIndiceAntigo(nomeNovo);
-                    if(idxAntigo !== -1 && arvoreAgendaAntiga[bimestre][idxAntigo] !== undefined) {
-                        novaArvoreAgenda[bimestre][idxNovo] = arvoreAgendaAntiga[bimestre][idxAntigo];
-                    }
-                });
-            });
-
             await db.ref('turmas/'+turmaLimpa).set(novaListaAlunos);
             await db.ref('vistos/'+turmaLimpa).set(novaArvoreVistos);
             await db.ref('recuperacao/'+turmaLimpa).set(novaArvoreRecs);
-            await db.ref('agenda_cadernos/'+turmaLimpa).set(novaArvoreAgenda);
         }
     </script>
 </body>
