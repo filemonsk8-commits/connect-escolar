@@ -1,17 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<defs>
-  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#10213f"/><stop offset="1" stop-color="#07101f"/></linearGradient>
-  <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#42a5ff"/><stop offset="1" stop-color="#1262d6"/></linearGradient>
-</defs>
-<rect width="512" height="512" rx="112" fill="url(#bg)"/>
-<circle cx="256" cy="240" r="158" fill="#142d50"/>
-<path d="M112 178c57-20 106-14 144 17v174c-39-30-88-36-144-16z" fill="#f4f8ff"/>
-<path d="M400 178c-57-20-106-14-144 17v174c39-30 88-36 144-16z" fill="url(#blue)"/>
-<path d="M256 195v174" stroke="#10213f" stroke-width="12" stroke-linecap="round"/>
-<path d="M145 216c35-9 66-5 91 10M145 255c35-9 66-5 91 10M367 216c-35-9-66-5-91 10M367 255c-35-9-66-5-91 10" fill="none" stroke="#10213f" stroke-width="10" stroke-linecap="round" opacity=".2"/>
-<circle cx="256" cy="112" r="23" fill="#42a5ff"/>
-<circle cx="169" cy="139" r="13" fill="#42a5ff"/>
-<circle cx="343" cy="139" r="13" fill="#42a5ff"/>
-<path d="M185 145l54-25M327 145l-54-25" stroke="#42a5ff" stroke-width="8" stroke-linecap="round"/>
-<text x="256" y="445" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" font-weight="700" letter-spacing="5" fill="#fff">CONNECT</text>
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2588ff"/><stop offset="1" stop-color="#0751b8"/></linearGradient></defs>
+<rect width="512" height="512" rx="104" fill="#09172b"/>
+<rect x="88" y="92" width="336" height="250" rx="28" fill="#142d4d" stroke="#42a5ff" stroke-width="18"/>
+<rect x="112" y="116" width="288" height="202" rx="12" fill="#eaf4ff"/>
+<path d="M256 342v48M190 404h132" stroke="#42a5ff" stroke-width="22" stroke-linecap="round"/>
+<path d="M160 270l55-60 42 38 83-89" fill="none" stroke="url(#g)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="160" cy="270" r="15" fill="#0b5fce"/><circle cx="215" cy="210" r="15" fill="#0b5fce"/><circle cx="257" cy="248" r="15" fill="#0b5fce"/><circle cx="340" cy="159" r="15" fill="#0b5fce"/>
+<text x="256" y="466" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="700" letter-spacing="3" fill="#fff">CONNECT</text>
 </svg>
