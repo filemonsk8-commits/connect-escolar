@@ -121,6 +121,18 @@
         .horario-table th { background: #0f172a; color: white; font-size: 0.75rem; }
         .horario-table input { font-size: 0.75rem; padding: 6px; border: 1px solid #e2e8f0; border-radius: 4px; text-align: center; }
 
+
+        /* V4.2 — estado de gravação e proteção contra perda de alterações */
+        .save-status-bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; margin-top:12px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:#f8fafc; font-size:.76rem; }
+        .save-status-main { display:flex; align-items:center; gap:7px; font-weight:800; color:#64748b; }
+        .save-status-dot { width:8px; height:8px; border-radius:50%; background:#94a3b8; flex:0 0 auto; }
+        .save-status-main.is-saving { color:#a16207; } .save-status-main.is-saving .save-status-dot { background:#eab308; animation:savePulse 1s infinite; }
+        .save-status-main.is-saved { color:#087f50; } .save-status-main.is-saved .save-status-dot { background:#16a36a; }
+        .save-status-main.is-error { color:#b91c1c; } .save-status-main.is-error .save-status-dot { background:#dc2626; }
+        .save-status-time { color:#64748b; }
+        @keyframes savePulse { 50% { opacity:.35; } }
+        @media (max-width:680px) { .save-status-bar { font-size:.7rem; gap:7px 12px; } }
+
         @media print { .no-print, nav, header, .btn-main, #welcome-cover, #login-screen { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
 
         /* CONNECT ESCOLAR V4.1 — interface responsiva */
@@ -303,6 +315,10 @@
                     <option value="4B">4º Bimestre</option>
                 </select>
                 <input type="date" id="data" onchange="marcarDataComoNaoAberta(); carregarAlunos();">
+            </div>
+            <div class="save-status-bar" aria-live="polite">
+                <div id="status-salvamento" class="save-status-main"><span class="save-status-dot"></span><span id="texto-status-salvamento">Aguardando salvamento</span></div>
+                <span id="ultimo-salvamento" class="save-status-time">Último salvamento: ainda não registrado neste dispositivo</span>
             </div>
         </header>
 
@@ -548,6 +564,85 @@
         const db = firebase.database();
         const auth = firebase.auth();
 
+        // V4.2: monitor de gravação sem alterar os caminhos nem os dados existentes.
+        let gravacoesPendentes = 0;
+        let camposAlterados = false;
+        let firebaseConectado = false;
+        const CHAVE_ULTIMO_SALVAMENTO = 'connect-escolar-ultimo-salvamento';
+        function atualizarIndicadorSalvamento(estado, mensagem) {
+            const el = document.getElementById('status-salvamento');
+            const txt = document.getElementById('texto-status-salvamento');
+            if (!el || !txt) return;
+            el.classList.remove('is-saving', 'is-saved', 'is-error');
+            if (estado === 'salvando') el.classList.add('is-saving');
+            if (estado === 'salvo') el.classList.add('is-saved');
+            if (estado === 'erro') el.classList.add('is-error');
+            txt.textContent = mensagem;
+        }
+        function atualizarHorarioUltimoSalvamento() {
+            const alvo = document.getElementById('ultimo-salvamento');
+            if (!alvo) return;
+            const registro = localStorage.getItem(CHAVE_ULTIMO_SALVAMENTO);
+            if (!registro) { alvo.textContent = 'Último salvamento: ainda não registrado neste dispositivo'; return; }
+            const data = new Date(registro);
+            alvo.textContent = 'Último salvamento confirmado: ' + data.toLocaleDateString('pt-BR') + ' às ' + data.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        }
+        function finalizarGravacaoComSucesso() {
+            gravacoesPendentes = Math.max(0, gravacoesPendentes - 1);
+            camposAlterados = false;
+            localStorage.setItem(CHAVE_ULTIMO_SALVAMENTO, new Date().toISOString());
+            atualizarHorarioUltimoSalvamento();
+            if (gravacoesPendentes === 0) atualizarIndicadorSalvamento('salvo', 'Salvo com sucesso');
+        }
+        function finalizarGravacaoComErro(erro) {
+            gravacoesPendentes = Math.max(0, gravacoesPendentes - 1);
+            atualizarIndicadorSalvamento('erro', 'Erro ao salvar — confira sua conexão e tente novamente');
+            console.error('Connect Escolar: falha ao gravar no Firebase:', erro);
+        }
+        function acompanharGravacao(promise) {
+            gravacoesPendentes++;
+            atualizarIndicadorSalvamento('salvando', 'Salvando…');
+            promise.then(finalizarGravacaoComSucesso, finalizarGravacaoComErro);
+            return promise;
+        }
+        const referenciaFirebase = firebase.database.Reference.prototype;
+        ['set', 'update', 'remove'].forEach(metodo => {
+            const original = referenciaFirebase[metodo];
+            if (typeof original !== 'function' || original.__connectMonitorado) return;
+            const monitorado = function(...args) {
+                try { return acompanharGravacao(original.apply(this, args)); }
+                catch (erro) { finalizarGravacaoComErro(erro); throw erro; }
+            };
+            monitorado.__connectMonitorado = true;
+            referenciaFirebase[metodo] = monitorado;
+        });
+        document.addEventListener('input', evento => {
+            const campo = evento.target;
+            if (!campo || !campo.matches('input, textarea')) return;
+            if (['email','password','date','file','checkbox','radio','button','submit'].includes(campo.type)) return;
+            if (campo.id === 'login-email' || campo.id === 'login-senha') return;
+            camposAlterados = true;
+            if (gravacoesPendentes === 0) atualizarIndicadorSalvamento('erro', 'Alterações ainda não salvas');
+        }, true);
+        window.addEventListener('beforeunload', evento => {
+            if (gravacoesPendentes > 0 || camposAlterados) {
+                evento.preventDefault();
+                evento.returnValue = 'Há alterações que podem não ter sido salvas. Deseja realmente sair?';
+                return evento.returnValue;
+            }
+        });
+        atualizarHorarioUltimoSalvamento();
+        function atualizarStatusConexao() {
+            const status = document.getElementById('status-conexao');
+            if (!status) return;
+            const conectado = navigator.onLine && firebaseConectado;
+            status.classList.toggle('is-online', conectado);
+            status.classList.toggle('is-offline', !conectado);
+            status.innerHTML = '<span class="connection-dot"></span>' + (conectado ? 'Conectado ao banco' : (!navigator.onLine ? 'Sem internet' : 'Sem conexão com o banco'));
+        }
+        window.addEventListener('online', atualizarStatusConexao);
+        window.addEventListener('offline', atualizarStatusConexao);
+
         // Restaura automaticamente a sessão segura do usuário autenticado.
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -561,13 +656,10 @@
         });
 
         db.ref('.info/connected').on('value', snapshot => {
-            const status = document.getElementById('status-conexao');
-            if (!status) return;
-            const conectado = snapshot.val() === true;
-            status.classList.toggle('is-online', conectado);
-            status.classList.toggle('is-offline', !conectado);
-            status.innerHTML = `<span class=\"connection-dot\"></span>${conectado ? 'Conectado ao banco' : 'Sem conexão com o banco'}`;
+            firebaseConectado = snapshot.val() === true;
+            atualizarStatusConexao();
         });
+        atualizarStatusConexao();
         
         const limparT = (t) => t ? t.replace(/[.#$\[\]]/g, "").replace(/\s+/g, " ").trim() : "";
         const escapeHTML = (valor) => String(valor ?? '').replace(/[&<>"']/g, c => { const mapa = {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}; return mapa[c]; });
