@@ -1,5 +1,5 @@
-const CACHE_NAME = 'connect-escolar-v4-shell';
-const CORE_ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
+const CACHE_NAME = 'connect-escolar-v4-shell-icon2';
+const CORE_ASSETS = ['./', './index.html', './manifest.webmanifest', './icons/connect-escolar.svg'];
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
