@@ -35,6 +35,7 @@
         .login-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .login-box input { margin: 9px 0; }
         #login-error { color:#dc2626; font-size:.82rem; min-height:20px; margin:8px 0 0; }
+        #btn-recuperar-senha:disabled { opacity:.55; cursor:wait; }
         #btn-sair { margin-top:auto; color:#fecaca; background:rgba(220,38,38,.12); }
         
         nav.tabs { display: flex; background: var(--primary); padding: 5px; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
@@ -263,6 +264,7 @@
             <input type="password" id="senha-login" autocomplete="current-password" placeholder="Sua senha" onkeydown="if(event.key==='Enter') logar()">
             <p id="login-error" role="alert" aria-live="polite"></p>
             <button id="btn-login" onclick="logar()" class="btn-main btn-blue">Entrar</button>
+            <button type="button" id="btn-recuperar-senha" onclick="recuperarSenha()" style="margin-top:12px;background:transparent;border:0;color:#2563eb;font-size:.85rem;font-weight:600;cursor:pointer;">Esqueci minha senha</button>
         </div>
     </div>
 
@@ -629,6 +631,39 @@
             } finally {
                 botao.disabled = false;
                 botao.textContent = 'Entrar';
+            }
+        }
+
+        async function recuperarSenha() {
+            const email = document.getElementById('email-login').value.trim();
+            const erro = document.getElementById('login-error');
+            const botao = document.getElementById('btn-recuperar-senha');
+            erro.textContent = '';
+
+            if (!email) {
+                erro.textContent = 'Digite seu e-mail no campo acima para receber o link de redefinição.';
+                document.getElementById('email-login').focus();
+                return;
+            }
+
+            botao.disabled = true;
+            botao.textContent = 'Enviando...';
+            try {
+                await auth.sendPasswordResetEmail(email);
+                erro.style.color = '#15803d';
+                erro.textContent = 'Se este e-mail estiver cadastrado, você receberá uma mensagem com o link para criar uma nova senha. Verifique também o spam.';
+            } catch (error) {
+                const mensagens = {
+                    'auth/invalid-email': 'O formato do e-mail não é válido.',
+                    'auth/user-not-found': 'Não foi possível localizar uma conta com esse e-mail.',
+                    'auth/too-many-requests': 'Muitas solicitações. Aguarde alguns minutos e tente novamente.',
+                    'auth/network-request-failed': 'Falha de conexão. Verifique sua internet.'
+                };
+                erro.style.color = '#dc2626';
+                erro.textContent = mensagens[error.code] || 'Não foi possível enviar o e-mail de recuperação. Tente novamente.';
+            } finally {
+                botao.disabled = false;
+                botao.textContent = 'Esqueci minha senha';
             }
         }
 
