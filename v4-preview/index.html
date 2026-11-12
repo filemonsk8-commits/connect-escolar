@@ -16,6 +16,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <!-- SortableJS para habilitar Drag and Drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <!-- PDF.js para leitura e extração de texto de PDFs -->
@@ -32,6 +33,9 @@
             transition: opacity 0.5s ease, visibility 0.5s ease;
         }
         .login-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .login-box input { margin: 9px 0; }
+        #login-error { color:#dc2626; font-size:.82rem; min-height:20px; margin:8px 0 0; }
+        #btn-sair { margin-top:auto; color:#fecaca; background:rgba(220,38,38,.12); }
         
         nav.tabs { display: flex; background: var(--primary); padding: 5px; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
         .tab-btn { flex: 0 0 auto; padding: 12px 15px; border: none; background: transparent; color: #94a3b8; font-size: 0.7rem; font-weight: bold; border-radius: 8px; white-space: nowrap; cursor: pointer; }
@@ -254,8 +258,11 @@
     <div id="login-screen" class="hidden">
         <div class="login-box">
             <h2>Connect Escolar V4.0 Professional</h2>
-            <input type="password" id="pass" inputmode="numeric" pattern="[0-9]*" placeholder="Senha" onkeydown="if(event.key==='Enter') logar()">
-            <button onclick="logar()" class="btn-main btn-blue">Entrar</button>
+            <p style="color:#64748b;font-size:.85rem;">Acesso pessoal do professor</p>
+            <input type="email" id="email-login" autocomplete="username" placeholder="Seu e-mail" onkeydown="if(event.key==='Enter') logar()">
+            <input type="password" id="senha-login" autocomplete="current-password" placeholder="Sua senha" onkeydown="if(event.key==='Enter') logar()">
+            <p id="login-error" role="alert" aria-live="polite"></p>
+            <button id="btn-login" onclick="logar()" class="btn-main btn-blue">Entrar</button>
         </div>
     </div>
 
@@ -274,6 +281,7 @@
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
             <button class="tab-btn" onclick="aba('cad')">CADASTRO</button>
             <button id="btn-instalar-app" class="tab-btn install-nav-btn" onclick="instalarAplicativo()" style="display:none;">＋ INSTALAR APLICATIVO</button>
+            <button id="btn-sair" class="tab-btn" onclick="sairDaConta()">SAIR DA CONTA</button>
         </nav>
 
         <header class="no-print">
@@ -446,9 +454,29 @@
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
         }
 
-        const config = { databaseURL: "https://connect-escolar-fdef0-default-rtdb.firebaseio.com/" };
+        const config = {
+            apiKey: "AIzaSyDa0B7IDWzFm5CobHO6E_ArBCsy0IIjexk",
+            authDomain: "connect-escolar-fdef0.firebaseapp.com",
+            databaseURL: "https://connect-escolar-fdef0-default-rtdb.firebaseio.com",
+            projectId: "connect-escolar-fdef0",
+            storageBucket: "connect-escolar-fdef0.firebasestorage.app",
+            messagingSenderId: "420200046275",
+            appId: "1:420200046275:web:e868e5199a0feacd250c76"
+        };
         firebase.initializeApp(config);
         const db = firebase.database();
+        const auth = firebase.auth();
+
+        // Restaura automaticamente a sessão segura do usuário autenticado.
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('welcome-cover').classList.add('hidden');
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+            } else {
+                document.getElementById('app').classList.add('hidden');
+            }
+        });
 
         db.ref('.info/connected').on('value', snapshot => {
             const status = document.getElementById('status-conexao');
@@ -565,18 +593,58 @@
             }, 500);
         }
 
-        function logar() { 
-            if(document.getElementById('pass').value === '2203') { 
+        async function logar() {
+            const email = document.getElementById('email-login').value.trim();
+            const senha = document.getElementById('senha-login').value;
+            const erro = document.getElementById('login-error');
+            const botao = document.getElementById('btn-login');
+            erro.textContent = '';
+
+            if (!email || !senha) {
+                erro.textContent = 'Informe seu e-mail e sua senha.';
+                return;
+            }
+
+            botao.disabled = true;
+            botao.textContent = 'Verificando acesso...';
+            try {
+                await auth.signInWithEmailAndPassword(email, senha);
                 const loginScreen = document.getElementById('login-screen');
                 loginScreen.style.opacity = '0';
                 loginScreen.style.visibility = 'hidden';
-                
                 setTimeout(() => {
-                    loginScreen.classList.add('hidden'); 
-                    document.getElementById('app').classList.remove('hidden'); 
-                }, 500);
-            } else {
-                alert("Senha incorreta!");
+                    loginScreen.classList.add('hidden');
+                    document.getElementById('app').classList.remove('hidden');
+                }, 250);
+            } catch (error) {
+                const mensagens = {
+                    'auth/invalid-email': 'O formato do e-mail não é válido.',
+                    'auth/user-not-found': 'Não existe uma conta cadastrada com esse e-mail.',
+                    'auth/wrong-password': 'Senha incorreta. Confira os dados e tente novamente.',
+                    'auth/invalid-credential': 'E-mail ou senha incorretos.',
+                    'auth/too-many-requests': 'Muitas tentativas. Aguarde um pouco e tente novamente.',
+                    'auth/network-request-failed': 'Falha de conexão. Verifique sua internet.'
+                };
+                erro.textContent = mensagens[error.code] || 'Não foi possível entrar. Verifique o cadastro e tente novamente.';
+            } finally {
+                botao.disabled = false;
+                botao.textContent = 'Entrar';
+            }
+        }
+
+        async function sairDaConta() {
+            if (!confirm('Deseja realmente sair do Connect Escolar?')) return;
+            try {
+                await auth.signOut();
+                document.getElementById('app').classList.add('hidden');
+                const loginScreen = document.getElementById('login-screen');
+                loginScreen.style.opacity = '1';
+                loginScreen.style.visibility = 'visible';
+                loginScreen.classList.remove('hidden');
+                document.getElementById('senha-login').value = '';
+                document.getElementById('login-error').textContent = '';
+            } catch (error) {
+                alert('Não foi possível encerrar a sessão. Tente novamente.');
             }
         }
         
