@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Escolar V4.0 | Prof. Eduardo</title>
+    <title>Connect Escolar V4.1 | Prof. Eduardo</title>
     
     <meta name="theme-color" content="#0f172a">
     <meta name="description" content="Organização pessoal das aulas, conteúdos, atividades e registros do professor.">
@@ -123,7 +123,7 @@
 
         @media print { .no-print, nav, header, .btn-main, #welcome-cover, #login-screen { display: none !important; } .card { box-shadow: none; border: none; padding: 0; } body { background: white; } }
 
-        /* CONNECT ESCOLAR V4.0 — interface responsiva */
+        /* CONNECT ESCOLAR V4.1 — interface responsiva */
         :root {
             --primary: #101b33;
             --accent: #2563eb;
@@ -258,7 +258,7 @@
 
     <div id="login-screen" class="hidden">
         <div class="login-box">
-            <h2>Connect Escolar V4.0 Professional</h2>
+            <h2>Connect Escolar V4.1 Professional</h2>
             <p style="color:#64748b;font-size:.85rem;">Acesso pessoal do professor</p>
             <input type="email" id="email-login" autocomplete="username" placeholder="Seu e-mail" onkeydown="if(event.key==='Enter') logar()">
             <input type="password" id="senha-login" autocomplete="current-password" placeholder="Sua senha" onkeydown="if(event.key==='Enter') logar()">
@@ -272,7 +272,7 @@
         <nav class="tabs no-print">
             <div class="app-nav-brand">
                 <div class="app-nav-mark">CE</div>
-                <div><strong>Connect Escolar</strong><small>V4.0 Professional</small></div>
+                <div><strong>Connect Escolar</strong><small>V4.1 Professional</small></div>
             </div>
             <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
             <button class="tab-btn" onclick="aba('ag')">HORÁRIO</button>
@@ -282,6 +282,7 @@
             <button class="tab-btn" onclick="aba('l')">FECHAMENTO</button>
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
             <button class="tab-btn" onclick="aba('cad')">CADASTRO</button>
+            <button class="tab-btn" onclick="aba('sobre')">SOBRE</button>
             <button id="btn-instalar-app" class="tab-btn install-nav-btn" onclick="instalarAplicativo()" style="display:none;">＋ INSTALAR APLICATIVO</button>
             <button id="btn-sair" class="tab-btn" onclick="sairDaConta()">SAIR DA CONTA</button>
         </nav>
@@ -395,6 +396,37 @@
                 <button onclick="importarComMigracao()" class="btn-main btn-orange">Atualizar Lista Migrando Vistos</button>
             </div>
 
+            <div id="aba-sobre" class="card hidden">
+                <h3>Sobre o Connect Escolar</h3>
+                <p style="color:#64748b;line-height:1.6;">Ambiente pessoal para organizar turmas, aulas, registros e acompanhamento escolar.</p>
+                <div class="sec-box" style="border-color:#bfdbfe;background:#f8fbff;">
+                    <h4 style="margin-bottom:8px;">Connect Escolar V4.1 Professional</h4>
+                    <p style="margin:5px 0;"><strong>Desenvolvimento:</strong> Prof. Eduardo</p>
+                    <p style="margin:5px 0;"><strong>Atualização:</strong> 12 de novembro de 2026</p>
+                    <p style="margin:5px 0;"><strong>Plataforma:</strong> Celular e computador</p>
+                </div>
+                <div class="sec-box">
+                    <h4>Histórico de melhorias</h4>
+                    <ul style="padding-left:20px;line-height:1.8;margin-bottom:0;">
+                        <li>Login seguro por e-mail e senha.</li>
+                        <li>Recuperação de senha por e-mail.</li>
+                        <li>Backup completo com exportação e restauração.</li>
+                        <li>Instalação como aplicativo e sincronização pelo Firebase.</li>
+                        <li>Retorno sonoro ao concluir salvamentos.</li>
+                    </ul>
+                </div>
+                <div class="sec-box">
+                    <h4>Som de salvamento</h4>
+                    <p style="font-size:.85rem;color:#64748b;">Toque curto para confirmar quando os dados forem salvos com sucesso.</p>
+                    <label style="display:flex;align-items:center;gap:10px;font-weight:600;">
+                        <input id="som-salvamento-toggle" type="checkbox" checked style="width:auto;" onchange="alternarSomSalvamento(this.checked)">
+                        Ativar som de confirmação
+                    </label>
+                    <button type="button" onclick="testarSomSalvamento()" class="btn-main btn-blue">Testar som</button>
+                </div>
+                <p style="font-size:.75rem;color:#94a3b8;">Connect Escolar — ferramenta de organização docente.</p>
+            </div>
+
             <div id="aba-cad" class="card hidden">
                 <h3>Cadastro & Gestão de Turmas</h3>
                 <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Cadastre novas turmas, edite, exclua ou <strong>arraste os itens para reordenar</strong> a exibição no menu.</p>
@@ -456,6 +488,53 @@
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
         }
 
+        // Som discreto de confirmação, liberado no primeiro toque/clique do usuário.
+        let contextoAudioSalvamento = null;
+        document.addEventListener('click', function liberarAudioSalvamento() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx && !contextoAudioSalvamento) contextoAudioSalvamento = new AudioCtx();
+                if (contextoAudioSalvamento && contextoAudioSalvamento.state === 'suspended') contextoAudioSalvamento.resume();
+            } catch (erro) { console.warn('Áudio de confirmação indisponível:', erro); }
+        }, true);
+
+        function tocarSomSalvamento() {
+            if (localStorage.getItem('connect-escolar-som-salvamento') === 'off') return;
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                if (!contextoAudioSalvamento) contextoAudioSalvamento = new AudioCtx();
+                const ctx = contextoAudioSalvamento;
+                if (ctx.state === 'suspended') ctx.resume();
+                const agora = ctx.currentTime;
+                [740, 988].forEach((frequencia, indice) => {
+                    const oscilador = ctx.createOscillator();
+                    const ganho = ctx.createGain();
+                    const inicio = agora + indice * 0.11;
+                    oscilador.type = 'sine';
+                    oscilador.frequency.setValueAtTime(frequencia, inicio);
+                    ganho.gain.setValueAtTime(0.0001, inicio);
+                    ganho.gain.exponentialRampToValueAtTime(0.10, inicio + 0.025);
+                    ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.16);
+                    oscilador.connect(ganho); ganho.connect(ctx.destination);
+                    oscilador.start(inicio); oscilador.stop(inicio + 0.17);
+                });
+            } catch (erro) { console.warn('Não foi possível tocar o som de salvamento:', erro); }
+        }
+
+        function alternarSomSalvamento(ativado) {
+            localStorage.setItem('connect-escolar-som-salvamento', ativado ? 'on' : 'off');
+            if (ativado) tocarSomSalvamento();
+        }
+        function testarSomSalvamento() {
+            if (localStorage.getItem('connect-escolar-som-salvamento') === 'off') { alert('Ative o som de confirmação para testá-lo.'); return; }
+            tocarSomSalvamento();
+        }
+        function carregarPreferenciaSomSalvamento() {
+            const controle = document.getElementById('som-salvamento-toggle');
+            if (controle) controle.checked = localStorage.getItem('connect-escolar-som-salvamento') !== 'off';
+        }
+
         const config = {
             apiKey: "AIzaSyDa0B7IDWzFm5CobHO6E_ArBCsy0IIjexk",
             authDomain: "connect-escolar-fdef0.firebaseapp.com",
@@ -475,6 +554,7 @@
                 document.getElementById('welcome-cover').classList.add('hidden');
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('app').classList.remove('hidden');
+                carregarPreferenciaSomSalvamento();
             } else {
                 document.getElementById('app').classList.add('hidden');
             }
@@ -617,6 +697,7 @@
                 setTimeout(() => {
                     loginScreen.classList.add('hidden');
                     document.getElementById('app').classList.remove('hidden');
+                    carregarPreferenciaSomSalvamento();
                 }, 250);
             } catch (error) {
                 const mensagens = {
@@ -839,6 +920,7 @@
             }); 
             
             db.ref(`vistos/${t}/${b}/${d}`).set(dados).then(() => { 
+                tocarSomSalvamento();
                 alert('Vistos salvos com sucesso!'); 
                 dataOficialmenteAberta = true; 
                 carregarAlunos(); 
@@ -850,7 +932,7 @@
             if(!t) return;
             let dados = {};
             for(let i=1; i<=5; i++) { dados['h'+i] = document.getElementById('h'+i).value; }
-            db.ref(`headers/${t}/${b}`).set(dados);
+            db.ref(`headers/${t}/${b}`).set(dados).then(() => tocarSomSalvamento()).catch(erro => console.error('Falha ao salvar cabeçalhos:', erro));
         }
 
         function carregarHistoricoVistos() {
@@ -922,6 +1004,7 @@
             });
 
             await db.ref('horario_professor').set(dados);
+            tocarSomSalvamento();
             alert("Horário das aulas salvo com sucesso!");
         }
 
@@ -1008,6 +1091,7 @@
             const dadosDiario = { conteudo: conteudo, data: d };
 
             db.ref(`diario/${t}/${b}/${idDiario}`).set(dadosDiario).then(() => {
+                tocarSomSalvamento();
                 alert("Diário gravado com sucesso!");
                 cancelarEdicaoD();
                 carregarHistorico();
@@ -1163,6 +1247,7 @@
             });
 
             db.ref(`recuperacao/${t}/${b}`).set(dados).then(() => {
+                tocarSomSalvamento();
                 alert('Recuperação salva com sucesso!');
                 carregarRec();
             });
@@ -1303,6 +1388,7 @@
             });
 
             await db.ref().update(updates);
+            tocarSomSalvamento();
             await popularMenus();
         }
 
@@ -1321,6 +1407,7 @@
             const qtd = Object.keys(turmas).length;
             const newRef = db.ref('cadastros_turmas').push();
             await newRef.set({ nome: nome, cat: cat, ordem: qtd + 1 });
+            tocarSomSalvamento();
 
             document.getElementById('cad-nome-turma').value = "";
             await popularMenus();
@@ -1351,6 +1438,7 @@
                 nome: nomeFormatado,
                 cat: catFinal
             });
+            tocarSomSalvamento();
 
             await popularMenus();
             carregarGerenciamentoTurmas();
@@ -1494,6 +1582,7 @@
             const sA = await db.ref('turmas/'+t).once('value');
             let arr = sA.val() || []; arr.push(nomeNovo);
             await db.ref('turmas/'+t).set(arr);
+            tocarSomSalvamento();
             document.getElementById('novo-aluno-nome').value = "";
             renderizarEditorAlunos();
             alert("Aluno incluído no final da listagem!");
@@ -1655,6 +1744,7 @@
             await db.ref('turmas/'+turmaLimpa).set(novaListaAlunos);
             await db.ref('vistos/'+turmaLimpa).set(novaArvoreVistos);
             await db.ref('recuperacao/'+turmaLimpa).set(novaArvoreRecs);
+            tocarSomSalvamento();
         }
 
         // Backup limitado às áreas utilizadas pelo Connect Escolar.
