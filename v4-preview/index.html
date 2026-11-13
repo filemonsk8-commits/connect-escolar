@@ -937,7 +937,12 @@
                 const meta = await offlineGet('meta', uid + '|cacheAtualizadoEm');
                 if (prontos === CAMINHOS_BACKUP.length) {
                     const data = meta && meta.valor ? new Date(meta.valor) : null;
-                    status.textContent = 'Cópia local preparada' + (data ? ' — atualizada em ' + data.toLocaleDateString('pt-BR') + ' às ' + data.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '');
+                    const persistencia = meta && meta.persistente
+                        ? ' — armazenamento persistente habilitado'
+                        : ' — mantenha seus backups; o navegador pode liberar espaço e remover dados locais';
+                    status.textContent = 'Cópia local preparada' +
+                        (data ? ' — atualizada em ' + data.toLocaleDateString('pt-BR') + ' às ' + data.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '') +
+                        persistencia;
                 } else {
                     status.textContent = 'Cópia local incompleta (' + prontos + ' de ' + CAMINHOS_BACKUP.length + ' áreas). Prepare-a enquanto estiver conectado.';
                 }
