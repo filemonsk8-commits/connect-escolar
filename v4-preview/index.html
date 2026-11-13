@@ -266,7 +266,47 @@
             .card { border:0 !important; box-shadow:none !important; }
         }
 
-    </style>
+    
+        /* Relatório pedagógico completo: diário + notas, sem alterar os módulos existentes. */
+        .pedagogical-report { margin-top:18px; color:#1e293b; }
+        .ped-report-header { padding:18px 0 14px; border-bottom:3px solid #1d4ed8; margin-bottom:18px; }
+        .ped-report-kicker { color:#2563eb; font-size:.72rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; margin:0 0 7px; }
+        .ped-report-header h2 { margin:0 0 7px; color:#17243c; font-size:1.45rem; }
+        .ped-report-subtitle { margin:0; color:#64748b; font-size:.85rem; }
+        .ped-report-meta { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:16px 0 22px; }
+        .ped-report-meta-item { padding:11px 13px; border:1px solid #dbe4f0; border-radius:9px; background:#f8fafc; }
+        .ped-report-meta-item small { display:block; color:#64748b; font-size:.69rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+        .ped-report-meta-item strong { display:block; color:#1e293b; font-size:.92rem; margin-top:4px; overflow-wrap:anywhere; }
+        .ped-report-section { margin:22px 0; }
+        .ped-report-section h3 { color:#17243c; font-size:1rem; border-bottom:1px solid #dbe4f0; padding-bottom:8px; margin:0 0 10px; }
+        .ped-report-section p { color:#64748b; font-size:.82rem; line-height:1.5; }
+        .ped-report-table-wrap { width:100%; overflow-x:auto; }
+        .ped-report-table-wrap .report-table { width:100%; }
+        .ped-report-grades { table-layout:fixed; }
+        .ped-report-grades th, .ped-report-grades td { overflow-wrap:anywhere; text-align:center; font-size:.76rem; padding:7px 5px; }
+        .ped-report-grades th:first-child, .ped-report-grades td:first-child { text-align:left; width:25%; }
+        .ped-report-empty { padding:13px; border:1px dashed #cbd5e1; border-radius:9px; background:#f8fafc; color:#64748b; font-size:.84rem; }
+        .ped-report-foot { margin-top:25px; padding-top:10px; border-top:1px solid #dbe4f0; color:#64748b; font-size:.72rem; }
+        @media (max-width:680px) {
+            .ped-report-meta { grid-template-columns:1fr; }
+            .ped-report-header h2 { font-size:1.2rem; }
+            .ped-report-grades th, .ped-report-grades td { font-size:.68rem; padding:6px 4px; }
+        }
+        @media print {
+            body.printing-pedagogical-report { background:#fff !important; padding:0 !important; }
+            body.printing-pedagogical-report #app nav.tabs,
+            body.printing-pedagogical-report #app header { display:none !important; }
+            body.printing-pedagogical-report #app .container { margin:0 !important; padding:0 !important; max-width:none !important; }
+            body.printing-pedagogical-report #app .container > .card { display:none !important; }
+            body.printing-pedagogical-report #app .container > #aba-l { display:block !important; margin:0 !important; padding:0 !important; border:0 !important; box-shadow:none !important; }
+            body.printing-pedagogical-report #aba-l > *:not(#relatorio-pedagogico-completo) { display:none !important; }
+            body.printing-pedagogical-report #relatorio-pedagogico-completo { display:block !important; margin:0 !important; padding:0 !important; }
+            body.printing-pedagogical-report .ped-report-section { break-inside:avoid-page; page-break-inside:avoid; }
+            body.printing-pedagogical-report .ped-report-grades th,
+            body.printing-pedagogical-report .ped-report-grades td { font-size:8pt !important; padding:5px 4px !important; }
+            body.printing-pedagogical-report .report-table { border-radius:0; }
+        }
+</style>
 </head>
 <body>
     <div id="welcome-cover">
@@ -402,6 +442,16 @@
                     <button onclick="copiarNotasApenasNumeros()" class="btn-main btn-green" style="margin-top: 0;">Copiar Notas (Apenas Números)</button>
                     <button onclick="copiarListaNomesENotas()" class="btn-main btn-orange" style="margin-top: 0;">Copiar Lista (Nomes + Notas)</button>
                 </div>
+
+                <div class="sec-box no-print" style="margin-top:18px;">
+                    <h3 style="margin-bottom:6px;">Relatório Pedagógico Completo</h3>
+                    <p style="font-size:.84rem;color:#64748b;line-height:1.55;margin-top:0;">Reúne os conteúdos registrados no Diário e o fechamento das notas da turma e do bimestre selecionados. A geração do relatório não altera nenhum registro.</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <button type="button" onclick="gerarRelatorioPedagogicoCompleto()" class="btn-main btn-blue" style="margin-top:0;">Gerar relatório completo</button>
+                        <button type="button" id="btn-imprimir-relatorio-pedagogico" onclick="imprimirRelatorioPedagogicoCompleto()" class="btn-main btn-green" style="margin-top:0;" disabled>Imprimir / Salvar em PDF</button>
+                    </div>
+                </div>
+                <div id="relatorio-pedagogico-completo" class="pedagogical-report" aria-live="polite"></div>
             </div>
 
             <div id="aba-c" class="card hidden">
@@ -2122,6 +2172,156 @@
             });
 
             document.getElementById('relatorio-lista').innerHTML = html + "</tbody></table>";
+        }
+
+
+        async function gerarRelatorioPedagogicoCompleto() {
+            const turmaInput = document.getElementById('turma');
+            const bimestreInput = document.getElementById('bimestre');
+            const container = document.getElementById('relatorio-pedagogico-completo');
+            const botaoImprimir = document.getElementById('btn-imprimir-relatorio-pedagogico');
+            const t = limparT(turmaInput.value);
+            const b = bimestreInput.value;
+
+            if (!t) {
+                alert('Selecione uma turma antes de gerar o relatório.');
+                return;
+            }
+
+            container.innerHTML = '<div class="ped-report-empty">Preparando o relatório com os registros desta turma...</div>';
+            botaoImprimir.disabled = true;
+
+            try {
+                const [sH, sA, sV, sR, sD] = await Promise.all([
+                    db.ref(`headers/${t}/${b}`).once('value'),
+                    db.ref('turmas/' + t).once('value'),
+                    db.ref(`vistos/${t}/${b}`).once('value'),
+                    db.ref(`recuperacao/${t}/${b}`).once('value'),
+                    db.ref(`diario/${t}/${b}`).once('value')
+                ]);
+
+                const h = sH.val() || {};
+                const alunosBrutos = sA.val() || [];
+                const alunos = Array.isArray(alunosBrutos)
+                    ? alunosBrutos
+                    : Object.keys(alunosBrutos).sort((a, b) => Number(a) - Number(b)).map(chave => alunosBrutos[chave]);
+                const vistos = sV.val() || {};
+                const recs = sR.val() || {};
+                const diariosBrutos = sD.val() || {};
+
+                const turmaNome = turmaInput.options[turmaInput.selectedIndex]?.textContent || turmaInput.value;
+                const bimestreNome = bimestreInput.options[bimestreInput.selectedIndex]?.textContent || b;
+                const registrosDiario = Object.keys(diariosBrutos).map(id => ({ id, ...diariosBrutos[id] }))
+                    .sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')));
+
+                const formatarData = valor => {
+                    const data = String(valor || '');
+                    return /^\d{4}-\d{2}-\d{2}$/.test(data) ? data.split('-').reverse().join('/') : (data || '—');
+                };
+                const formatarNota = valor => {
+                    const numero = Number(valor);
+                    return Number.isFinite(numero) ? numero.toFixed(1).replace('.', ',') : '—';
+                };
+                const converterNumero = valor => {
+                    const numero = parseFloat(String(valor ?? '').replace(',', '.'));
+                    return Number.isFinite(numero) ? numero : 0;
+                };
+
+                let html = `
+                    <div class="ped-report-header">
+                        <p class="ped-report-kicker">Connect Escolar · Relatório docente</p>
+                        <h2>Relatório Pedagógico Completo</h2>
+                        <p class="ped-report-subtitle">${escapeHTML(turmaNome)} · ${escapeHTML(bimestreNome)}</p>
+                    </div>
+                    <div class="ped-report-meta">
+                        <div class="ped-report-meta-item"><small>Turma</small><strong>${escapeHTML(turmaNome)}</strong></div>
+                        <div class="ped-report-meta-item"><small>Período</small><strong>${escapeHTML(bimestreNome)}</strong></div>
+                        <div class="ped-report-meta-item"><small>Estudantes</small><strong>${alunos.length}</strong></div>
+                        <div class="ped-report-meta-item"><small>Registros no diário</small><strong>${registrosDiario.length}</strong></div>
+                        <div class="ped-report-meta-item"><small>Atividades avaliativas</small><strong>Até 5 atividades</strong></div>
+                        <div class="ped-report-meta-item"><small>Emissão</small><strong>${new Date().toLocaleDateString('pt-BR')}</strong></div>
+                    </div>
+
+                    <section class="ped-report-section">
+                        <h3>1. Conteúdos e aulas registradas</h3>`;
+
+                if (registrosDiario.length) {
+                    html += '<div class="ped-report-table-wrap"><table class="report-table"><thead><tr><th style="width:18%;">Data</th><th>Conteúdo / Registro da aula</th></tr></thead><tbody>';
+                    registrosDiario.forEach(registro => {
+                        const conteudo = registro.conteudo || registro.conteúdo || '';
+                        html += `<tr><td style="white-space:nowrap;font-weight:700;">${escapeHTML(formatarData(registro.data))}</td><td>${escapeHTML(conteudo).replace(/\r?\n/g, '<br>')}</td></tr>`;
+                    });
+                    html += '</tbody></table></div>';
+                } else {
+                    html += '<div class="ped-report-empty">Não há registros no Diário para esta turma e este bimestre.</div>';
+                }
+                html += '</section><section class="ped-report-section"><h3>2. Acompanhamento das notas</h3>';
+
+                if (alunos.length) {
+                    html += '<div class="ped-report-table-wrap"><table class="report-table ped-report-grades"><thead><tr><th>Estudante</th>';
+                    for (let atividade = 1; atividade <= 5; atividade++) {
+                        html += `<th>${escapeHTML(h['h' + atividade] || ('Ativ. ' + atividade))}</th>`;
+                    }
+                    html += '<th>Soma</th><th>Rec.</th><th>Nota final</th></tr></thead><tbody>';
+
+                    alunos.forEach((nome, indice) => {
+                        const somas = [0, 0, 0, 0, 0, 0];
+                        Object.keys(vistos).forEach(data => {
+                            const dia = vistos[data]?.[indice] || {};
+                            for (let atividade = 1; atividade <= 5; atividade++) {
+                                if (dia[atividade] !== undefined && dia[atividade] !== null && String(dia[atividade]).trim() !== '') {
+                                    somas[atividade] += converterNumero(dia[atividade]);
+                                }
+                            }
+                        });
+
+                        let totalBimestre = 0;
+                        for (let atividade = 1; atividade <= 5; atividade++) totalBimestre += somas[atividade];
+                        totalBimestre = Math.min(totalBimestre, 10);
+
+                        const recBruta = recs[indice];
+                        const recNumero = recBruta !== undefined && recBruta !== null && String(recBruta).trim() !== ''
+                            ? converterNumero(recBruta) : null;
+                        const recValida = recNumero !== null && recNumero !== -1;
+                        const notaFinal = recValida && recNumero > totalBimestre ? recNumero : totalBimestre;
+
+                        html += `<tr><td>${escapeHTML(nome)}</td>`;
+                        for (let atividade = 1; atividade <= 5; atividade++) {
+                            html += `<td>${somas[atividade] > 0 ? formatarNota(somas[atividade]) : '—'}</td>`;
+                        }
+                        html += `<td><strong>${formatarNota(totalBimestre)}</strong></td>
+                            <td>${recValida ? formatarNota(recNumero) : '—'}</td>
+                            <td><strong>${formatarNota(notaFinal)}</strong></td></tr>`;
+                    });
+                    html += '</tbody></table></div>';
+                } else {
+                    html += '<div class="ped-report-empty">Não há estudantes cadastrados nesta turma.</div>';
+                }
+
+                html += `</section>
+                    <div class="ped-report-foot">Documento gerado a partir dos registros disponíveis no Connect Escolar. A emissão não modifica notas, diários ou cadastros.</div>`;
+
+                container.innerHTML = html;
+                botaoImprimir.disabled = false;
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (erro) {
+                console.error('Connect Escolar: falha ao gerar relatório pedagógico completo:', erro);
+                container.innerHTML = '<div class="ped-report-empty">Não foi possível montar o relatório. Verifique a conexão e tente novamente. Seus registros não foram alterados.</div>';
+                alert('Não foi possível gerar o relatório: ' + (erro && erro.message ? erro.message : 'erro de leitura dos dados'));
+            }
+        }
+
+        function imprimirRelatorioPedagogicoCompleto() {
+            const container = document.getElementById('relatorio-pedagogico-completo');
+            const botao = document.getElementById('btn-imprimir-relatorio-pedagogico');
+            if (!container || !container.innerHTML.trim() || botao.disabled) {
+                alert('Gere o relatório completo antes de imprimir.');
+                return;
+            }
+            const limparModoImpressao = () => document.body.classList.remove('printing-pedagogical-report');
+            document.body.classList.add('printing-pedagogical-report');
+            window.addEventListener('afterprint', limparModoImpressao, { once: true });
+            window.print();
         }
 
         function copiarNotasApenasNumeros() {
