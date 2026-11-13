@@ -1730,7 +1730,7 @@
                     const diariosTurma = localizarDadosTurma(diarioPorTurma, nome);
                     const diariosBimestre = diariosTurma && diariosTurma[bimestre] ? diariosTurma[bimestre] : {};
                     Object.values(diariosBimestre || {}).forEach(registro => {
-                        const dataValida = registro && /^\\d{4}-\\d{2}-\\d{2}$/.test(String(registro.data || ''));
+                        const dataValida = registro && /^\d{4}-\d{2}-\d{2}$/.test(String(registro.data || ''));
                         const conteudo = registro && String(registro.conteudo || registro.conteúdo || '').trim();
                         if (!dataValida || !conteudo) diariosIncompletos++;
                     });
