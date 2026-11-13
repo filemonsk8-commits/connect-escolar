@@ -515,7 +515,7 @@
                         <p id="offline-pendencias" class="offline-pending">Nenhuma informação de sincronização disponível.</p>
                         <div class="offline-actions">
                             <button id="btn-preparar-offline" onclick="prepararDadosOffline()" class="btn-main btn-blue" style="margin-top:0;">Preparar / atualizar cópia local</button>
-                            <button id="btn-sincronizar-offline" onclick="window.iniciarSincronizacaoManualOffline()" class="btn-main btn-orange" style="margin-top:0;">Sincronizar pendências</button>
+                            <button id="btn-sincronizar-offline" onclick="window.diagnosticoCliqueOffline()" class="btn-main btn-orange" style="margin-top:0;">Sincronizar pendências</button>
                             <button id="btn-forcar-sincronizacao" onclick="forcarSincronizacaoOffline()" class="btn-main btn-red" style="display:none; margin-top:0;">Forçar envio após conferir</button>
                         </div>
                         <p class="offline-warning">Faça a preparação separadamente no computador e no celular, enquanto estiver conectado. O primeiro login neste aparelho precisa ser feito com internet. Os dados offline ficam armazenados neste navegador; evite usar um perfil compartilhado ou computador público.</p>
@@ -1115,6 +1115,13 @@
                 await atualizarPainelOffline();
             }
         }
+
+        // Diagnóstico temporário: confirma apenas se o clique chega ao JavaScript. Não sincroniza nem altera dados.
+        window.diagnosticoCliqueOffline = function() {
+            const status = document.getElementById('offline-status');
+            if (status) status.textContent = 'TESTE: o botão foi acionado. Nenhuma alteração foi enviada.';
+            alert('Teste do Connect Escolar: o botão respondeu ao clique. Nenhum dado foi enviado, apagado ou alterado.');
+        };
 
         // Entrada explícita do botão: mostra resposta imediata e registra qualquer falha.
         window.iniciarSincronizacaoManualOffline = async function() {
