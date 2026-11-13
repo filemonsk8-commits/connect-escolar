@@ -1201,7 +1201,7 @@
             if (!uid) return original.apply(referencia, argumentos);
             const caminho = caminhoDaReferencia(referencia);
             const valor = metodo === 'remove' ? null : clonarDadosOffline(argumentos[0]);
-            const base = await obterValorCacheOffline(uid, caminho);
+            let base = await obterValorCacheOffline(uid, caminho);
             let basesMulticaminho = null;
             let podeAplicarOffline = base.encontrado;
 
@@ -1315,12 +1315,15 @@
         atualizarHorarioUltimoSalvamento();
 
         // Restaura automaticamente a sessão segura do usuário autenticado.
-        auth.onAuthStateChanged(user => {
+        auth.onAuthStateChanged(async user => {
             if (user) {
                 document.getElementById('welcome-cover').classList.add('hidden');
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('app').classList.remove('hidden');
                 carregarPreferenciaSomSalvamento();
+                // Após restaurar a sessão, carrega novamente os menus para permitir leitura do cache offline.
+                try { await popularMenus(); }
+                catch (erro) { console.warn('Connect Escolar: não foi possível carregar as turmas:', erro); }
                 iniciarModoOffline(user);
             } else {
                 document.getElementById('app').classList.add('hidden');
