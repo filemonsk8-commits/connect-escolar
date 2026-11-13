@@ -199,6 +199,17 @@
         .backup-description, .backup-warning { color:#64748b; font-size:.82rem; line-height:1.55; }
         .backup-warning { margin:12px 0 0; font-size:.74rem; }
         .backup-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+        .save-status-main.is-pending { color:#946200; background:#fff8e8; border-color:#f1d18a; }
+        .save-status-main.is-pending .save-status-dot { background:#d97706; }
+        .offline-panel { margin-top:16px; padding:16px; border:1px solid #cbdaf5; border-radius:13px; background:linear-gradient(180deg,#f6f9ff,#fff); }
+        .offline-panel h4 { margin:0 0 7px; color:#17243c; }
+        .offline-description, .offline-warning { color:#64748b; font-size:.78rem; line-height:1.55; }
+        .offline-state { margin:10px 0 5px; color:#1d4ed8; font-size:.82rem; font-weight:800; }
+        .offline-pending { margin:0 0 10px; color:#475569; font-size:.78rem; font-weight:700; }
+        .offline-actions { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+        .offline-warning { margin:10px 0 0; font-size:.7rem; }
+        @media (max-width:600px) { .offline-actions { grid-template-columns:1fr; } }
         #lista-container { overflow-x:auto; }
         #lista-container table { min-width:520px; }
         #lista-container tr td:first-child { min-width:150px; }
@@ -494,6 +505,19 @@
                     </div>
                     <input id="arquivo-backup" type="file" accept="application/json,.json" class="hidden" onchange="restaurarBackupCompleto(this)">
                     <p class="backup-warning">Ao restaurar, somente as áreas de dados do Connect Escolar serão substituídas. Antes disso, o sistema baixará uma cópia do estado atual.</p>
+
+                    <div class="offline-panel">
+                        <h4>💾 Modo offline deste aparelho</h4>
+                        <p class="offline-description">Prepare uma cópia local das turmas, estudantes, vistos, diários, recuperações e horários. Depois, você poderá consultar e registrar informações sem internet; as alterações serão enviadas ao Firebase quando a conexão voltar.</p>
+                        <p id="offline-status" class="offline-state">Verificando armazenamento local…</p>
+                        <p id="offline-pendencias" class="offline-pending">Nenhuma informação de sincronização disponível.</p>
+                        <div class="offline-actions">
+                            <button id="btn-preparar-offline" onclick="prepararDadosOffline()" class="btn-main btn-blue" style="margin-top:0;">Preparar / atualizar cópia local</button>
+                            <button id="btn-sincronizar-offline" onclick="sincronizarFilaOffline(true)" class="btn-main btn-orange" style="margin-top:0;">Sincronizar pendências</button>
+                            <button id="btn-forcar-sincronizacao" onclick="forcarSincronizacaoOffline()" class="btn-main btn-red" style="display:none; margin-top:0;">Forçar envio após conferir</button>
+                        </div>
+                        <p class="offline-warning">Faça a preparação separadamente no computador e no celular, enquanto estiver conectado. O primeiro login neste aparelho precisa ser feito com internet. Os dados offline ficam armazenados neste navegador; evite usar um perfil compartilhado ou computador público.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -564,84 +588,672 @@
         const db = firebase.database();
         const auth = firebase.auth();
 
-        // V4.2: monitor de gravação sem alterar os caminhos nem os dados existentes.
+        // MODO OFFLINE V4.3 — cache local persistente e fila de sincronização por usuário.
         let gravacoesPendentes = 0;
         let camposAlterados = false;
         let firebaseConectado = false;
         const CHAVE_ULTIMO_SALVAMENTO = 'connect-escolar-ultimo-salvamento';
+        const BANCO_OFFLINE_NOME = 'connect-escolar-offline';
+        const BANCO_OFFLINE_VERSAO = 1;
+        let promessaBancoOffline = null;
+        let sincronizacaoOfflineEmAndamento = false;
+        let usuarioOfflineInicializado = null;
+        let avisoCacheAusenteExibido = false;
+        const operacoesFirebaseAtivas = new Set();
+
+        const referenciaFirebase = firebase.database.Reference.prototype;
+        const metodosFirebaseOriginais = {
+            set: referenciaFirebase.set,
+            update: referenciaFirebase.update,
+            remove: referenciaFirebase.remove
+        };
+        const onceFirebaseOriginal = referenciaFirebase.once;
+
         function atualizarIndicadorSalvamento(estado, mensagem) {
             const el = document.getElementById('status-salvamento');
             const txt = document.getElementById('texto-status-salvamento');
             if (!el || !txt) return;
-            el.classList.remove('is-saving', 'is-saved', 'is-error');
+            el.classList.remove('is-saving', 'is-saved', 'is-error', 'is-pending');
             if (estado === 'salvando') el.classList.add('is-saving');
             if (estado === 'salvo') el.classList.add('is-saved');
             if (estado === 'erro') el.classList.add('is-error');
+            if (estado === 'pendente') el.classList.add('is-pending');
             txt.textContent = mensagem;
         }
+
         function atualizarHorarioUltimoSalvamento() {
             const alvo = document.getElementById('ultimo-salvamento');
             if (!alvo) return;
             const registro = localStorage.getItem(CHAVE_ULTIMO_SALVAMENTO);
-            if (!registro) { alvo.textContent = 'Último salvamento: ainda não registrado neste dispositivo'; return; }
+            if (!registro) {
+                alvo.textContent = 'Último salvamento confirmado: ainda não registrado neste dispositivo';
+                return;
+            }
             const data = new Date(registro);
-            alvo.textContent = 'Último salvamento confirmado: ' + data.toLocaleDateString('pt-BR') + ' às ' + data.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+            alvo.textContent = 'Último salvamento confirmado: ' + data.toLocaleDateString('pt-BR') +
+                ' às ' + data.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
         }
-        function finalizarGravacaoComSucesso() {
+
+        function finalizarGravacaoComSucesso(resultado) {
             gravacoesPendentes = Math.max(0, gravacoesPendentes - 1);
+            if (resultado && resultado.__connectOfflineQueued) {
+                atualizarIndicadorSalvamento('pendente', 'Salvo neste dispositivo — aguardando internet');
+                atualizarPainelOffline();
+                return;
+            }
             camposAlterados = false;
             localStorage.setItem(CHAVE_ULTIMO_SALVAMENTO, new Date().toISOString());
             atualizarHorarioUltimoSalvamento();
             if (gravacoesPendentes === 0) atualizarIndicadorSalvamento('salvo', 'Salvo com sucesso');
+            atualizarPainelOffline();
         }
+
         function finalizarGravacaoComErro(erro) {
             gravacoesPendentes = Math.max(0, gravacoesPendentes - 1);
-            atualizarIndicadorSalvamento('erro', 'Erro ao salvar — confira sua conexão e tente novamente');
-            console.error('Connect Escolar: falha ao gravar no Firebase:', erro);
+            atualizarIndicadorSalvamento('erro', 'Não foi possível guardar a alteração');
+            console.error('Connect Escolar: falha ao gravar:', erro);
+            atualizarPainelOffline();
         }
+
         function acompanharGravacao(promise) {
             gravacoesPendentes++;
             atualizarIndicadorSalvamento('salvando', 'Salvando…');
             promise.then(finalizarGravacaoComSucesso, finalizarGravacaoComErro);
             return promise;
         }
-        const referenciaFirebase = firebase.database.Reference.prototype;
-        ['set', 'update', 'remove'].forEach(metodo => {
-            const original = referenciaFirebase[metodo];
-            if (typeof original !== 'function' || original.__connectMonitorado) return;
-            const monitorado = function(...args) {
-                try { return acompanharGravacao(original.apply(this, args)); }
-                catch (erro) { finalizarGravacaoComErro(erro); throw erro; }
-            };
-            monitorado.__connectMonitorado = true;
-            referenciaFirebase[metodo] = monitorado;
-        });
-        document.addEventListener('input', evento => {
-            const campo = evento.target;
-            if (!campo || !campo.matches('input, textarea')) return;
-            if (['email','password','date','file','checkbox','radio','button','submit'].includes(campo.type)) return;
-            if (campo.id === 'login-email' || campo.id === 'login-senha') return;
-            camposAlterados = true;
-            if (gravacoesPendentes === 0) atualizarIndicadorSalvamento('erro', 'Alterações ainda não salvas');
-        }, true);
-        window.addEventListener('beforeunload', evento => {
-            if (gravacoesPendentes > 0 || camposAlterados) {
-                evento.preventDefault();
-                evento.returnValue = 'Há alterações que podem não ter sido salvas. Deseja realmente sair?';
-                return evento.returnValue;
+
+        function abrirBancoOffline() {
+            if (promessaBancoOffline) return promessaBancoOffline;
+            promessaBancoOffline = new Promise((resolve, reject) => {
+                if (!window.indexedDB) {
+                    reject(new Error('Este navegador não oferece armazenamento offline compatível.'));
+                    return;
+                }
+                const pedido = indexedDB.open(BANCO_OFFLINE_NOME, BANCO_OFFLINE_VERSAO);
+                pedido.onupgradeneeded = () => {
+                    const bancoLocal = pedido.result;
+                    if (!bancoLocal.objectStoreNames.contains('snapshots')) {
+                        bancoLocal.createObjectStore('snapshots', {keyPath:'id'});
+                    }
+                    if (!bancoLocal.objectStoreNames.contains('fila')) {
+                        bancoLocal.createObjectStore('fila', {keyPath:'id', autoIncrement:true});
+                    }
+                    if (!bancoLocal.objectStoreNames.contains('meta')) {
+                        bancoLocal.createObjectStore('meta', {keyPath:'id'});
+                    }
+                };
+                pedido.onsuccess = () => resolve(pedido.result);
+                pedido.onerror = () => reject(pedido.error || new Error('Falha ao abrir o armazenamento local.'));
+                pedido.onblocked = () => reject(new Error('Feche outras abas do Connect Escolar para preparar o modo offline.'));
+            }).catch(erro => {
+                promessaBancoOffline = null;
+                throw erro;
+            });
+            return promessaBancoOffline;
+        }
+
+        function operarBancoOffline(nomeStore, modo, criarPedido) {
+            return abrirBancoOffline().then(bancoLocal => new Promise((resolve, reject) => {
+                let resultado;
+                let pedido;
+                let finalizado = false;
+                const falhar = erro => {
+                    if (finalizado) return;
+                    finalizado = true;
+                    reject(erro || new Error('Falha no armazenamento offline.'));
+                };
+                let transacao;
+                try {
+                    transacao = bancoLocal.transaction([nomeStore], modo);
+                    pedido = criarPedido(transacao.objectStore(nomeStore));
+                    if (pedido) {
+                        pedido.onsuccess = () => { resultado = pedido.result; };
+                        pedido.onerror = () => falhar(pedido.error);
+                    }
+                } catch (erro) {
+                    falhar(erro);
+                    return;
+                }
+                transacao.oncomplete = () => {
+                    if (finalizado) return;
+                    finalizado = true;
+                    resolve(resultado);
+                };
+                transacao.onerror = () => falhar(transacao.error);
+                transacao.onabort = () => falhar(transacao.error);
+            }));
+        }
+
+        function offlineGet(store, id) {
+            return operarBancoOffline(store, 'readonly', s => s.get(id));
+        }
+        function offlinePut(store, objeto) {
+            return operarBancoOffline(store, 'readwrite', s => s.put(objeto));
+        }
+        function offlineAdd(store, objeto) {
+            return operarBancoOffline(store, 'readwrite', s => s.add(objeto));
+        }
+        function offlineDelete(store, id) {
+            return operarBancoOffline(store, 'readwrite', s => s.delete(id));
+        }
+        function offlineGetAll(store) {
+            return operarBancoOffline(store, 'readonly', s => s.getAll());
+        }
+
+        function clonarDadosOffline(valor) {
+            if (valor === undefined || valor === null) return null;
+            return JSON.parse(JSON.stringify(valor));
+        }
+
+        function caminhoDaReferencia(referencia) {
+            try {
+                const url = new URL(referencia.toString());
+                const base = new URL(config.databaseURL);
+                let caminho = url.pathname;
+                if (base.pathname && base.pathname !== '/' && caminho.startsWith(base.pathname)) {
+                    caminho = caminho.slice(base.pathname.length);
+                }
+                caminho = caminho.replace(/^\/+|\/+$/g, '').replace(/\.json$/i, '');
+                return caminho ? caminho.split('/').map(parte => decodeURIComponent(parte)).join('/') : '';
+            } catch (erro) {
+                if (referencia.path && typeof referencia.path.toString === 'function') {
+                    return referencia.path.toString().replace(/^\/+|\/+$/g, '');
+                }
+                return '';
             }
-        });
-        atualizarHorarioUltimoSalvamento();
+        }
+
+        function usuarioAtualOffline() {
+            return auth.currentUser && auth.currentUser.uid ? auth.currentUser.uid : null;
+        }
+
+        function conectadoAoFirebase() {
+            return !!(navigator.onLine && firebaseConectado && usuarioAtualOffline());
+        }
+
+        function ehFalhaDeRede(erro) {
+            const codigo = String(erro && erro.code || '').toUpperCase();
+            return !navigator.onLine || !firebaseConectado ||
+                ['NETWORK_ERROR','NETWORK_REQUEST_FAILED','DATABASE_UNAVAILABLE','DISCONNECTED','UNAVAILABLE'].includes(codigo) ||
+                /network|offline|disconnected|unavailable/i.test(String(erro && erro.message || ''));
+        }
+
+        function chaveSnapshotOffline(uid, caminho) {
+            return uid + '|' + (caminho || '');
+        }
+
+        async function guardarSnapshotOffline(uid, caminho, valor) {
+            await offlinePut('snapshots', {
+                id: chaveSnapshotOffline(uid, caminho),
+                uid: uid,
+                caminho: caminho || '',
+                valor: clonarDadosOffline(valor),
+                atualizadoEm: new Date().toISOString()
+            });
+        }
+
+        async function obterValorCacheOffline(uid, caminho) {
+            const partes = (caminho || '').split('/').filter(Boolean);
+            for (let tamanho = partes.length; tamanho >= 0; tamanho--) {
+                const prefixo = partes.slice(0, tamanho).join('/');
+                const registro = await offlineGet('snapshots', chaveSnapshotOffline(uid, prefixo));
+                if (!registro) continue;
+                let valor = registro.valor;
+                for (const parte of partes.slice(tamanho)) {
+                    if (valor === null || typeof valor !== 'object' || !(parte in valor)) {
+                        valor = null;
+                        break;
+                    }
+                    valor = valor[parte];
+                }
+                return {encontrado:true, valor:valor === undefined ? null : valor, caminhoCache:prefixo};
+            }
+            return {encontrado:false, valor:null, caminhoCache:null};
+        }
+
+        function definirValorEmCaminho(raiz, partes, valor, metodo) {
+            if (!partes.length) return metodo === 'remove' || valor === null ? null : clonarDadosOffline(valor);
+            if (raiz === null || typeof raiz !== 'object') {
+                raiz = /^\d+$/.test(partes[0]) ? [] : {};
+            }
+            let atual = raiz;
+            for (let i = 0; i < partes.length - 1; i++) {
+                const parte = partes[i];
+                const proximaParte = partes[i + 1];
+                if (atual[parte] === null || typeof atual[parte] !== 'object') {
+                    atual[parte] = /^\d+$/.test(proximaParte) ? [] : {};
+                }
+                atual = atual[parte];
+            }
+            const ultimaParte = partes[partes.length - 1];
+            if (metodo === 'remove' || valor === null) {
+                if (Array.isArray(atual) && /^\d+$/.test(ultimaParte)) atual[Number(ultimaParte)] = null;
+                else delete atual[ultimaParte];
+            } else {
+                atual[ultimaParte] = clonarDadosOffline(valor);
+            }
+            return raiz;
+        }
+
+        async function aplicarMutacaoCacheOffline(uid, caminho, metodo, valor) {
+            if (!caminho && metodo === 'update') {
+                const atualizacoes = valor || {};
+                for (const [subcaminho, dado] of Object.entries(atualizacoes)) {
+                    await aplicarMutacaoCacheOffline(uid, subcaminho, 'set', dado);
+                }
+                return true;
+            }
+            const partes = (caminho || '').split('/').filter(Boolean);
+            for (let tamanho = partes.length; tamanho >= 0; tamanho--) {
+                const prefixo = partes.slice(0, tamanho).join('/');
+                const registro = await offlineGet('snapshots', chaveSnapshotOffline(uid, prefixo));
+                if (!registro) continue;
+                const relativas = partes.slice(tamanho);
+                let novoValor = registro.valor;
+                if (metodo === 'update') {
+                    for (const [subcaminho, dado] of Object.entries(valor || {})) {
+                        novoValor = definirValorEmCaminho(
+                            novoValor,
+                            relativas.concat(subcaminho.split('/').filter(Boolean)),
+                            dado,
+                            dado === null ? 'remove' : 'set'
+                        );
+                    }
+                } else {
+                    novoValor = definirValorEmCaminho(novoValor, relativas, valor, metodo);
+                }
+                registro.valor = clonarDadosOffline(novoValor);
+                registro.atualizadoEm = new Date().toISOString();
+                await offlinePut('snapshots', registro);
+                return true;
+            }
+            return false;
+        }
+
+        function dadosIguaisOffline(a, b) {
+            const ordenar = valor => {
+                if (Array.isArray(valor)) return valor.map(ordenar);
+                if (valor && typeof valor === 'object') {
+                    const resultado = {};
+                    Object.keys(valor).sort().forEach(chave => { resultado[chave] = ordenar(valor[chave]); });
+                    return resultado;
+                }
+                return valor === undefined ? null : valor;
+            };
+            return JSON.stringify(ordenar(a)) === JSON.stringify(ordenar(b));
+        }
+
+        function criarSnapshotOffline(valor, referencia) {
+            return {
+                val: () => clonarDadosOffline(valor),
+                exists: () => valor !== null && valor !== undefined,
+                key: referencia.key || null,
+                ref: referencia
+            };
+        }
+
+        async function reconstruirFilaLocalOffline(uid) {
+            const fila = (await offlineGetAll('fila') || []).filter(item => item.uid === uid).sort((a,b) => a.id - b.id);
+            for (const item of fila) {
+                if (!item.cacheAplicado) {
+                    const aplicado = await aplicarMutacaoCacheOffline(uid, item.caminho, item.metodo, item.valor);
+                    item.cacheAplicado = aplicado;
+                    await offlinePut('fila', item);
+                }
+            }
+        }
+
+        async function contarSnapshotsProntosOffline(uid) {
+            let total = 0;
+            for (const caminho of CAMINHOS_BACKUP) {
+                if (await offlineGet('snapshots', chaveSnapshotOffline(uid, caminho))) total++;
+            }
+            return total;
+        }
+
+        async function atualizarPainelOffline() {
+            const status = document.getElementById('offline-status');
+            const pendenciasEl = document.getElementById('offline-pendencias');
+            const botaoPreparar = document.getElementById('btn-preparar-offline');
+            const botaoSincronizar = document.getElementById('btn-sincronizar-offline');
+            const botaoForcar = document.getElementById('btn-forcar-sincronizacao');
+            if (!status || !pendenciasEl) return;
+            const uid = usuarioAtualOffline();
+            if (!uid) {
+                status.textContent = 'Entre com sua conta para preparar os dados neste aparelho.';
+                pendenciasEl.textContent = '';
+                if (botaoPreparar) botaoPreparar.disabled = true;
+                if (botaoSincronizar) botaoSincronizar.disabled = true;
+                if (botaoForcar) botaoForcar.style.display = 'none';
+                return;
+            }
+            try {
+                const fila = (await offlineGetAll('fila') || []).filter(item => item.uid === uid);
+                const prontos = await contarSnapshotsProntosOffline(uid);
+                const meta = await offlineGet('meta', uid + '|cacheAtualizadoEm');
+                if (prontos === CAMINHOS_BACKUP.length) {
+                    const data = meta && meta.valor ? new Date(meta.valor) : null;
+                    status.textContent = 'Cópia local preparada' + (data ? ' — atualizada em ' + data.toLocaleDateString('pt-BR') + ' às ' + data.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '');
+                } else {
+                    status.textContent = 'Cópia local incompleta (' + prontos + ' de ' + CAMINHOS_BACKUP.length + ' áreas). Prepare-a enquanto estiver conectado.';
+                }
+                pendenciasEl.textContent = fila.length + (fila.length === 1 ? ' alteração aguardando sincronização.' : ' alterações aguardando sincronização.');
+                const possuiConflito = fila.some(item => item.conflito);
+                if (botaoPreparar) botaoPreparar.disabled = !conectadoAoFirebase();
+                if (botaoSincronizar) botaoSincronizar.disabled = !conectadoAoFirebase() || fila.length === 0;
+                if (botaoForcar) botaoForcar.style.display = possuiConflito ? 'block' : 'none';
+            } catch (erro) {
+                status.textContent = 'Não foi possível acessar o armazenamento offline: ' + (erro.message || erro);
+                if (botaoPreparar) botaoPreparar.disabled = true;
+                if (botaoSincronizar) botaoSincronizar.disabled = true;
+            }
+        }
+
+        async function prepararDadosOffline(silencioso = false) {
+            const uid = usuarioAtualOffline();
+            if (!uid) {
+                if (!silencioso) alert('Entre com sua conta antes de preparar o modo offline.');
+                return false;
+            }
+            if (!conectadoAoFirebase()) {
+                if (!silencioso) alert('Para preparar ou atualizar a cópia offline, conecte-se à internet e aguarde “Conectado ao banco”.');
+                return false;
+            }
+            const status = document.getElementById('offline-status');
+            if (status) status.textContent = 'Baixando e guardando os dados deste aparelho…';
+            try {
+                await reconstruirFilaLocalOffline(uid);
+                const filaAntes = (await offlineGetAll('fila') || []).filter(item => item.uid === uid);
+                if (filaAntes.length) {
+                    await sincronizarFilaOffline(false, false);
+                    const filaDepois = (await offlineGetAll('fila') || []).filter(item => item.uid === uid);
+                    if (filaDepois.length) {
+                        throw new Error('Há alterações pendentes ou conflitantes. Sincronize-as antes de atualizar a cópia local.');
+                    }
+                }
+                for (const caminho of CAMINHOS_BACKUP) {
+                    const snapshot = await onceFirebaseOriginal.call(db.ref(caminho), 'value');
+                    await guardarSnapshotOffline(uid, caminho, snapshot.val());
+                }
+                await offlinePut('meta', {id:uid + '|cacheAtualizadoEm', valor:new Date().toISOString()});
+                if (status) status.textContent = 'Cópia local preparada com sucesso.';
+                await atualizarPainelOffline();
+                if (!silencioso) alert('Pronto! Os dados do Connect Escolar foram guardados neste aparelho para uso sem internet.');
+                return true;
+            } catch (erro) {
+                console.error('Connect Escolar: falha ao preparar modo offline:', erro);
+                if (status) status.textContent = erro.message || 'Não foi possível preparar os dados offline.';
+                if (!silencioso) alert('Não foi possível preparar o modo offline: ' + (erro.message || erro));
+                return false;
+            }
+        }
+
+        async function sincronizarFilaOffline(mostrarResultado = false, forcar = false) {
+            const uid = usuarioAtualOffline();
+            if (!uid) {
+                if (mostrarResultado) alert('Entre com sua conta para sincronizar as alterações.');
+                return false;
+            }
+            if (!conectadoAoFirebase()) {
+                if (mostrarResultado) alert('Sem conexão com o Firebase. As alterações continuam guardadas neste aparelho.');
+                await atualizarPainelOffline();
+                return false;
+            }
+            if (sincronizacaoOfflineEmAndamento) return false;
+            sincronizacaoOfflineEmAndamento = true;
+            let sincronizadas = 0;
+            let conflitoEncontrado = false;
+            try {
+                await reconstruirFilaLocalOffline(uid);
+                const fila = (await offlineGetAll('fila') || []).filter(item => item.uid === uid).sort((a,b) => a.id - b.id);
+                for (const item of fila) {
+                    if (operacoesFirebaseAtivas.has(item.id)) break;
+                    if (item.conflito && !forcar) {
+                        conflitoEncontrado = true;
+                        break;
+                    }
+                    const referencia = db.ref(item.caminho || '');
+                    if (!forcar && item.baseDisponivel && item.caminho) {
+                        const remoto = await onceFirebaseOriginal.call(referencia, 'value');
+                        if (!dadosIguaisOffline(remoto.val(), item.baseValor)) {
+                            item.conflito = true;
+                            await offlinePut('fila', item);
+                            conflitoEncontrado = true;
+                            break;
+                        }
+                    }
+                    try {
+                        const metodoOriginal = metodosFirebaseOriginais[item.metodo];
+                        if (typeof metodoOriginal !== 'function') throw new Error('Operação de sincronização desconhecida.');
+                        if (item.metodo === 'remove') await metodoOriginal.call(referencia);
+                        else await metodoOriginal.call(referencia, clonarDadosOffline(item.valor));
+                        await offlineDelete('fila', item.id);
+                        sincronizadas++;
+                    } catch (erroGravacao) {
+                        if (!ehFalhaDeRede(erroGravacao)) {
+                            item.erro = String(erroGravacao.message || erroGravacao);
+                            await offlinePut('fila', item);
+                        }
+                        break;
+                    }
+                }
+                const filaRestante = (await offlineGetAll('fila') || []).filter(item => item.uid === uid);
+                await atualizarPainelOffline();
+                if (conflitoEncontrado) {
+                    const status = document.getElementById('offline-status');
+                    if (status) status.textContent = 'Sincronização pausada para proteger dados: há alterações diferentes no Firebase.';
+                } else if (filaRestante.length === 0) {
+                    const status = document.getElementById('offline-status');
+                    if (status) status.textContent = 'Tudo sincronizado. A cópia local está atualizada.';
+                    if (sincronizadas > 0 && typeof atualizarTudo === 'function') {
+                        try { await atualizarTudo(); } catch (erroAtualizacao) { console.warn('Atualização visual após sincronização:', erroAtualizacao); }
+                    }
+                }
+                if (mostrarResultado) {
+                    if (conflitoEncontrado) {
+                        alert('A sincronização foi pausada porque alguns dados foram alterados no Firebase enquanto este aparelho estava offline. Nenhum dado conflitante foi sobrescrito.');
+                    } else {
+                        alert(sincronizadas > 0 ? sincronizadas + ' alteração(ões) sincronizada(s) com sucesso.' : 'Não há alterações pendentes para sincronizar.');
+                    }
+                }
+                return filaRestante.length === 0;
+            } catch (erro) {
+                console.error('Connect Escolar: erro ao sincronizar fila offline:', erro);
+                const status = document.getElementById('offline-status');
+                if (status) status.textContent = 'Não foi possível sincronizar agora. As alterações continuam guardadas neste aparelho.';
+                if (mostrarResultado) alert('Não foi possível sincronizar. As alterações continuam guardadas neste aparelho. ' + (erro.message || erro));
+                return false;
+            } finally {
+                sincronizacaoOfflineEmAndamento = false;
+                await atualizarPainelOffline();
+            }
+        }
+
+        async function forcarSincronizacaoOffline() {
+            const uid = usuarioAtualOffline();
+            if (!uid) return;
+            const fila = (await offlineGetAll('fila') || []).filter(item => item.uid === uid);
+            if (!fila.length) return;
+            const confirmar = confirm(
+                'ATENÇÃO: existe conflito entre a cópia deste aparelho e o Firebase.\\n\\n' +
+                'Forçar o envio pode substituir alterações feitas em outro dispositivo.\\n' +
+                'Antes de continuar, faça um backup do Firebase.\\n\\n' +
+                'Deseja realmente forçar o envio das alterações deste aparelho?'
+            );
+            if (confirmar) await sincronizarFilaOffline(true, true);
+        }
+
+        async function iniciarModoOffline(user) {
+            if (!user || !user.uid) return;
+            atualizarPainelOffline();
+            if (!conectadoAoFirebase() || usuarioOfflineInicializado === user.uid) return;
+            usuarioOfflineInicializado = user.uid;
+            try {
+                await reconstruirFilaLocalOffline(user.uid);
+                await sincronizarFilaOffline(false, false);
+                const fila = (await offlineGetAll('fila') || []).filter(item => item.uid === user.uid);
+                if (!fila.length) {
+                    const prontos = await contarSnapshotsProntosOffline(user.uid);
+                    if (prontos !== CAMINHOS_BACKUP.length) await prepararDadosOffline(true);
+                }
+            } catch (erro) {
+                console.warn('Connect Escolar: inicialização offline não concluída:', erro);
+            }
+            await atualizarPainelOffline();
+        }
+
         function atualizarStatusConexao() {
             const status = document.getElementById('status-conexao');
             if (!status) return;
             const conectado = navigator.onLine && firebaseConectado;
             status.classList.toggle('is-online', conectado);
             status.classList.toggle('is-offline', !conectado);
-            status.innerHTML = '<span class="connection-dot"></span>' + (conectado ? 'Conectado ao banco' : (!navigator.onLine ? 'Sem internet' : 'Sem conexão com o banco'));
+            status.innerHTML = '<span class="connection-dot"></span>' +
+                (conectado ? 'Conectado ao banco' : (!navigator.onLine ? 'Sem internet' : 'Sem conexão com o banco'));
+            atualizarPainelOffline();
         }
-        window.addEventListener('online', atualizarStatusConexao);
+
+        // Leituras: usa o Firebase normalmente quando conectado e recorre à cópia local quando necessário.
+        referenciaFirebase.once = function(evento, callbackSucesso, callbackErro, contexto) {
+            const referencia = this;
+            const caminho = caminhoDaReferencia(referencia);
+            const ehInfo = caminho === '.info' || caminho.startsWith('.info/');
+            if (evento !== 'value' || ehInfo || !usuarioAtualOffline()) {
+                return onceFirebaseOriginal.apply(referencia, arguments);
+            }
+            const uid = usuarioAtualOffline();
+            const usarCacheLocal = async erroOriginal => {
+                const local = await obterValorCacheOffline(uid, caminho);
+                if (!local.encontrado) {
+                    const mensagem = 'Este aparelho ainda não tem uma cópia offline de "' + (caminho || 'dados') +
+                        '". Conecte-se à internet e use “Preparar/atualizar cópia local” na aba CADASTRO.';
+                    if (!avisoCacheAusenteExibido) {
+                        avisoCacheAusenteExibido = true;
+                        alert(mensagem);
+                    }
+                    if (typeof callbackErro === 'function') callbackErro.call(contexto || referencia, erroOriginal || new Error(mensagem));
+                    throw new Error(mensagem);
+                }
+                const snapshot = criarSnapshotOffline(local.valor, referencia);
+                if (typeof callbackSucesso === 'function') callbackSucesso.call(contexto || referencia, snapshot);
+                return snapshot;
+            };
+            if (!navigator.onLine || !firebaseConectado) {
+                return usarCacheLocal(new Error('O dispositivo está sem conexão com o Firebase.'));
+            }
+            return Promise.resolve(onceFirebaseOriginal.apply(referencia, arguments)).then(async snapshot => {
+                try { await guardarSnapshotOffline(uid, caminho, snapshot.val()); }
+                catch (erroCache) { console.warn('Não foi possível atualizar a cópia local:', erroCache); }
+                return snapshot;
+            }).catch(erro => {
+                if (ehFalhaDeRede(erro)) return usarCacheLocal(erro);
+                throw erro;
+            });
+        };
+
+        // Gravações: registra cada operação antes de enviá-la. Offline, ela fica na fila persistente.
+        async function executarGravacaoComFila(referencia, metodo, argumentos, original) {
+            const uid = usuarioAtualOffline();
+            if (!uid) return original.apply(referencia, argumentos);
+            const caminho = caminhoDaReferencia(referencia);
+            const valor = metodo === 'remove' ? null : clonarDadosOffline(argumentos[0]);
+            const base = await obterValorCacheOffline(uid, caminho);
+            let basesMulticaminho = null;
+            let podeAplicarOffline = base.encontrado;
+
+            if (!caminho && metodo === 'update') {
+                basesMulticaminho = {};
+                for (const subcaminho of Object.keys(valor || {})) {
+                    const baseFilha = await obterValorCacheOffline(uid, subcaminho);
+                    basesMulticaminho[subcaminho] = baseFilha.encontrado ? baseFilha.valor : null;
+                    if (!baseFilha.encontrado) podeAplicarOffline = false;
+                }
+            }
+
+            if (!conectadoAoFirebase() && !podeAplicarOffline) {
+                throw new Error('Para registrar offline, prepare primeiro a cópia local dos dados na aba CADASTRO.');
+            }
+
+            const item = {
+                uid: uid,
+                caminho: caminho,
+                metodo: metodo,
+                valor: valor,
+                baseDisponivel: base.encontrado && !!caminho,
+                baseValor: base.encontrado ? base.valor : null,
+                basesMulticaminho: basesMulticaminho,
+                cacheAplicado: false,
+                criadoEm: new Date().toISOString()
+            };
+            const id = await offlineAdd('fila', item);
+            item.id = id;
+            try {
+                const aplicado = await aplicarMutacaoCacheOffline(uid, caminho, metodo, valor);
+                item.cacheAplicado = aplicado || podeAplicarOffline;
+                await offlinePut('fila', item);
+            } catch (erroCache) {
+                await offlineDelete('fila', id);
+                throw erroCache;
+            }
+            await atualizarPainelOffline();
+
+            if (!conectadoAoFirebase()) {
+                return {__connectOfflineQueued:true, id:id};
+            }
+
+            operacoesFirebaseAtivas.add(id);
+            try {
+                const resultado = metodo === 'remove'
+                    ? await original.call(referencia)
+                    : await original.apply(referencia, argumentos);
+                await offlineDelete('fila', id);
+                return resultado;
+            } catch (erro) {
+                if (ehFalhaDeRede(erro)) {
+                    return {__connectOfflineQueued:true, id:id};
+                }
+                await offlineDelete('fila', id);
+                if (base.encontrado) {
+                    await aplicarMutacaoCacheOffline(uid, caminho, 'set', base.valor);
+                } else if (basesMulticaminho) {
+                    for (const [subcaminho, valorBase] of Object.entries(basesMulticaminho)) {
+                        await aplicarMutacaoCacheOffline(uid, subcaminho, 'set', valorBase);
+                    }
+                }
+                throw erro;
+            } finally {
+                operacoesFirebaseAtivas.delete(id);
+                atualizarPainelOffline();
+            }
+        }
+
+        ['set', 'update', 'remove'].forEach(metodo => {
+            const original = metodosFirebaseOriginais[metodo];
+            if (typeof original !== 'function' || original.__connectOfflineMonitorado) return;
+            const monitorado = function(...argumentos) {
+                const promessa = executarGravacaoComFila(this, metodo, argumentos, original);
+                return acompanharGravacao(promessa);
+            };
+            monitorado.__connectOfflineMonitorado = true;
+            referenciaFirebase[metodo] = monitorado;
+        });
+
+        async function obterCacheOfflineCompleto(uid) {
+            const dados = {};
+            for (const caminho of CAMINHOS_BACKUP) {
+                const local = await obterValorCacheOffline(uid, caminho);
+                if (!local.encontrado) return {pronto:false, dados:null};
+                dados[caminho] = local.valor;
+            }
+            return {pronto:true, dados:dados};
+        }
+
+        window.addEventListener('online', () => {
+            atualizarStatusConexao();
+            if (auth.currentUser) iniciarModoOffline(auth.currentUser);
+        });
         window.addEventListener('offline', atualizarStatusConexao);
+        atualizarHorarioUltimoSalvamento();
 
         // Restaura automaticamente a sessão segura do usuário autenticado.
         auth.onAuthStateChanged(user => {
@@ -650,6 +1262,7 @@
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('app').classList.remove('hidden');
                 carregarPreferenciaSomSalvamento();
+                iniciarModoOffline(user);
             } else {
                 document.getElementById('app').classList.add('hidden');
             }
@@ -658,6 +1271,7 @@
         db.ref('.info/connected').on('value', snapshot => {
             firebaseConectado = snapshot.val() === true;
             atualizarStatusConexao();
+            if (firebaseConectado && auth.currentUser) iniciarModoOffline(auth.currentUser);
         });
         atualizarStatusConexao();
         
@@ -798,7 +1412,7 @@
                     'auth/wrong-password': 'Senha incorreta. Confira os dados e tente novamente.',
                     'auth/invalid-credential': 'E-mail ou senha incorretos.',
                     'auth/too-many-requests': 'Muitas tentativas. Aguarde um pouco e tente novamente.',
-                    'auth/network-request-failed': 'Falha de conexão. Verifique sua internet.'
+                    'auth/network-request-failed': 'Sem conexão. Para usar offline, entre com sua conta neste aparelho enquanto estiver conectado e prepare a cópia local na aba CADASTRO.'
                 };
                 erro.textContent = mensagens[error.code] || 'Não foi possível entrar. Verifique o cadastro e tente novamente.';
             } finally {
@@ -841,6 +1455,14 @@
         }
 
         async function sairDaConta() {
+            const uid = usuarioAtualOffline();
+            if (uid) {
+                const pendentes = (await offlineGetAll('fila') || []).filter(item => item.uid === uid);
+                if (pendentes.length) {
+                    alert('Há ' + pendentes.length + ' alteração(ões) ainda não sincronizada(s). Conecte-se e sincronize antes de sair da conta para não interromper o trabalho offline.');
+                    return;
+                }
+            }
             if (!confirm('Deseja realmente sair do Connect Escolar?')) return;
             try {
                 await auth.signOut();
@@ -1847,6 +2469,19 @@
         ];
 
         async function montarObjetoBackup() {
+            const uid = usuarioAtualOffline();
+            if (!conectadoAoFirebase()) {
+                if (!uid) throw new Error('Entre na conta já autenticada neste aparelho para acessar o backup offline.');
+                const cache = await obterCacheOfflineCompleto(uid);
+                if (!cache.pronto) throw new Error('A cópia offline ainda não está completa. Conecte-se e prepare os dados pela aba CADASTRO.');
+                return {
+                    aplicativo: 'Connect Escolar',
+                    formato: 'connect-escolar-backup',
+                    versaoFormato: 1,
+                    geradoEm: new Date().toISOString(),
+                    caminhos: cache.dados
+                };
+            }
             const leituras = await Promise.all(
                 CAMINHOS_BACKUP.map(async caminho => {
                     const snapshot = await db.ref(caminho).once('value');
