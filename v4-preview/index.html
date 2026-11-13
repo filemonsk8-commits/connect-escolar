@@ -1013,14 +1013,28 @@
                         break;
                     }
                     const referencia = db.ref(item.caminho || '');
-                    if (!forcar && item.baseDisponivel && item.caminho) {
-                        const remoto = await onceFirebaseOriginal.call(referencia, 'value');
-                        if (!dadosIguaisOffline(remoto.val(), item.baseValor)) {
-                            item.conflito = true;
-                            await offlinePut('fila', item);
-                            conflitoEncontrado = true;
-                            break;
+                    let conflitoDestaOperacao = false;
+                    if (!forcar && item.metodo === 'update' && !item.caminho && item.basesMulticaminho) {
+                        for (const [subcaminho, valorBase] of Object.entries(item.basesMulticaminho)) {
+                            if (!item.basesMulticaminhoDisponiveis || !item.basesMulticaminhoDisponiveis[subcaminho]) {
+                                conflitoDestaOperacao = true;
+                                break;
+                            }
+                            const remotoFilho = await onceFirebaseOriginal.call(db.ref(subcaminho), 'value');
+                            if (!dadosIguaisOffline(remotoFilho.val(), valorBase)) {
+                                conflitoDestaOperacao = true;
+                                break;
+                            }
                         }
+                    } else if (!forcar && item.baseDisponivel && item.caminho) {
+                        const remoto = await onceFirebaseOriginal.call(referencia, 'value');
+                        if (!dadosIguaisOffline(remoto.val(), item.baseValor)) conflitoDestaOperacao = true;
+                    }
+                    if (conflitoDestaOperacao) {
+                        item.conflito = true;
+                        await offlinePut('fila', item);
+                        conflitoEncontrado = true;
+                        break;
                     }
                     try {
                         const metodoOriginal = metodosFirebaseOriginais[item.metodo];
@@ -1037,7 +1051,14 @@
                         break;
                     }
                 }
-                const filaRestante = (await offlineGetAll('fila') || []).filter(item => item.uid === uid);
+                let filaRestante = (await offlineGetAll('fila') || []).filter(item => item.uid === uid);
+                if (!conflitoEncontrado && filaRestante.length === 0 && sincronizadas > 0) {
+                    for (const caminho of CAMINHOS_BACKUP) {
+                        const snapshotAtual = await onceFirebaseOriginal.call(db.ref(caminho), 'value');
+                        await guardarSnapshotOffline(uid, caminho, snapshotAtual.val());
+                    }
+                    filaRestante = (await offlineGetAll('fila') || []).filter(item => item.uid === uid);
+                }
                 await atualizarPainelOffline();
                 if (conflitoEncontrado) {
                     const status = document.getElementById('offline-status');
@@ -1086,13 +1107,15 @@
         async function iniciarModoOffline(user) {
             if (!user || !user.uid) return;
             atualizarPainelOffline();
-            if (!conectadoAoFirebase() || usuarioOfflineInicializado === user.uid) return;
+            if (!conectadoAoFirebase()) return;
+            const primeiraInicializacao = usuarioOfflineInicializado !== user.uid;
             usuarioOfflineInicializado = user.uid;
             try {
                 await reconstruirFilaLocalOffline(user.uid);
+                // Executa em toda reconexão, mesmo que o usuário continue na mesma sessão.
                 await sincronizarFilaOffline(false, false);
                 const fila = (await offlineGetAll('fila') || []).filter(item => item.uid === user.uid);
-                if (!fila.length) {
+                if (primeiraInicializacao && !fila.length) {
                     const prontos = await contarSnapshotsProntosOffline(user.uid);
                     if (prontos !== CAMINHOS_BACKUP.length) await prepararDadosOffline(true);
                 }
@@ -1161,13 +1184,26 @@
             let basesMulticaminho = null;
             let podeAplicarOffline = base.encontrado;
 
+            let basesMulticaminhoDisponiveis = null;
             if (!caminho && metodo === 'update') {
                 basesMulticaminho = {};
+                basesMulticaminhoDisponiveis = {};
                 for (const subcaminho of Object.keys(valor || {})) {
-                    const baseFilha = await obterValorCacheOffline(uid, subcaminho);
+                    let baseFilha = await obterValorCacheOffline(uid, subcaminho);
+                    if (!baseFilha.encontrado && conectadoAoFirebase()) {
+                        const snapshotRemoto = await onceFirebaseOriginal.call(db.ref(subcaminho), 'value');
+                        await guardarSnapshotOffline(uid, subcaminho, snapshotRemoto.val());
+                        baseFilha = await obterValorCacheOffline(uid, subcaminho);
+                    }
                     basesMulticaminho[subcaminho] = baseFilha.encontrado ? baseFilha.valor : null;
+                    basesMulticaminhoDisponiveis[subcaminho] = !!baseFilha.encontrado;
                     if (!baseFilha.encontrado) podeAplicarOffline = false;
                 }
+            } else if (caminho && !base.encontrado && conectadoAoFirebase()) {
+                const snapshotRemoto = await onceFirebaseOriginal.call(referencia, 'value');
+                await guardarSnapshotOffline(uid, caminho, snapshotRemoto.val());
+                base = await obterValorCacheOffline(uid, caminho);
+                podeAplicarOffline = base.encontrado;
             }
 
             if (!conectadoAoFirebase() && !podeAplicarOffline) {
@@ -1182,6 +1218,7 @@
                 baseDisponivel: base.encontrado && !!caminho,
                 baseValor: base.encontrado ? base.valor : null,
                 basesMulticaminho: basesMulticaminho,
+                basesMulticaminhoDisponiveis: basesMulticaminhoDisponiveis,
                 cacheAplicado: false,
                 criadoEm: new Date().toISOString()
             };
@@ -1224,6 +1261,7 @@
             } finally {
                 operacoesFirebaseAtivas.delete(id);
                 atualizarPainelOffline();
+                if (conectadoAoFirebase()) setTimeout(() => sincronizarFilaOffline(false, false), 0);
             }
         }
 
