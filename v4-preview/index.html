@@ -1020,7 +1020,12 @@
                 await atualizarPainelOffline();
                 return false;
             }
-            if (sincronizacaoOfflineEmAndamento) return false;
+            if (sincronizacaoOfflineEmAndamento) {
+                const status = document.getElementById('offline-status');
+                if (status) status.textContent = 'Já existe uma tentativa de sincronização em andamento. Aguarde a resposta antes de tentar novamente.';
+                if (mostrarResultado) alert('A sincronização anterior ainda está em andamento. Aguarde a resposta; suas alterações continuam guardadas neste aparelho.');
+                return false;
+            }
             sincronizacaoOfflineEmAndamento = true;
             let sincronizadas = 0;
             let conflitoEncontrado = false;
