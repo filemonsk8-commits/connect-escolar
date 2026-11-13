@@ -342,9 +342,9 @@
         .panel-audit-state.is-info { background:#eff6ff; color:#1d4ed8; }
         .panel-audit-summary { margin-bottom:10px; padding:12px 14px; border:1px solid #bbf7d0; border-radius:10px; background:#f0fdf4; color:#166534; font-size:.82rem; font-weight:700; }
         .panel-audit-summary.has-attention { border-color:#fed7aa; background:#fff7ed; color:#9a3412; }
-        .panel-shortcuts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-top:24px; }
+        .panel-shortcuts { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:9px; margin-top:24px; }
         .panel-shortcuts .btn-main { margin:0; min-height:42px; padding:10px; font-size:.78rem; }
-        @media(max-width:1000px) { .panel-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+        @media(max-width:1000px) { .panel-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .panel-shortcuts { grid-template-columns:repeat(3,minmax(0,1fr)); } }
         @media(max-width:680px) {
             .panel-hero { align-items:flex-start; flex-direction:column; }
             .panel-hero h2 { font-size:1.2rem; }
@@ -397,7 +397,7 @@
         .calendar-event-chip.tipo-reuniao { border-left-color:#7c3aed; background:#f5f3ff; }
         .calendar-event-chip.tipo-compromisso { border-left-color:#0f766e; background:#f0fdfa; }
         .calendar-more-events { margin:4px 0 0 3px; color:#64748b; font-size:.62rem; }
-        .calendar-week-view .calendar-day-cell { min-height:220px; }
+        .calendar-grid.calendar-week-view .calendar-day-cell { min-height:220px; }
         .calendar-day-agenda { margin-top:20px; }
         .calendar-day-agenda h3 { margin:0 0 10px; color:#17243c; font-size:.98rem; }
         .calendar-agenda-item { display:grid; grid-template-columns:82px minmax(0,1fr) auto; gap:12px; align-items:start; padding:12px; margin-bottom:8px; border:1px solid var(--line); border-radius:10px; background:#fff; }
@@ -415,7 +415,7 @@
         .calendar-type-dot.tipo-compromisso { background:#0f766e; }
         @media(max-width:900px) {
             .calendar-day-cell { min-height:100px; padding:4px; }
-            .calendar-week-view .calendar-day-cell { min-height:190px; }
+            .calendar-grid.calendar-week-view .calendar-day-cell { min-height:190px; }
         }
         @media(max-width:680px) {
             .calendar-hero { flex-direction:column; }
@@ -431,8 +431,8 @@
             .calendar-day-number { width:23px; height:23px; font-size:.68rem; }
             .calendar-weekday { padding:8px 2px; font-size:.62rem; }
             .calendar-event-chip { padding:3px 2px; font-size:.55rem; border-left-width:2px; }
-            .calendar-week-view .calendar-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-            .calendar-week-view .calendar-day-cell { min-height:120px; }
+            .calendar-grid.calendar-week-view { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .calendar-grid.calendar-week-view .calendar-day-cell { min-height:120px; }
             .calendar-agenda-item { grid-template-columns:57px minmax(0,1fr); gap:8px; padding:10px; }
             .calendar-agenda-edit { grid-column:2; justify-self:start; }
             .calendar-form-actions { flex-direction:column; }
@@ -2210,12 +2210,14 @@
                 calendarioDataAtual.setDate(calendarioDataAtual.getDate() + (7 * direcao));
                 calendarioDataSelecionada = calendarioDataChave(calendarioDataAtual);
             }
+            document.getElementById('cal-event-data').value = calendarioDataSelecionada;
             renderizarCalendarioEscolar();
         }
 
         function irParaHojeCalendario() {
             calendarioDataAtual = new Date();
             calendarioDataSelecionada = calendarioDataChave(calendarioDataAtual);
+            document.getElementById('cal-event-data').value = calendarioDataSelecionada;
             renderizarCalendarioEscolar();
         }
 
@@ -2286,6 +2288,9 @@
                 return;
             }
             calendarioEditandoId = id;
+            calendarioDataSelecionada = evento.data;
+            calendarioDataAtual = objetoDataCalendario(evento.data);
+            renderizarCalendarioEscolar();
             document.getElementById('cal-event-titulo').value = evento.titulo || '';
             document.getElementById('cal-event-tipo').value = evento.tipo || 'compromisso';
             document.getElementById('cal-event-data').value = evento.data || calendarioDataSelecionada;
