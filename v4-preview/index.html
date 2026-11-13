@@ -515,7 +515,7 @@
                         <p id="offline-pendencias" class="offline-pending">Nenhuma informação de sincronização disponível.</p>
                         <div class="offline-actions">
                             <button id="btn-preparar-offline" onclick="prepararDadosOffline()" class="btn-main btn-blue" style="margin-top:0;">Preparar / atualizar cópia local</button>
-                            <button id="btn-sincronizar-offline" onclick="sincronizarFilaOffline(true)" class="btn-main btn-orange" style="margin-top:0;">Sincronizar pendências</button>
+                            <button id="btn-sincronizar-offline" onclick="window.iniciarSincronizacaoManualOffline()" class="btn-main btn-orange" style="margin-top:0;">Sincronizar pendências</button>
                             <button id="btn-forcar-sincronizacao" onclick="forcarSincronizacaoOffline()" class="btn-main btn-red" style="display:none; margin-top:0;">Forçar envio após conferir</button>
                         </div>
                         <p class="offline-warning">Faça a preparação separadamente no computador e no celular, enquanto estiver conectado. O primeiro login neste aparelho precisa ser feito com internet. Os dados offline ficam armazenados neste navegador; evite usar um perfil compartilhado ou computador público.</p>
@@ -1115,6 +1115,27 @@
                 await atualizarPainelOffline();
             }
         }
+
+        // Entrada explícita do botão: mostra resposta imediata e registra qualquer falha.
+        window.iniciarSincronizacaoManualOffline = async function() {
+            const status = document.getElementById('offline-status');
+            if (status) status.textContent = 'Solicitação de sincronização recebida. Verificando conexão e fila…';
+            const botao = document.getElementById('btn-sincronizar-offline');
+            if (botao) botao.disabled = true;
+            try {
+                const resultado = await sincronizarFilaOffline(true, false);
+                if (resultado && status) status.textContent = 'Tudo sincronizado. A cópia local está atualizada.';
+                return resultado;
+            } catch (erro) {
+                console.error('Falha ao iniciar sincronização manual:', erro);
+                if (status) status.textContent = 'Erro ao iniciar sincronização: ' + String(erro && erro.message || erro).slice(0,160);
+                alert('Não foi possível iniciar a sincronização. As alterações permanecem guardadas neste aparelho. ' + String(erro && erro.message || erro));
+                return false;
+            } finally {
+                if (botao) botao.disabled = false;
+                await atualizarPainelOffline();
+            }
+        };
 
         async function forcarSincronizacaoOffline() {
             const uid = usuarioAtualOffline();
