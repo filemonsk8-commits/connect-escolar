@@ -1633,7 +1633,8 @@
                         Object.values(dadosDia || {}).forEach(registroAluno => {
                             if (!registroAluno || typeof registroAluno !== 'object') return;
                             Object.entries(registroAluno).forEach(([chave, valor]) => {
-                                if (chave === 'placeholder_controle' || valor === null || valor === undefined || String(valor).trim() === '') return;
+                                if (!['1','2','3','4','5'].includes(chave) ||
+                                    valor === null || valor === undefined || String(valor).trim() === '') return;
                                 const numero = Number(String(valor).replace(',', '.'));
                                 if (Number.isFinite(numero)) total++;
                             });
@@ -1805,10 +1806,15 @@
                 ];
 
                 const quantidadeProblemas = verificacoes.filter(item => item.problema).length;
+                const quantidadeInformativos = verificacoes.filter(item => item.informativo).length;
                 const auditoriaEl = document.getElementById('painel-auditoria');
                 let auditoriaHtml = quantidadeProblemas
-                    ? '<div class="panel-audit-summary has-attention">A conferência encontrou ' + quantidadeProblemas + ' ponto(s) que merecem revisão. Isso não significa, por si só, perda de dados.</div>'
-                    : '<div class="panel-audit-summary">Conferência técnica concluída: nenhuma inconsistência estrutural foi encontrada nos itens verificados.</div>';
+                    ? '<div class="panel-audit-summary has-attention">A conferência encontrou ' + quantidadeProblemas + ' ponto(s) com valores que merecem revisão' +
+                        (quantidadeInformativos ? ' e ' + quantidadeInformativos + ' observação(ões) histórica(s).' : '.') +
+                        ' Isso não significa, por si só, perda de dados.</div>'
+                    : quantidadeInformativos
+                        ? '<div class="panel-audit-summary">Nenhum valor inválido foi identificado nos itens verificados. Há ' + quantidadeInformativos + ' observação(ões) informativa(s) sobre campos extras ou históricos preservados.</div>'
+                        : '<div class="panel-audit-summary">Conferência técnica concluída: nenhuma inconsistência estrutural foi encontrada nos itens verificados.</div>';
 
                 auditoriaHtml += '<table class="panel-audit-table"><thead><tr><th>Verificação</th><th>Resultado</th><th>Situação</th></tr></thead><tbody>';
                 verificacoes.forEach(item => {
