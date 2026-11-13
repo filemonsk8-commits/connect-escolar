@@ -339,6 +339,7 @@
         .panel-audit-table tr:last-child td { border-bottom:0; }
         .panel-audit-state { display:inline-block; padding:4px 8px; border-radius:999px; background:#ecfdf5; color:#047857; font-size:.7rem; font-weight:800; white-space:nowrap; }
         .panel-audit-state.is-attention { background:#fff7ed; color:#b45309; }
+        .panel-audit-state.is-info { background:#eff6ff; color:#1d4ed8; }
         .panel-audit-summary { margin-bottom:10px; padding:12px 14px; border:1px solid #bbf7d0; border-radius:10px; background:#f0fdf4; color:#166534; font-size:.82rem; font-weight:700; }
         .panel-audit-summary.has-attention { border-color:#fed7aa; background:#fff7ed; color:#9a3412; }
         .panel-shortcuts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-top:24px; }
@@ -1708,8 +1709,9 @@
                 const nomesCadastrados = new Set(lista.map(item => normalizarChavePainel(item.nome)));
                 let turmasSemLista = 0;
                 let diariosIncompletos = 0;
-                let notasComFormatoInvalido = 0;
-                const chavesForaDoCadastro = new Set();
+                let notasComValorInvalido = 0;
+                const camposAdicionaisNotas = new Map();
+                const referenciasForaDoCadastro = new Map();
 
                 const localizarDadosTurma = (raiz, nome) => {
                     const chaveDireta = limparT(nome);
@@ -1742,11 +1744,13 @@
                             if (!registroAluno || typeof registroAluno !== 'object') return;
                             Object.entries(registroAluno).forEach(([atividade, valor]) => {
                                 if (atividade === 'placeholder_controle') return;
-                                if (!['1','2','3','4','5'].includes(atividade) ||
-                                    valor === null || valor === undefined || String(valor).trim() === '' ||
-                                    !Number.isFinite(Number(String(valor).replace(',', '.')))) {
-                                    notasComFormatoInvalido++;
+                                if (!['1','2','3','4','5'].includes(atividade)) {
+                                    camposAdicionaisNotas.set(atividade, (camposAdicionaisNotas.get(atividade) || 0) + 1);
+                                    return;
                                 }
+                                const textoValor = String(valor ?? '').trim();
+                                const numeroValor = Number(textoValor.replace(',', '.'));
+                                if (!textoValor || !Number.isFinite(numeroValor)) notasComValorInvalido++;
                             });
                         });
                     });
@@ -1759,10 +1763,19 @@
                 ].forEach(fonte => {
                     Object.keys(fonte.dados || {}).forEach(chave => {
                         if (!nomesCadastrados.has(normalizarChavePainel(chave))) {
-                            chavesForaDoCadastro.add(fonte.nome + ': ' + chave);
+                            if (!referenciasForaDoCadastro.has(chave)) referenciasForaDoCadastro.set(chave, new Set());
+                            referenciasForaDoCadastro.get(chave).add(fonte.nome);
                         }
                     });
                 });
+
+                const resumoCamposAdicionais = Array.from(camposAdicionaisNotas.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([campo, quantidade]) => campo + ' (' + quantidade + ')')
+                    .join(', ');
+                const resumoTurmasForaCadastro = Array.from(referenciasForaDoCadastro.entries())
+                    .map(([nome, fontes]) => nome + ' — ' + Array.from(fontes).join(', '))
+                    .join('; ');
 
                 const somaAlunosTurmas = linhas.reduce((soma, linha) => soma + linha.alunos, 0);
                 const somaDiariosTurmas = linhas.reduce((soma, linha) => soma + linha.diarios, 0);
@@ -1780,12 +1793,15 @@
                     {rotulo:'Registros do Diário incompletos', detalhe:diariosIncompletos
                         ? diariosIncompletos + ' registro(s) sem data válida ou conteúdo preenchido no bimestre selecionado.'
                         : 'Os registros do Diário do bimestre possuem data e conteúdo.', problema:diariosIncompletos > 0},
-                    {rotulo:'Lançamentos de notas com formato irregular', detalhe:notasComFormatoInvalido
-                        ? notasComFormatoInvalido + ' lançamento(s) precisam ser revisados por apresentarem estrutura ou valor inesperado.'
-                        : 'Os lançamentos encontrados seguem a estrutura esperada de atividades 1 a 5.', problema:notasComFormatoInvalido > 0},
-                    {rotulo:'Dados de turmas fora do cadastro', detalhe:chavesForaDoCadastro.size
-                        ? chavesForaDoCadastro.size + ' referência(s) de turma em listas, diários ou notas não aparecem no cadastro atual.'
-                        : 'Não foram encontradas referências a turmas ausentes do cadastro.', problema:chavesForaDoCadastro.size > 0}
+                    {rotulo:'Campos adicionais nos registros de notas', detalhe:camposAdicionaisNotas.size
+                        ? Array.from(camposAdicionaisNotas.values()).reduce((a, b) => a + b, 0) + ' campo(s) fora das chaves de atividade 1 a 5. Chaves encontradas: ' + resumoCamposAdicionais + '. Podem ser campos de versões anteriores; não foram alterados.'
+                        : 'Não foram encontrados campos adicionais fora das atividades 1 a 5.', informativo:camposAdicionaisNotas.size > 0},
+                    {rotulo:'Valores não numéricos em atividades 1 a 5', detalhe:notasComValorInvalido
+                        ? notasComValorInvalido + ' valor(es) precisam de conferência porque não são números reconhecíveis.'
+                        : 'Os valores das atividades 1 a 5 possuem formato numérico.', problema:notasComValorInvalido > 0},
+                    {rotulo:'Histórico de turmas fora do cadastro atual', detalhe:referenciasForaDoCadastro.size
+                        ? referenciasForaDoCadastro.size + ' turma(s) têm dados preservados fora da lista atual: ' + resumoTurmasForaCadastro + '. Isso pode ocorrer após excluir ou renomear uma turma; os dados permanecem no banco.'
+                        : 'Não foram encontradas referências históricas fora do cadastro atual.', informativo:referenciasForaDoCadastro.size > 0}
                 ];
 
                 const quantidadeProblemas = verificacoes.filter(item => item.problema).length;
@@ -1796,9 +1812,11 @@
 
                 auditoriaHtml += '<table class="panel-audit-table"><thead><tr><th>Verificação</th><th>Resultado</th><th>Situação</th></tr></thead><tbody>';
                 verificacoes.forEach(item => {
+                    const classeStatus = item.problema ? 'is-attention' : (item.informativo ? 'is-info' : '');
+                    const textoStatus = item.problema ? 'Revisar' : (item.informativo ? 'Informativo' : 'OK');
                     auditoriaHtml += '<tr><td><strong>' + escapeHTML(item.rotulo) + '</strong></td><td>' +
                         escapeHTML(item.detalhe) + '</td><td><span class="panel-audit-state ' +
-                        (item.problema ? 'is-attention' : '') + '">' + (item.problema ? 'Revisar' : 'OK') + '</span></td></tr>';
+                        classeStatus + '">' + textoStatus + '</span></td></tr>';
                 });
                 auditoriaHtml += '</tbody></table>';
                 auditoriaEl.innerHTML = auditoriaHtml;
