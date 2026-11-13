@@ -306,6 +306,45 @@
             body.printing-pedagogical-report .ped-report-grades td { font-size:8pt !important; padding:5px 4px !important; }
             body.printing-pedagogical-report .report-table { border-radius:0; }
         }
+
+        /* Painel geral: consultas agregadas, sem gravação de dados. */
+        .panel-hero { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:6px 0 18px; border-bottom:1px solid var(--line); }
+        .panel-kicker { margin:0 0 6px; color:#2563eb; font-size:.7rem; font-weight:800; letter-spacing:.12em; }
+        .panel-hero h2 { margin:0; color:#17243c; font-size:1.45rem; letter-spacing:-.4px; }
+        .panel-subtitle { margin:6px 0 0; color:#64748b; font-size:.84rem; }
+        .panel-refresh { width:auto; min-width:150px; margin:0; padding:11px 15px; }
+        .panel-status { margin:12px 0; color:#64748b; font-size:.76rem; }
+        .panel-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:16px 0 24px; }
+        .panel-stat { min-width:0; padding:17px; border:1px solid #e3eaf4; border-radius:14px; background:linear-gradient(160deg,#fff,#f8fbff); box-shadow:0 4px 14px rgba(15,23,42,.035); }
+        .panel-stat span { display:block; color:#64748b; font-size:.74rem; font-weight:700; line-height:1.35; }
+        .panel-stat strong { display:block; margin-top:8px; color:#17243c; font-size:1.8rem; line-height:1; letter-spacing:-.5px; }
+        .panel-section { margin:22px 0; }
+        .panel-section h3 { margin:0 0 11px; color:#17243c; font-size:1rem; }
+        .panel-table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:11px; }
+        .panel-table { width:100%; min-width:620px; border-collapse:collapse; background:#fff; }
+        .panel-table th,.panel-table td { padding:11px 12px; border-bottom:1px solid var(--line); text-align:left; font-size:.78rem; }
+        .panel-table th { background:#f1f5fb; color:#475569; font-size:.7rem; text-transform:uppercase; letter-spacing:.035em; }
+        .panel-table tr:last-child td { border-bottom:0; }
+        .panel-table td.num { text-align:center; font-variant-numeric:tabular-nums; }
+        .panel-empty { padding:14px; color:#64748b; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:9px; font-size:.82rem; }
+        .panel-recent-item { display:grid; grid-template-columns:105px minmax(0,1fr); gap:12px; padding:12px 3px; border-bottom:1px solid var(--line); }
+        .panel-recent-item:last-child { border-bottom:0; }
+        .panel-recent-date { color:#2563eb; font-size:.75rem; font-weight:800; }
+        .panel-recent-class { color:#17243c; font-size:.8rem; font-weight:800; margin-bottom:4px; }
+        .panel-recent-content { color:#64748b; font-size:.79rem; line-height:1.45; overflow-wrap:anywhere; }
+        .panel-shortcuts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-top:24px; }
+        .panel-shortcuts .btn-main { margin:0; min-height:42px; padding:10px; font-size:.78rem; }
+        @media(max-width:1000px) { .panel-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+        @media(max-width:680px) {
+            .panel-hero { align-items:flex-start; flex-direction:column; }
+            .panel-hero h2 { font-size:1.2rem; }
+            .panel-refresh { width:100%; }
+            .panel-stats { gap:8px; }
+            .panel-stat { padding:13px; }
+            .panel-stat strong { font-size:1.55rem; }
+            .panel-shortcuts { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .panel-recent-item { grid-template-columns:82px minmax(0,1fr); gap:8px; }
+        }
 </style>
 </head>
 <body>
@@ -337,7 +376,8 @@
                 <div class="app-nav-mark">CE</div>
                 <div><strong>Connect Escolar</strong><small>V4.3 Professional</small></div>
             </div>
-            <button class="tab-btn active" onclick="aba('v')">VISTOS</button>
+            <button class="tab-btn active" onclick="aba('home')">PAINEL GERAL</button>
+            <button class="tab-btn" onclick="aba('v')">VISTOS</button>
             <button class="tab-btn" onclick="aba('ag')">HORÁRIO</button>
             <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
             <button class="tab-btn" onclick="aba('rd')">RELATÓRIO DIÁRIO</button>
@@ -374,7 +414,42 @@
         </header>
 
         <div class="container">
-            <div id="aba-v" class="card">
+            <div id="aba-home" class="card">
+                <div class="panel-hero">
+                    <div>
+                        <p class="panel-kicker">CONNECT ESCOLAR · VISÃO GERAL</p>
+                        <h2>Painel Geral do Professor</h2>
+                        <p id="painel-periodo" class="panel-subtitle">Resumo das suas turmas e registros.</p>
+                    </div>
+                    <button type="button" class="btn-main btn-blue no-print panel-refresh" onclick="carregarPainelGeral()">Atualizar painel</button>
+                </div>
+                <div id="painel-status" class="panel-status" role="status">Carregando informações...</div>
+                <div class="panel-stats">
+                    <div class="panel-stat"><span>Turmas cadastradas</span><strong id="painel-total-turmas">—</strong></div>
+                    <div class="panel-stat"><span>Estudantes cadastrados</span><strong id="painel-total-alunos">—</strong></div>
+                    <div class="panel-stat"><span>Registros no Diário</span><strong id="painel-total-diarios">—</strong></div>
+                    <div class="panel-stat"><span>Notas lançadas</span><strong id="painel-total-notas">—</strong></div>
+                </div>
+                <section class="panel-section">
+                    <h3>Resumo por turma</h3>
+                    <div id="painel-tabela-turmas" class="panel-table-wrap">
+                        <div class="panel-empty">Preparando o resumo...</div>
+                    </div>
+                </section>
+                <section class="panel-section">
+                    <h3>Últimos registros do Diário</h3>
+                    <div id="painel-registros-recentes">
+                        <div class="panel-empty">Preparando os registros...</div>
+                    </div>
+                </section>
+                <div class="panel-shortcuts no-print">
+                    <button type="button" class="btn-main btn-blue" onclick="aba('v')">Abrir Vistos</button>
+                    <button type="button" class="btn-main btn-blue" onclick="aba('d')">Abrir Diário</button>
+                    <button type="button" class="btn-main btn-blue" onclick="aba('l')">Fechamento</button>
+                    <button type="button" class="btn-main btn-blue" onclick="aba('cad')">Gerenciar turmas</button>
+                </div>
+            </div>
+            <div id="aba-v" class="card hidden">
                 <div id="aviso-data-incorreta" class="alerta-bloqueio hidden">⚠️ Data incorreta - Selecione ou abra esta data pelo histórico abaixo para editar!</div>
                 <div id="header-inputs" style="display:flex; overflow-x:auto; padding-bottom:10px; margin-bottom: 10px;" class="no-print"></div>
                 <div id="lista-container">Escolha a turma acima...</div>
@@ -1416,6 +1491,8 @@
                 try { await popularMenus(); }
                 catch (erro) { console.warn('Connect Escolar: não foi possível carregar as turmas:', erro); }
                 iniciarModoOffline(user);
+                try { await carregarPainelGeral(); }
+                catch (erroPainel) { console.warn('Connect Escolar: painel inicial não carregado:', erroPainel); }
             } else {
                 document.getElementById('app').classList.add('hidden');
             }
@@ -1495,6 +1572,144 @@
             if (valorAnterior) st.value = valorAnterior;
         }
 
+
+        async function carregarPainelGeral() {
+            const periodo = document.getElementById('bimestre');
+            const resumoPeriodo = document.getElementById('painel-periodo');
+            const status = document.getElementById('painel-status');
+            const tabela = document.getElementById('painel-tabela-turmas');
+            const recentes = document.getElementById('painel-registros-recentes');
+            if (!periodo || !tabela || !recentes) return;
+
+            const bimestre = periodo.value;
+            const nomeBimestre = periodo.options[periodo.selectedIndex]?.textContent || bimestre;
+            resumoPeriodo.textContent = 'Resumo de todas as turmas · ' + nomeBimestre;
+            status.textContent = 'Atualizando informações...';
+
+            try {
+                // Todas as leituras usam caminhos que já fazem parte do backup e da cópia offline.
+                const [sCad, sTurmas, sDiario, sVistos] = await Promise.all([
+                    db.ref('cadastros_turmas').once('value'),
+                    db.ref('turmas').once('value'),
+                    db.ref('diario').once('value'),
+                    db.ref('vistos').once('value')
+                ]);
+
+                const cadastros = sCad.val() || {};
+                const alunosPorTurma = sTurmas.val() || {};
+                const diarioPorTurma = sDiario.val() || {};
+                const vistosPorTurma = sVistos.val() || {};
+
+                const lista = Object.values(cadastros)
+                    .filter(item => item && item.nome)
+                    .sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0));
+
+                const contarAlunos = valor => {
+                    if (Array.isArray(valor)) return valor.filter(nome => String(nome || '').trim()).length;
+                    if (valor && typeof valor === 'object') return Object.values(valor).filter(nome => String(nome || '').trim()).length;
+                    return 0;
+                };
+
+                const contarNotas = dadosPeriodo => {
+                    let total = 0;
+                    Object.values(dadosPeriodo || {}).forEach(dadosDia => {
+                        Object.values(dadosDia || {}).forEach(registroAluno => {
+                            if (!registroAluno || typeof registroAluno !== 'object') return;
+                            Object.entries(registroAluno).forEach(([chave, valor]) => {
+                                if (chave === 'placeholder_controle' || valor === null || valor === undefined || String(valor).trim() === '') return;
+                                const numero = Number(String(valor).replace(',', '.'));
+                                if (Number.isFinite(numero)) total++;
+                            });
+                        });
+                    });
+                    return total;
+                };
+
+                const linhas = [];
+                const todosRegistros = [];
+                let totalAlunos = 0;
+                let totalDiarios = 0;
+                let totalNotas = 0;
+
+                lista.forEach(item => {
+                    const nome = String(item.nome);
+                    const chave = limparT(nome);
+                    const alunos = alunosPorTurma[chave] ?? alunosPorTurma[nome] ?? [];
+                    const diarios = diarioPorTurma[chave]?.[bimestre] ?? diarioPorTurma[nome]?.[bimestre] ?? {};
+                    const vistos = vistosPorTurma[chave]?.[bimestre] ?? vistosPorTurma[nome]?.[bimestre] ?? {};
+                    const quantidadeAlunos = contarAlunos(alunos);
+                    const quantidadeDiarios = Object.keys(diarios || {}).length;
+                    const quantidadeNotas = contarNotas(vistos);
+
+                    totalAlunos += quantidadeAlunos;
+                    totalDiarios += quantidadeDiarios;
+                    totalNotas += quantidadeNotas;
+
+                    linhas.push({
+                        nome:nome,
+                        categoria:String(item.cat || 'Não classificada'),
+                        alunos:quantidadeAlunos,
+                        diarios:quantidadeDiarios,
+                        notas:quantidadeNotas
+                    });
+
+                    Object.entries(diarios || {}).forEach(([id, registro]) => {
+                        if (!registro || typeof registro !== 'object') return;
+                        todosRegistros.push({
+                            id:id,
+                            turma:nome,
+                            data:String(registro.data || ''),
+                            conteudo:String(registro.conteudo || registro.conteúdo || '')
+                        });
+                    });
+                });
+
+                document.getElementById('painel-total-turmas').textContent = lista.length.toLocaleString('pt-BR');
+                document.getElementById('painel-total-alunos').textContent = totalAlunos.toLocaleString('pt-BR');
+                document.getElementById('painel-total-diarios').textContent = totalDiarios.toLocaleString('pt-BR');
+                document.getElementById('painel-total-notas').textContent = totalNotas.toLocaleString('pt-BR');
+
+                if (linhas.length) {
+                    let html = '<table class="panel-table"><thead><tr><th>Turma</th><th>Etapa</th><th>Estudantes</th><th>Diários</th><th>Notas</th></tr></thead><tbody>';
+                    linhas.forEach(linha => {
+                        html += '<tr>' +
+                            '<td><strong>' + escapeHTML(linha.nome) + '</strong></td>' +
+                            '<td>' + escapeHTML(linha.categoria) + '</td>' +
+                            '<td class="num">' + linha.alunos.toLocaleString('pt-BR') + '</td>' +
+                            '<td class="num">' + linha.diarios.toLocaleString('pt-BR') + '</td>' +
+                            '<td class="num">' + linha.notas.toLocaleString('pt-BR') + '</td>' +
+                            '</tr>';
+                    });
+                    html += '</tbody></table>';
+                    tabela.innerHTML = html;
+                } else {
+                    tabela.innerHTML = '<div class="panel-empty">Nenhuma turma cadastrada foi encontrada.</div>';
+                }
+
+                todosRegistros.sort((a, b) => b.data.localeCompare(a.data));
+                const ultimos = todosRegistros.slice(0, 5);
+                if (ultimos.length) {
+                    recentes.innerHTML = ultimos.map(registro =>
+                        '<div class="panel-recent-item">' +
+                            '<div class="panel-recent-date">' + escapeHTML(/^\d{4}-\d{2}-\d{2}$/.test(registro.data) ? registro.data.split('-').reverse().join('/') : (registro.data || 'Sem data')) + '</div>' +
+                            '<div><div class="panel-recent-class">' + escapeHTML(registro.turma) + '</div>' +
+                            '<div class="panel-recent-content">' + escapeHTML(registro.conteudo || 'Registro sem descrição.').replace(/\r?\n/g, '<br>') + '</div></div>' +
+                        '</div>'
+                    ).join('');
+                } else {
+                    recentes.innerHTML = '<div class="panel-empty">Ainda não há registros de Diário para exibir.</div>';
+                }
+
+                status.textContent = (navigator.onLine ? 'Resumo atualizado' : 'Resumo da cópia disponível neste aparelho') +
+                    ' · ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+            } catch (erro) {
+                console.error('Connect Escolar: falha ao carregar o painel geral:', erro);
+                status.textContent = 'Não foi possível atualizar o resumo. Verifique se há uma cópia offline preparada ou conexão com o banco.';
+                tabela.innerHTML = '<div class="panel-empty">Resumo indisponível no momento. Seus dados não foram alterados.</div>';
+                recentes.innerHTML = '<div class="panel-empty">Os últimos registros não puderam ser carregados.</div>';
+            }
+        }
+
         function marcarDataComoNaoAberta() {
             dataOficialmenteAberta = false;
         }
@@ -1504,6 +1719,7 @@
             const selectAba = document.querySelector('.tab-btn.active');
             const abaAtiva = selectAba ? selectAba.innerText : '';
             
+            if(abaAtiva === 'PAINEL GERAL') carregarPainelGeral();
             if(abaAtiva === 'DIÁRIO') { cancelarEdicaoD(); carregarHistorico(); }
             if(abaAtiva === 'HORÁRIO') carregarHorarioAulas();
             if(abaAtiva === 'RELATÓRIO DIÁRIO') gerarRelatorioDiario();
@@ -1638,6 +1854,7 @@
             event.currentTarget.classList.add('active'); 
             
             setTimeout(() => {
+                if(a === 'home') carregarPainelGeral();
                 if(a === 'ag') carregarHorarioAulas();
                 if(a === 'rd') gerarRelatorioDiario(); 
                 if(a === 'l') gerarRelatorio(); 
