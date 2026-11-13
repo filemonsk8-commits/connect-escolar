@@ -355,6 +355,89 @@
             .panel-shortcuts { grid-template-columns:repeat(2,minmax(0,1fr)); }
             .panel-recent-item { grid-template-columns:82px minmax(0,1fr); gap:8px; }
         }
+
+        /* Calendário escolar: eventos sincronizados e incluídos na cópia offline. */
+        .calendar-hero { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:5px 0 17px; border-bottom:1px solid var(--line); }
+        .calendar-kicker { margin:0 0 6px; color:#2563eb; font-size:.7rem; font-weight:800; letter-spacing:.12em; }
+        .calendar-hero h2 { margin:0; color:#17243c; font-size:1.4rem; }
+        .calendar-subtitle { margin:6px 0 0; color:#64748b; font-size:.84rem; }
+        .calendar-view-switch { display:flex; gap:4px; padding:4px; border:1px solid var(--line); border-radius:10px; background:#f8fafc; }
+        .calendar-view-btn { border:0; padding:8px 13px; border-radius:7px; background:transparent; color:#64748b; font-weight:800; cursor:pointer; }
+        .calendar-view-btn.active { background:#1d4ed8; color:#fff; }
+        .calendar-toolbar { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px; padding:15px 0; }
+        .calendar-nav-buttons { display:flex; align-items:center; gap:5px; }
+        .calendar-nav-btn,.calendar-today-btn { min-width:36px; height:35px; border:1px solid #dbe4f0; border-radius:8px; background:#fff; color:#334155; font-weight:800; cursor:pointer; }
+        .calendar-today-btn { padding:0 11px; font-size:.76rem; }
+        #cal-titulo-periodo { color:#17243c; font-size:1rem; text-align:center; }
+        #cal-status { color:#64748b; font-size:.7rem; text-align:right; }
+        .calendar-form { margin:2px 0 20px; }
+        .calendar-form-heading h3 { margin:0 0 4px; font-size:1rem; color:#17243c; }
+        .calendar-form-heading p { margin:0 0 14px; color:#64748b; font-size:.78rem; line-height:1.45; }
+        .calendar-form-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+        .calendar-field { display:flex; flex-direction:column; gap:6px; color:#475569; font-size:.75rem; font-weight:800; min-width:0; }
+        .calendar-field input,.calendar-field select,.calendar-field textarea { min-width:0; font-weight:500; }
+        .calendar-field-wide { grid-column:span 2; }
+        .calendar-form-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+        .calendar-form-actions .btn-main { width:auto; min-width:140px; margin:0; padding:11px 15px; }
+        .calendar-grid-area { border:1px solid var(--line); border-radius:11px; overflow:hidden; background:#fff; }
+        .calendar-weekday-row,.calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+        .calendar-weekday { padding:10px 4px; text-align:center; color:#64748b; background:#f1f5fb; border-right:1px solid var(--line); font-size:.7rem; font-weight:800; }
+        .calendar-weekday:last-child { border-right:0; }
+        .calendar-day-cell { min-width:0; min-height:118px; padding:6px; border-top:1px solid var(--line); border-right:1px solid var(--line); background:#fff; }
+        .calendar-day-cell:nth-child(7n) { border-right:0; }
+        .calendar-day-cell.is-outside { background:#f8fafc; }
+        .calendar-day-cell.is-selected { background:#eff6ff; box-shadow:inset 0 0 0 2px #93c5fd; }
+        .calendar-day-cell.is-today .calendar-day-number { color:#1d4ed8; background:#dbeafe; }
+        .calendar-day-number { width:27px; height:27px; display:grid; place-items:center; border:0; border-radius:50%; background:transparent; color:#334155; font-size:.75rem; font-weight:800; cursor:pointer; }
+        .calendar-day-cell.is-outside .calendar-day-number { color:#94a3b8; }
+        .calendar-event-chip { display:block; width:100%; margin-top:4px; padding:4px 5px; border:0; border-left:3px solid #64748b; border-radius:4px; background:#f1f5f9; color:#334155; text-align:left; font-size:.66rem; line-height:1.3; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .calendar-event-chip.tipo-aula { border-left-color:#2563eb; background:#eff6ff; }
+        .calendar-event-chip.tipo-avaliacao { border-left-color:#dc2626; background:#fef2f2; }
+        .calendar-event-chip.tipo-entrega { border-left-color:#d97706; background:#fffbeb; }
+        .calendar-event-chip.tipo-reuniao { border-left-color:#7c3aed; background:#f5f3ff; }
+        .calendar-event-chip.tipo-compromisso { border-left-color:#0f766e; background:#f0fdfa; }
+        .calendar-more-events { margin:4px 0 0 3px; color:#64748b; font-size:.62rem; }
+        .calendar-week-view .calendar-day-cell { min-height:220px; }
+        .calendar-day-agenda { margin-top:20px; }
+        .calendar-day-agenda h3 { margin:0 0 10px; color:#17243c; font-size:.98rem; }
+        .calendar-agenda-item { display:grid; grid-template-columns:82px minmax(0,1fr) auto; gap:12px; align-items:start; padding:12px; margin-bottom:8px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+        .calendar-agenda-time { color:#2563eb; font-size:.78rem; font-weight:800; }
+        .calendar-agenda-title { color:#17243c; font-size:.83rem; font-weight:800; overflow-wrap:anywhere; }
+        .calendar-agenda-meta { color:#64748b; font-size:.72rem; margin-top:4px; line-height:1.45; overflow-wrap:anywhere; }
+        .calendar-agenda-edit { border:1px solid #dbe4f0; border-radius:7px; padding:7px 9px; background:#f8fafc; color:#1d4ed8; font-size:.72rem; font-weight:800; cursor:pointer; }
+        .calendar-type-legend { display:flex; flex-wrap:wrap; gap:10px 14px; padding:10px 2px 0; color:#64748b; font-size:.68rem; }
+        .calendar-type-legend span { display:flex; align-items:center; gap:5px; }
+        .calendar-type-dot { width:8px; height:8px; border-radius:50%; background:#64748b; }
+        .calendar-type-dot.tipo-aula { background:#2563eb; }
+        .calendar-type-dot.tipo-avaliacao { background:#dc2626; }
+        .calendar-type-dot.tipo-entrega { background:#d97706; }
+        .calendar-type-dot.tipo-reuniao { background:#7c3aed; }
+        .calendar-type-dot.tipo-compromisso { background:#0f766e; }
+        @media(max-width:900px) {
+            .calendar-day-cell { min-height:100px; padding:4px; }
+            .calendar-week-view .calendar-day-cell { min-height:190px; }
+        }
+        @media(max-width:680px) {
+            .calendar-hero { flex-direction:column; }
+            .calendar-hero h2 { font-size:1.2rem; }
+            .calendar-view-switch { width:100%; }
+            .calendar-view-btn { flex:1; }
+            .calendar-toolbar { grid-template-columns:auto 1fr; gap:7px; }
+            #cal-titulo-periodo { text-align:right; font-size:.82rem; }
+            #cal-status { grid-column:1 / -1; text-align:left; }
+            .calendar-form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .calendar-field-wide { grid-column:span 2; }
+            .calendar-day-cell { min-height:78px; padding:3px; }
+            .calendar-day-number { width:23px; height:23px; font-size:.68rem; }
+            .calendar-weekday { padding:8px 2px; font-size:.62rem; }
+            .calendar-event-chip { padding:3px 2px; font-size:.55rem; border-left-width:2px; }
+            .calendar-week-view .calendar-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .calendar-week-view .calendar-day-cell { min-height:120px; }
+            .calendar-agenda-item { grid-template-columns:57px minmax(0,1fr); gap:8px; padding:10px; }
+            .calendar-agenda-edit { grid-column:2; justify-self:start; }
+            .calendar-form-actions { flex-direction:column; }
+            .calendar-form-actions .btn-main { width:100%; }
+        }
 </style>
 </head>
 <body>
@@ -387,6 +470,7 @@
                 <div><strong>Connect Escolar</strong><small>V4.3 Professional</small></div>
             </div>
             <button class="tab-btn active" onclick="aba('home')">PAINEL GERAL</button>
+            <button class="tab-btn" onclick="aba('cal')">CALENDÁRIO</button>
             <button class="tab-btn" onclick="aba('v')">VISTOS</button>
             <button class="tab-btn" onclick="aba('ag')">HORÁRIO</button>
             <button class="tab-btn" onclick="aba('d')">DIÁRIO</button>
@@ -464,7 +548,85 @@
                     <button type="button" class="btn-main btn-blue" onclick="aba('d')">Abrir Diário</button>
                     <button type="button" class="btn-main btn-blue" onclick="aba('l')">Fechamento</button>
                     <button type="button" class="btn-main btn-blue" onclick="aba('cad')">Gerenciar turmas</button>
+                    <button type="button" class="btn-main btn-blue" onclick="aba('cal')">Calendário</button>
                 </div>
+            </div>
+
+            <div id="aba-cal" class="card hidden">
+                <div class="calendar-hero">
+                    <div>
+                        <p class="calendar-kicker">ORGANIZAÇÃO ESCOLAR</p>
+                        <h2>Calendário Escolar</h2>
+                        <p class="calendar-subtitle">Organize aulas, avaliações, entregas, reuniões e compromissos.</p>
+                    </div>
+                    <div class="calendar-view-switch no-print">
+                        <button type="button" id="cal-view-month" class="calendar-view-btn active" onclick="definirModoCalendario('mes')">Mês</button>
+                        <button type="button" id="cal-view-week" class="calendar-view-btn" onclick="definirModoCalendario('semana')">Semana</button>
+                    </div>
+                </div>
+
+                <div class="calendar-toolbar no-print">
+                    <div class="calendar-nav-buttons">
+                        <button type="button" class="calendar-nav-btn" onclick="navegarCalendario(-1)" aria-label="Período anterior">‹</button>
+                        <button type="button" class="calendar-today-btn" onclick="irParaHojeCalendario()">Hoje</button>
+                        <button type="button" class="calendar-nav-btn" onclick="navegarCalendario(1)" aria-label="Próximo período">›</button>
+                    </div>
+                    <strong id="cal-titulo-periodo">Carregando calendário...</strong>
+                    <span id="cal-status" role="status">Preparando agenda...</span>
+                </div>
+
+                <div class="calendar-form sec-box no-print">
+                    <div class="calendar-form-heading">
+                        <div>
+                            <h3 id="cal-form-titulo">Adicionar compromisso</h3>
+                            <p>Os eventos ficam disponíveis no PC e no celular e entram no backup do sistema.</p>
+                        </div>
+                    </div>
+                    <div class="calendar-form-grid">
+                        <label class="calendar-field calendar-field-wide">Título
+                            <input type="text" id="cal-event-titulo" maxlength="100" placeholder="Ex.: Avaliação de História" required>
+                        </label>
+                        <label class="calendar-field">Tipo
+                            <select id="cal-event-tipo">
+                                <option value="aula">Aula</option>
+                                <option value="avaliacao">Avaliação</option>
+                                <option value="entrega">Entrega de atividade</option>
+                                <option value="reuniao">Reunião</option>
+                                <option value="compromisso">Compromisso</option>
+                            </select>
+                        </label>
+                        <label class="calendar-field">Data
+                            <input type="date" id="cal-event-data" required>
+                        </label>
+                        <label class="calendar-field">Horário (opcional)
+                            <input type="time" id="cal-event-horario">
+                        </label>
+                        <label class="calendar-field">Turma (opcional)
+                            <select id="cal-event-turma">
+                                <option value="">Geral / todas as turmas</option>
+                            </select>
+                        </label>
+                        <label class="calendar-field calendar-field-wide">Descrição (opcional)
+                            <textarea id="cal-event-descricao" rows="2" maxlength="500" placeholder="Detalhes do compromisso..."></textarea>
+                        </label>
+                    </div>
+                    <div class="calendar-form-actions">
+                        <button type="button" id="cal-event-salvar" class="btn-main btn-blue" onclick="salvarEventoCalendario()">Salvar compromisso</button>
+                        <button type="button" id="cal-event-cancelar" class="btn-main btn-orange hidden" onclick="cancelarEdicaoEventoCalendario()">Cancelar edição</button>
+                        <button type="button" id="cal-event-excluir" class="btn-main btn-red hidden" onclick="excluirEventoCalendario()">Excluir compromisso</button>
+                    </div>
+                </div>
+
+                <div id="calendario-grade" class="calendar-grid-area">
+                    <div class="panel-empty">Carregando calendário...</div>
+                </div>
+
+                <section class="calendar-day-agenda">
+                    <h3 id="cal-dia-titulo">Compromissos da data selecionada</h3>
+                    <div id="cal-eventos-dia">
+                        <div class="panel-empty">Carregando compromissos...</div>
+                    </div>
+                </section>
             </div>
             <div id="aba-v" class="card hidden">
                 <div id="aviso-data-incorreta" class="alerta-bloqueio hidden">⚠️ Data incorreta - Selecione ou abra esta data pelo histórico abaixo para editar!</div>
@@ -1529,6 +1691,11 @@
         let notasParaCopiaGlobal = [];
         let listaNomesENotasGlobal = [];
         let sortableInstance = null;
+        let eventosCalendarioCache = [];
+        let calendarioDataAtual = new Date();
+        let calendarioDataSelecionada = calendarioDataChave(new Date());
+        let calendarioModo = 'mes';
+        let calendarioEditandoId = null;
 
         const turmasPadrao = [
             { cat: "ENSINO FUNDAMENTAL", nome: "9ºA Pensamento Comp", ordem: 1 },
@@ -1851,6 +2018,308 @@
             }
         }
 
+
+        function calendarioDataChave(data) {
+            const ano = data.getFullYear();
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const dia = String(data.getDate()).padStart(2, '0');
+            return ano + '-' + mes + '-' + dia;
+        }
+
+        function objetoDataCalendario(chave) {
+            const partes = String(chave || '').split('-').map(Number);
+            if (partes.length !== 3 || partes.some(n => !Number.isFinite(n))) return new Date();
+            return new Date(partes[0], partes[1] - 1, partes[2]);
+        }
+
+        function textoDataCalendario(chave, completo = false) {
+            const data = objetoDataCalendario(chave);
+            return data.toLocaleDateString('pt-BR', completo
+                ? {weekday:'long', day:'2-digit', month:'long', year:'numeric'}
+                : {day:'2-digit', month:'2-digit', year:'numeric'});
+        }
+
+        function rotuloTipoEventoCalendario(tipo) {
+            const rotulos = {
+                aula:'Aula',
+                avaliacao:'Avaliação',
+                entrega:'Entrega de atividade',
+                reuniao:'Reunião',
+                compromisso:'Compromisso'
+            };
+            return rotulos[tipo] || 'Compromisso';
+        }
+
+        function ordenarEventosCalendario(lista) {
+            return lista.slice().sort((a, b) =>
+                String(a.data || '').localeCompare(String(b.data || '')) ||
+                String(a.horario || '99:99').localeCompare(String(b.horario || '99:99')) ||
+                String(a.titulo || '').localeCompare(String(b.titulo || ''), 'pt-BR')
+            );
+        }
+
+        async function carregarCalendarioEscolar() {
+            const status = document.getElementById('cal-status');
+            const turmaSelect = document.getElementById('cal-event-turma');
+            if (!status || !turmaSelect) return;
+
+            status.textContent = 'Atualizando agenda...';
+            try {
+                const principal = document.getElementById('turma');
+                const turmaAnterior = turmaSelect.value;
+                turmaSelect.innerHTML = '<option value="">Geral / todas as turmas</option>';
+                if (principal) {
+                    Array.from(principal.options).forEach(opcao => {
+                        if (opcao.value) turmaSelect.add(new Option(opcao.textContent, opcao.value));
+                    });
+                }
+                if (turmaAnterior) turmaSelect.value = turmaAnterior;
+
+                const snapshot = await db.ref('calendario_escolar').once('value');
+                const dados = snapshot.val() || {};
+                eventosCalendarioCache = Object.keys(dados).map(id => ({
+                    id:id,
+                    ...(dados[id] || {})
+                })).filter(item => item.data && item.titulo);
+
+                if (!calendarioDataSelecionada) calendarioDataSelecionada = calendarioDataChave(new Date());
+                renderizarCalendarioEscolar();
+                status.textContent = navigator.onLine
+                    ? 'Agenda atualizada · ' + eventosCalendarioCache.length + ' compromisso(s)'
+                    : 'Agenda da cópia local · ' + eventosCalendarioCache.length + ' compromisso(s)';
+            } catch (erro) {
+                console.error('Connect Escolar: não foi possível carregar o calendário:', erro);
+                status.textContent = 'Não foi possível carregar a agenda. Verifique a conexão ou prepare a cópia offline.';
+                document.getElementById('calendario-grade').innerHTML =
+                    '<div class="panel-empty">Agenda indisponível no momento. Os demais dados do sistema não foram alterados.</div>';
+                document.getElementById('cal-eventos-dia').innerHTML =
+                    '<div class="panel-empty">Não foi possível carregar os compromissos.</div>';
+            }
+        }
+
+        function renderizarCalendarioEscolar() {
+            const grade = document.getElementById('calendario-grade');
+            const titulo = document.getElementById('cal-titulo-periodo');
+            if (!grade || !titulo) return;
+
+            const selecionada = objetoDataCalendario(calendarioDataSelecionada);
+            const hojeChave = calendarioDataChave(new Date());
+            const inicio = new Date(selecionada.getFullYear(), selecionada.getMonth(), selecionada.getDate());
+
+            let primeiroDia;
+            let quantidadeDias;
+            if (calendarioModo === 'mes') {
+                const primeiroMes = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
+                const deslocamento = (primeiroMes.getDay() + 6) % 7;
+                primeiroDia = new Date(primeiroMes);
+                primeiroDia.setDate(primeiroDia.getDate() - deslocamento);
+                quantidadeDias = Math.ceil((deslocamento + new Date(inicio.getFullYear(), inicio.getMonth() + 1, 0).getDate()) / 7) * 7;
+                titulo.textContent = inicio.toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
+            } else {
+                const deslocamento = (inicio.getDay() + 6) % 7;
+                primeiroDia = new Date(inicio);
+                primeiroDia.setDate(inicio.getDate() - deslocamento);
+                quantidadeDias = 7;
+                const ultimoDia = new Date(primeiroDia);
+                ultimoDia.setDate(ultimoDia.getDate() + 6);
+                titulo.textContent = primeiroDia.toLocaleDateString('pt-BR', {day:'2-digit',month:'short'}) +
+                    ' – ' + ultimoDia.toLocaleDateString('pt-BR', {day:'2-digit',month:'short',year:'numeric'});
+            }
+
+            const diasSemana = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+            let html = '<div class="calendar-weekday-row">' +
+                diasSemana.map(dia => '<div class="calendar-weekday">' + dia + '</div>').join('') +
+                '</div><div class="calendar-grid ' + (calendarioModo === 'semana' ? 'calendar-week-view' : '') + '">';
+
+            for (let i = 0; i < quantidadeDias; i++) {
+                const data = new Date(primeiroDia);
+                data.setDate(primeiroDia.getDate() + i);
+                const chave = calendarioDataChave(data);
+                const eventosDia = ordenarEventosCalendario(eventosCalendarioCache.filter(evento => evento.data === chave));
+                const classes = ['calendar-day-cell'];
+                if (calendarioModo === 'mes' && data.getMonth() !== inicio.getMonth()) classes.push('is-outside');
+                if (chave === calendarioDataSelecionada) classes.push('is-selected');
+                if (chave === hojeChave) classes.push('is-today');
+
+                html += '<div class="' + classes.join(' ') + '">' +
+                    '<button type="button" class="calendar-day-number" onclick="selecionarDiaCalendario(\'' + chave + '\')" aria-label="Selecionar ' + textoDataCalendario(chave) + '">' +
+                    data.getDate() + '</button>';
+
+                eventosDia.slice(0, calendarioModo === 'semana' ? 8 : 3).forEach(evento => {
+                    html += '<button type="button" class="calendar-event-chip tipo-' + escapeHTML(evento.tipo || 'compromisso') +
+                        '" title="' + escapeHTML(evento.titulo) + '" onclick="editarEventoCalendario(\'' + escapeHTML(evento.id) + '\')">' +
+                        (evento.horario ? escapeHTML(evento.horario) + ' ' : '') + escapeHTML(evento.titulo) + '</button>';
+                });
+                if (eventosDia.length > (calendarioModo === 'semana' ? 8 : 3)) {
+                    html += '<div class="calendar-more-events">+' +
+                        (eventosDia.length - (calendarioModo === 'semana' ? 8 : 3)) + ' mais</div>';
+                }
+                html += '</div>';
+            }
+
+            html += '</div><div class="calendar-type-legend">' +
+                '<span><i class="calendar-type-dot tipo-aula"></i>Aula</span>' +
+                '<span><i class="calendar-type-dot tipo-avaliacao"></i>Avaliação</span>' +
+                '<span><i class="calendar-type-dot tipo-entrega"></i>Entrega</span>' +
+                '<span><i class="calendar-type-dot tipo-reuniao"></i>Reunião</span>' +
+                '<span><i class="calendar-type-dot tipo-compromisso"></i>Compromisso</span>' +
+                '</div>';
+            grade.innerHTML = html;
+
+            const diaTitulo = document.getElementById('cal-dia-titulo');
+            const listaDia = document.getElementById('cal-eventos-dia');
+            diaTitulo.textContent = 'Compromissos de ' + textoDataCalendario(calendarioDataSelecionada, true);
+            const eventosSelecionados = ordenarEventosCalendario(
+                eventosCalendarioCache.filter(evento => evento.data === calendarioDataSelecionada)
+            );
+
+            if (!eventosSelecionados.length) {
+                listaDia.innerHTML = '<div class="panel-empty">Nenhum compromisso registrado para esta data.</div>';
+            } else {
+                listaDia.innerHTML = eventosSelecionados.map(evento => {
+                    const detalhes = [
+                        rotuloTipoEventoCalendario(evento.tipo),
+                        evento.turma || 'Geral / todas as turmas',
+                        evento.descricao || ''
+                    ].filter(Boolean).join(' · ');
+                    return '<div class="calendar-agenda-item">' +
+                        '<div class="calendar-agenda-time">' + escapeHTML(evento.horario || 'Sem horário') + '</div>' +
+                        '<div><div class="calendar-agenda-title">' + escapeHTML(evento.titulo) + '</div>' +
+                        '<div class="calendar-agenda-meta">' + escapeHTML(detalhes) + '</div></div>' +
+                        '<button type="button" class="calendar-agenda-edit" onclick="editarEventoCalendario(\'' + escapeHTML(evento.id) + '\')">Editar</button>' +
+                        '</div>';
+                }).join('');
+            }
+
+            const botaoMes = document.getElementById('cal-view-month');
+            const botaoSemana = document.getElementById('cal-view-week');
+            if (botaoMes) botaoMes.classList.toggle('active', calendarioModo === 'mes');
+            if (botaoSemana) botaoSemana.classList.toggle('active', calendarioModo === 'semana');
+        }
+
+        function definirModoCalendario(modo) {
+            calendarioModo = modo === 'semana' ? 'semana' : 'mes';
+            renderizarCalendarioEscolar();
+        }
+
+        function navegarCalendario(direcao) {
+            if (calendarioModo === 'mes') {
+                calendarioDataAtual = new Date(calendarioDataAtual.getFullYear(), calendarioDataAtual.getMonth() + direcao, 1);
+                calendarioDataSelecionada = calendarioDataChave(calendarioDataAtual);
+            } else {
+                calendarioDataAtual.setDate(calendarioDataAtual.getDate() + (7 * direcao));
+                calendarioDataSelecionada = calendarioDataChave(calendarioDataAtual);
+            }
+            renderizarCalendarioEscolar();
+        }
+
+        function irParaHojeCalendario() {
+            calendarioDataAtual = new Date();
+            calendarioDataSelecionada = calendarioDataChave(calendarioDataAtual);
+            renderizarCalendarioEscolar();
+        }
+
+        function selecionarDiaCalendario(chave) {
+            calendarioDataSelecionada = chave;
+            calendarioDataAtual = objetoDataCalendario(chave);
+            if (!calendarioEditandoId) document.getElementById('cal-event-data').value = chave;
+            renderizarCalendarioEscolar();
+        }
+
+        function limparFormularioEventoCalendario() {
+            calendarioEditandoId = null;
+            document.getElementById('cal-event-titulo').value = '';
+            document.getElementById('cal-event-tipo').value = 'aula';
+            document.getElementById('cal-event-data').value = calendarioDataSelecionada || calendarioDataChave(new Date());
+            document.getElementById('cal-event-horario').value = '';
+            document.getElementById('cal-event-turma').value = '';
+            document.getElementById('cal-event-descricao').value = '';
+            document.getElementById('cal-form-titulo').textContent = 'Adicionar compromisso';
+            document.getElementById('cal-event-salvar').textContent = 'Salvar compromisso';
+            document.getElementById('cal-event-cancelar').classList.add('hidden');
+            document.getElementById('cal-event-excluir').classList.add('hidden');
+        }
+
+        async function salvarEventoCalendario() {
+            const titulo = document.getElementById('cal-event-titulo').value.trim();
+            const data = document.getElementById('cal-event-data').value;
+            if (!titulo || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+                alert('Informe um título e uma data válida para o compromisso.');
+                return;
+            }
+
+            const dados = {
+                titulo:titulo,
+                data:data,
+                tipo:document.getElementById('cal-event-tipo').value,
+                horario:document.getElementById('cal-event-horario').value,
+                turma:document.getElementById('cal-event-turma').value,
+                descricao:document.getElementById('cal-event-descricao').value.trim(),
+                atualizadoEm:new Date().toISOString()
+            };
+            const botao = document.getElementById('cal-event-salvar');
+            botao.disabled = true;
+            try {
+                if (calendarioEditandoId) {
+                    await db.ref('calendario_escolar/' + calendarioEditandoId).update(dados);
+                } else {
+                    const referencia = db.ref('calendario_escolar').push();
+                    await referencia.set(dados);
+                }
+                calendarioDataSelecionada = data;
+                calendarioDataAtual = objetoDataCalendario(data);
+                limparFormularioEventoCalendario();
+                await carregarCalendarioEscolar();
+                alert('Compromisso salvo no calendário.');
+            } catch (erro) {
+                console.error('Connect Escolar: falha ao salvar compromisso:', erro);
+                alert('Não foi possível salvar o compromisso. Verifique a conexão ou a cópia offline preparada.');
+            } finally {
+                botao.disabled = false;
+            }
+        }
+
+        function editarEventoCalendario(id) {
+            const evento = eventosCalendarioCache.find(item => item.id === id);
+            if (!evento) {
+                alert('Este compromisso não foi encontrado na agenda atual. Atualize o calendário e tente novamente.');
+                return;
+            }
+            calendarioEditandoId = id;
+            document.getElementById('cal-event-titulo').value = evento.titulo || '';
+            document.getElementById('cal-event-tipo').value = evento.tipo || 'compromisso';
+            document.getElementById('cal-event-data').value = evento.data || calendarioDataSelecionada;
+            document.getElementById('cal-event-horario').value = evento.horario || '';
+            document.getElementById('cal-event-turma').value = evento.turma || '';
+            document.getElementById('cal-event-descricao').value = evento.descricao || '';
+            document.getElementById('cal-form-titulo').textContent = 'Editar compromisso';
+            document.getElementById('cal-event-salvar').textContent = 'Atualizar compromisso';
+            document.getElementById('cal-event-cancelar').classList.remove('hidden');
+            document.getElementById('cal-event-excluir').classList.remove('hidden');
+            document.getElementById('cal-form-titulo').scrollIntoView({behavior:'smooth', block:'center'});
+        }
+
+        function cancelarEdicaoEventoCalendario() {
+            limparFormularioEventoCalendario();
+        }
+
+        async function excluirEventoCalendario() {
+            if (!calendarioEditandoId) return;
+            const evento = eventosCalendarioCache.find(item => item.id === calendarioEditandoId);
+            const nome = evento ? evento.titulo : 'este compromisso';
+            if (!confirm('Deseja excluir "' + nome + '" do calendário?')) return;
+
+            try {
+                await db.ref('calendario_escolar/' + calendarioEditandoId).remove();
+                limparFormularioEventoCalendario();
+                await carregarCalendarioEscolar();
+                alert('Compromisso excluído do calendário.');
+            } catch (erro) {
+                console.error('Connect Escolar: falha ao excluir compromisso:', erro);
+                alert('Não foi possível excluir o compromisso. Verifique a conexão e tente novamente.');
+            }
+        }
+
         function marcarDataComoNaoAberta() {
             dataOficialmenteAberta = false;
         }
@@ -1861,6 +2330,7 @@
             const abaAtiva = selectAba ? selectAba.innerText : '';
             
             if(abaAtiva === 'PAINEL GERAL') carregarPainelGeral();
+            if(abaAtiva === 'CALENDÁRIO') carregarCalendarioEscolar();
             if(abaAtiva === 'DIÁRIO') { cancelarEdicaoD(); carregarHistorico(); }
             if(abaAtiva === 'HORÁRIO') carregarHorarioAulas();
             if(abaAtiva === 'RELATÓRIO DIÁRIO') gerarRelatorioDiario();
@@ -1996,6 +2466,7 @@
             
             setTimeout(() => {
                 if(a === 'home') carregarPainelGeral();
+                if(a === 'cal') carregarCalendarioEscolar();
                 if(a === 'ag') carregarHorarioAulas();
                 if(a === 'rd') gerarRelatorioDiario(); 
                 if(a === 'l') gerarRelatorio(); 
@@ -3126,8 +3597,10 @@
         // Mantém intactos os demais caminhos que possam existir no Firebase.
         const CAMINHOS_BACKUP = [
             'cadastros_turmas', 'turmas', 'vistos', 'headers',
-            'diario', 'recuperacao', 'horario_professor'
+            'diario', 'recuperacao', 'horario_professor', 'calendario_escolar'
         ];
+        // Compatibilidade: backups antigos não possuíam o módulo de calendário.
+        const CAMINHOS_BACKUP_ANTIGOS = CAMINHOS_BACKUP.filter(caminho => caminho !== 'calendario_escolar');
 
         async function montarObjetoBackup() {
             const uid = usuarioAtualOffline();
@@ -3194,7 +3667,7 @@
                     backup.formato === 'connect-escolar-backup' &&
                     backup.versaoFormato === 1 &&
                     backup.caminhos && typeof backup.caminhos === 'object' &&
-                    CAMINHOS_BACKUP.every(caminho => Object.prototype.hasOwnProperty.call(backup.caminhos, caminho));
+                    CAMINHOS_BACKUP_ANTIGOS.every(caminho => Object.prototype.hasOwnProperty.call(backup.caminhos, caminho));
 
                 if (!formatoValido) {
                     alert('Este arquivo não é um backup válido do Connect Escolar. Nenhum dado foi alterado.');
@@ -3216,6 +3689,8 @@
                 baixarObjetoBackup(backupAtual, 'seguranca-antes-da-restauracao');
 
                 for (const caminho of CAMINHOS_BACKUP) {
+                    // Se o backup é antigo e não contém calendário, preserva os eventos atuais.
+                    if (!Object.prototype.hasOwnProperty.call(backup.caminhos, caminho)) continue;
                     const valor = backup.caminhos[caminho];
                     await db.ref(caminho).set(valor === undefined ? null : valor);
                 }
