@@ -515,7 +515,7 @@
                         <p id="offline-pendencias" class="offline-pending">Nenhuma informação de sincronização disponível.</p>
                         <div class="offline-actions">
                             <button id="btn-preparar-offline" onclick="prepararDadosOffline()" class="btn-main btn-blue" style="margin-top:0;">Preparar / atualizar cópia local</button>
-                            <button id="btn-sincronizar-offline" onclick="window.diagnosticoCliqueOffline()" class="btn-main btn-orange" style="margin-top:0;">Sincronizar pendências</button>
+                            <button id="btn-sincronizar-offline" onclick="window.iniciarSincronizacaoManualOffline()" class="btn-main btn-orange" style="margin-top:0;">Sincronizar pendências</button>
                             <button id="btn-forcar-sincronizacao" onclick="forcarSincronizacaoOffline()" class="btn-main btn-red" style="display:none; margin-top:0;">Forçar envio após conferir</button>
                         </div>
                         <p class="offline-warning">Faça a preparação separadamente no computador e no celular, enquanto estiver conectado. O primeiro login neste aparelho precisa ser feito com internet. Os dados offline ficam armazenados neste navegador; evite usar um perfil compartilhado ou computador público.</p>
@@ -1084,6 +1084,14 @@
                         await guardarSnapshotOffline(uid, caminho, snapshotAtual.val());
                     }
                     filaRestante = (await offlineGetAll('fila') || []).filter(item => item.uid === uid);
+                    // Registra a confirmação também quando a gravação veio da fila offline.
+                    if (filaRestante.length === 0) {
+                        localStorage.setItem(CHAVE_ULTIMO_SALVAMENTO, new Date().toISOString());
+                        atualizarHorarioUltimoSalvamento();
+                        if (gravacoesPendentes === 0 && !camposAlterados) {
+                            atualizarIndicadorSalvamento('salvo', 'Salvo e sincronizado');
+                        }
+                    }
                 }
                 await atualizarPainelOffline();
                 if (conflitoEncontrado) {
@@ -1115,13 +1123,6 @@
                 await atualizarPainelOffline();
             }
         }
-
-        // Diagnóstico temporário: confirma apenas se o clique chega ao JavaScript. Não sincroniza nem altera dados.
-        window.diagnosticoCliqueOffline = function() {
-            const status = document.getElementById('offline-status');
-            if (status) status.textContent = 'TESTE: o botão foi acionado. Nenhuma alteração foi enviada.';
-            alert('Teste do Connect Escolar: o botão respondeu ao clique. Nenhum dado foi enviado, apagado ou alterado.');
-        };
 
         // Entrada explícita do botão: mostra resposta imediata e registra qualquer falha.
         window.iniciarSincronizacaoManualOffline = async function() {
@@ -1169,6 +1170,13 @@
                 // Executa em toda reconexão, mesmo que o usuário continue na mesma sessão.
                 await sincronizarFilaOffline(false, false);
                 const fila = (await offlineGetAll('fila') || []).filter(item => item.uid === user.uid);
+                if (gravacoesPendentes === 0 && !camposAlterados) {
+                    if (fila.length) {
+                        atualizarIndicadorSalvamento('pendente', 'Salvo neste dispositivo — aguardando sincronização');
+                    } else if (localStorage.getItem(CHAVE_ULTIMO_SALVAMENTO)) {
+                        atualizarIndicadorSalvamento('salvo', 'Último salvamento confirmado');
+                    }
+                }
                 if (primeiraInicializacao && !fila.length) {
                     const prontos = await contarSnapshotsProntosOffline(user.uid);
                     if (prontos !== CAMINHOS_BACKUP.length) await prepararDadosOffline(true);
