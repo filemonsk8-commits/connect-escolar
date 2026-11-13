@@ -332,6 +332,15 @@
         .panel-recent-date { color:#2563eb; font-size:.75rem; font-weight:800; }
         .panel-recent-class { color:#17243c; font-size:.8rem; font-weight:800; margin-bottom:4px; }
         .panel-recent-content { color:#64748b; font-size:.79rem; line-height:1.45; overflow-wrap:anywhere; }
+        .panel-audit-note { margin:-3px 0 12px; color:#64748b; font-size:.78rem; line-height:1.5; }
+        .panel-audit-table { width:100%; border-collapse:collapse; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+        .panel-audit-table th,.panel-audit-table td { padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; font-size:.78rem; vertical-align:top; }
+        .panel-audit-table th { background:#f1f5fb; color:#475569; font-size:.7rem; text-transform:uppercase; }
+        .panel-audit-table tr:last-child td { border-bottom:0; }
+        .panel-audit-state { display:inline-block; padding:4px 8px; border-radius:999px; background:#ecfdf5; color:#047857; font-size:.7rem; font-weight:800; white-space:nowrap; }
+        .panel-audit-state.is-attention { background:#fff7ed; color:#b45309; }
+        .panel-audit-summary { margin-bottom:10px; padding:12px 14px; border:1px solid #bbf7d0; border-radius:10px; background:#f0fdf4; color:#166534; font-size:.82rem; font-weight:700; }
+        .panel-audit-summary.has-attention { border-color:#fed7aa; background:#fff7ed; color:#9a3412; }
         .panel-shortcuts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-top:24px; }
         .panel-shortcuts .btn-main { margin:0; min-height:42px; padding:10px; font-size:.78rem; }
         @media(max-width:1000px) { .panel-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
@@ -440,6 +449,13 @@
                     <h3>Últimos registros do Diário</h3>
                     <div id="painel-registros-recentes">
                         <div class="panel-empty">Preparando os registros...</div>
+                    </div>
+                </section>
+                <section class="panel-section">
+                    <h3>Conferência automática dos registros</h3>
+                    <p class="panel-audit-note">Esta conferência procura inconsistências entre o cadastro das turmas, as listas de estudantes, o Diário e os lançamentos de notas. Ela não substitui a conferência pedagógica com os documentos oficiais.</p>
+                    <div id="painel-auditoria" aria-live="polite">
+                        <div class="panel-empty">Preparando a conferência...</div>
                     </div>
                 </section>
                 <div class="panel-shortcuts no-print">
@@ -1685,6 +1701,107 @@
                 } else {
                     tabela.innerHTML = '<div class="panel-empty">Nenhuma turma cadastrada foi encontrada.</div>';
                 }
+
+
+                // Conferência técnica entre os módulos, sem alterar ou gravar dados.
+                const normalizarChavePainel = valor => limparT(String(valor || '')).toLocaleLowerCase('pt-BR');
+                const nomesCadastrados = new Set(lista.map(item => normalizarChavePainel(item.nome)));
+                let turmasSemLista = 0;
+                let diariosIncompletos = 0;
+                let notasComFormatoInvalido = 0;
+                const chavesForaDoCadastro = new Set();
+
+                const localizarDadosTurma = (raiz, nome) => {
+                    const chaveDireta = limparT(nome);
+                    if (Object.prototype.hasOwnProperty.call(raiz || {}, chaveDireta)) return raiz[chaveDireta];
+                    if (Object.prototype.hasOwnProperty.call(raiz || {}, nome)) return raiz[nome];
+                    const chaveNormalizada = normalizarChavePainel(nome);
+                    const chaveEncontrada = Object.keys(raiz || {}).find(chave => normalizarChavePainel(chave) === chaveNormalizada);
+                    return chaveEncontrada ? raiz[chaveEncontrada] : undefined;
+                };
+
+                lista.forEach(item => {
+                    const nome = String(item.nome);
+                    const alunosTurma = localizarDadosTurma(alunosPorTurma, nome);
+                    if (!Array.isArray(alunosTurma) && (!alunosTurma || typeof alunosTurma !== 'object' || Object.keys(alunosTurma).length === 0)) {
+                        turmasSemLista++;
+                    }
+
+                    const diariosTurma = localizarDadosTurma(diarioPorTurma, nome);
+                    const diariosBimestre = diariosTurma && diariosTurma[bimestre] ? diariosTurma[bimestre] : {};
+                    Object.values(diariosBimestre || {}).forEach(registro => {
+                        const dataValida = registro && /^\\d{4}-\\d{2}-\\d{2}$/.test(String(registro.data || ''));
+                        const conteudo = registro && String(registro.conteudo || registro.conteúdo || '').trim();
+                        if (!dataValida || !conteudo) diariosIncompletos++;
+                    });
+
+                    const vistosTurma = localizarDadosTurma(vistosPorTurma, nome);
+                    const vistosBimestre = vistosTurma && vistosTurma[bimestre] ? vistosTurma[bimestre] : {};
+                    Object.values(vistosBimestre || {}).forEach(dia => {
+                        Object.values(dia || {}).forEach(registroAluno => {
+                            if (!registroAluno || typeof registroAluno !== 'object') return;
+                            Object.entries(registroAluno).forEach(([atividade, valor]) => {
+                                if (atividade === 'placeholder_controle') return;
+                                if (!['1','2','3','4','5'].includes(atividade) ||
+                                    valor === null || valor === undefined || String(valor).trim() === '' ||
+                                    !Number.isFinite(Number(String(valor).replace(',', '.')))) {
+                                    notasComFormatoInvalido++;
+                                }
+                            });
+                        });
+                    });
+                });
+
+                [
+                    {nome:'Listas de estudantes', dados:alunosPorTurma},
+                    {nome:'Diários', dados:diarioPorTurma},
+                    {nome:'Vistos e notas', dados:vistosPorTurma}
+                ].forEach(fonte => {
+                    Object.keys(fonte.dados || {}).forEach(chave => {
+                        if (!nomesCadastrados.has(normalizarChavePainel(chave))) {
+                            chavesForaDoCadastro.add(fonte.nome + ': ' + chave);
+                        }
+                    });
+                });
+
+                const somaAlunosTurmas = linhas.reduce((soma, linha) => soma + linha.alunos, 0);
+                const somaDiariosTurmas = linhas.reduce((soma, linha) => soma + linha.diarios, 0);
+                const somaNotasTurmas = linhas.reduce((soma, linha) => soma + linha.notas, 0);
+                const totaisConferem = somaAlunosTurmas === totalAlunos &&
+                    somaDiariosTurmas === totalDiarios && somaNotasTurmas === totalNotas;
+
+                const verificacoes = [
+                    {rotulo:'Totais do painel x soma das turmas', detalhe:totaisConferem
+                        ? 'Os totais gerais correspondem à soma das linhas da tabela.'
+                        : 'Há diferença entre os totais gerais e a soma da tabela.', problema:!totaisConferem},
+                    {rotulo:'Turmas sem lista de estudantes', detalhe:turmasSemLista
+                        ? turmasSemLista + ' turma(s) sem lista localizada no cadastro de estudantes.'
+                        : 'Todas as turmas cadastradas possuem uma lista localizada.', problema:turmasSemLista > 0},
+                    {rotulo:'Registros do Diário incompletos', detalhe:diariosIncompletos
+                        ? diariosIncompletos + ' registro(s) sem data válida ou conteúdo preenchido no bimestre selecionado.'
+                        : 'Os registros do Diário do bimestre possuem data e conteúdo.', problema:diariosIncompletos > 0},
+                    {rotulo:'Lançamentos de notas com formato irregular', detalhe:notasComFormatoInvalido
+                        ? notasComFormatoInvalido + ' lançamento(s) precisam ser revisados por apresentarem estrutura ou valor inesperado.'
+                        : 'Os lançamentos encontrados seguem a estrutura esperada de atividades 1 a 5.', problema:notasComFormatoInvalido > 0},
+                    {rotulo:'Dados de turmas fora do cadastro', detalhe:chavesForaDoCadastro.size
+                        ? chavesForaDoCadastro.size + ' referência(s) de turma em listas, diários ou notas não aparecem no cadastro atual.'
+                        : 'Não foram encontradas referências a turmas ausentes do cadastro.', problema:chavesForaDoCadastro.size > 0}
+                ];
+
+                const quantidadeProblemas = verificacoes.filter(item => item.problema).length;
+                const auditoriaEl = document.getElementById('painel-auditoria');
+                let auditoriaHtml = quantidadeProblemas
+                    ? '<div class="panel-audit-summary has-attention">A conferência encontrou ' + quantidadeProblemas + ' ponto(s) que merecem revisão. Isso não significa, por si só, perda de dados.</div>'
+                    : '<div class="panel-audit-summary">Conferência técnica concluída: nenhuma inconsistência estrutural foi encontrada nos itens verificados.</div>';
+
+                auditoriaHtml += '<table class="panel-audit-table"><thead><tr><th>Verificação</th><th>Resultado</th><th>Situação</th></tr></thead><tbody>';
+                verificacoes.forEach(item => {
+                    auditoriaHtml += '<tr><td><strong>' + escapeHTML(item.rotulo) + '</strong></td><td>' +
+                        escapeHTML(item.detalhe) + '</td><td><span class="panel-audit-state ' +
+                        (item.problema ? 'is-attention' : '') + '">' + (item.problema ? 'Revisar' : 'OK') + '</span></td></tr>';
+                });
+                auditoriaHtml += '</tbody></table>';
+                auditoriaEl.innerHTML = auditoriaHtml;
 
                 todosRegistros.sort((a, b) => b.data.localeCompare(a.data));
                 const ultimos = todosRegistros.slice(0, 5);
