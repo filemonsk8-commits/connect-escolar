@@ -456,6 +456,41 @@
         .appearance-size-row button.selected { border-color:var(--accent); background:var(--accent); color:#fff; }
         .appearance-note { color:#64748b; font-size:.85rem; line-height:1.5; }
 
+
+        /* Exportação local de documentos, sem serviços pagos. */
+        .export-info{padding:15px 17px;border:1px solid #cbdaf5;border-radius:12px;background:#f6f9ff;color:#41516b;margin:14px 0 20px}
+        .export-info strong{color:#1e3a66}.export-info p{margin:7px 0 0;font-size:.82rem;line-height:1.55}
+        .export-actions-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0 20px}
+        .export-action{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-height:95px;padding:15px;border:1px solid #dbe5f2;border-radius:12px;background:#fff;text-align:left;cursor:pointer;color:#263650}
+        .export-action strong{font-size:.88rem}.export-action span{color:#64748b;font-size:.76rem;line-height:1.45;font-weight:400}
+        .export-action:hover{border-color:#79a9f8;background:#f8fbff}
+        .export-status{margin:12px 0;padding:11px 13px;border:1px solid #dbe5f2;border-radius:9px;background:#f8fafc;color:#475569;font-size:.8rem;line-height:1.5}
+        .export-preview-actions{max-width:340px}.export-preview{margin-top:15px}
+        .export-preview-empty{padding:24px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;text-align:center;font-size:.85rem}
+        .export-document{padding:26px;background:#fff;color:#17243c;border:1px solid #e4eaf3;border-radius:12px}
+        .export-document h2{margin:0 0 6px;color:#17243c;font-size:1.35rem}
+        .export-doc-subtitle{margin:0 0 18px;color:#64748b;font-size:.85rem}
+        .export-doc-meta{padding:10px 12px;margin-bottom:18px;border:1px solid #e2e8f0;border-radius:8px;color:#475569;font-size:.78rem}
+        .export-document h3{margin:22px 0 8px;font-size:1rem;color:#1e293b}
+        .export-document .report-table{width:100%;min-width:0;table-layout:auto}
+        .export-document .report-table th,.export-document .report-table td{font-size:.78rem;padding:7px 6px}
+        .export-doc-foot{margin-top:22px;padding-top:10px;border-top:1px solid #e2e8f0;color:#64748b;font-size:.72rem}
+        @media(max-width:680px){.export-actions-grid{grid-template-columns:1fr}.export-action{min-height:80px}.export-document{padding:14px}}
+        @media print{
+          @page{size:A4 landscape;margin:12mm}
+          body.printing-export-document{background:#fff!important;padding:0!important}
+          body.printing-export-document #app nav,body.printing-export-document #app header{display:none!important}
+          body.printing-export-document #app .container{margin:0!important;padding:0!important;max-width:none!important}
+          body.printing-export-document #app .container>.card:not(#aba-export){display:none!important}
+          body.printing-export-document #aba-export{display:block!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important}
+          body.printing-export-document #aba-export>*:not(#export-preview){display:none!important}
+          body.printing-export-document #export-preview{display:block!important;margin:0!important;padding:0!important}
+          body.printing-export-document .export-document{border:0!important;border-radius:0!important;padding:0!important;box-shadow:none!important}
+          body.printing-export-document .export-document .report-table{width:100%!important;min-width:0!important}
+          body.printing-export-document .export-document .report-table th,body.printing-export-document .export-document .report-table td{font-size:8pt!important;padding:5px 4px!important}
+          body.printing-export-document .export-document tr{break-inside:avoid;page-break-inside:avoid}
+        }
+
 </style>
 </head>
 <body>
@@ -495,6 +530,7 @@
             <button class="tab-btn" onclick="aba('rd')">RELATÓRIO DIÁRIO</button>
             <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
             <button class="tab-btn" onclick="aba('l')">FECHAMENTO</button>
+            <button class="tab-btn" onclick="aba('export')">EXPORTAR DOCUMENTOS</button>
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
             <button class="tab-btn" onclick="aba('cad')">CADASTRO</button>
             <button class="tab-btn" onclick="aba('visual', this)">APARÊNCIA</button>
@@ -760,6 +796,25 @@
                     </div>
                 </div>
                 <div id="relatorio-pedagogico-completo" class="pedagogical-report" aria-live="polite"></div>
+            </div>
+
+            <div id="aba-export" class="card hidden">
+                <div class="panel-hero"><div><p class="panel-kicker">DOCUMENTOS E RELATÓRIOS</p><h2>Exportação de Documentos</h2><p class="panel-subtitle">Use a turma e o bimestre selecionados na barra superior.</p></div></div>
+                <div class="export-info"><strong>Como funciona</strong><p>Para garantir dados atualizados, mantenha o Connect Escolar conectado ao Firebase. Os documentos PDF usam a opção de impressão do aparelho: escolha “Salvar como PDF”.</p><p>As planilhas são baixadas em CSV com codificação compatível com Excel e outros aplicativos de planilha. Nenhum dado é enviado a serviços externos.</p></div>
+                <h3>Documentos em PDF</h3>
+                <div class="export-actions-grid">
+                    <button type="button" class="export-action" onclick="prepararDocumentoExportacao('completo')"><strong>Relatório pedagógico completo</strong><span>Diário de classe e fechamento das notas.</span></button>
+                    <button type="button" class="export-action" onclick="prepararDocumentoExportacao('diario')"><strong>Diário de classe</strong><span>Datas e conteúdos registrados.</span></button>
+                    <button type="button" class="export-action" onclick="prepararDocumentoExportacao('fechamento')"><strong>Fechamento de notas</strong><span>Atividades 1 a 5, soma, recuperação e nota final.</span></button>
+                </div>
+                <h3>Planilhas compatíveis com Excel</h3>
+                <div class="export-actions-grid">
+                    <button type="button" class="export-action" onclick="exportarPlanilhaFechamento()"><strong>Baixar planilha de notas (.csv)</strong><span>Notas e fechamento, uma linha por estudante.</span></button>
+                    <button type="button" class="export-action" onclick="exportarPlanilhaDiario()"><strong>Baixar planilha do Diário (.csv)</strong><span>Datas e conteúdos do Diário de Classe.</span></button>
+                </div>
+                <div id="export-status" class="export-status" role="status" aria-live="polite">Selecione um documento ou uma planilha. A exportação não altera seus registros.</div>
+                <div class="export-preview-actions no-print"><button type="button" id="btn-imprimir-exportacao" class="btn-main btn-green" onclick="imprimirDocumentoExportacao()" disabled>Imprimir / Salvar em PDF</button></div>
+                <div id="export-preview" class="export-preview"><div class="export-preview-empty">A prévia aparecerá aqui depois que você escolher um documento em PDF.</div></div>
             </div>
 
             <div id="aba-c" class="card hidden">
@@ -3885,6 +3940,144 @@
             } finally {
                 input.value = '';
             }
+        }
+
+
+        function alunosExportacaoNormalizados(valor){
+            if(Array.isArray(valor))return valor;
+            if(valor&&typeof valor==='object')return Object.keys(valor).sort((a,b)=>Number(a)-Number(b)).map(k=>valor[k]);
+            return [];
+        }
+        function dataExportacaoFormatada(valor){
+            const d=String(valor||'');
+            return /^\d{4}-\d{2}-\d{2}$/.test(d)?d.split('-').reverse().join('/'):(d||'—');
+        }
+        function notaExportacaoFormatada(valor){
+            const n=Number(valor);return Number.isFinite(n)?n.toFixed(1).replace('.', ','):'—';
+        }
+        function nomeArquivoExportacao(valor){
+            return String(valor||'turma').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'turma';
+        }
+        async function obterDadosExportacao(){
+            const ts=document.getElementById('turma'),bs=document.getElementById('bimestre'),t=limparT(ts.value),b=bs.value;
+            if(!t)throw new Error('Selecione uma turma na barra superior antes de exportar.');
+            if(!conectadoAoFirebase())throw new Error('Conecte o Connect Escolar ao Firebase antes de exportar, para usar os dados atualizados.');
+            const s=await Promise.all([
+                db.ref('headers/'+t+'/'+b).once('value'),db.ref('turmas/'+t).once('value'),
+                db.ref('vistos/'+t+'/'+b).once('value'),db.ref('recuperacao/'+t+'/'+b).once('value'),
+                db.ref('diario/'+t+'/'+b).once('value')
+            ]);
+            const raw=s[4].val()||{};
+            const diarios=Object.keys(raw).map(id=>Object.assign({id:id},raw[id]||{})).sort((a,b)=>String(a.data||'').localeCompare(String(b.data||'')));
+            return {turma:t,turmaNome:ts.options[ts.selectedIndex]?ts.options[ts.selectedIndex].textContent:ts.value,
+                bimestre:b,bimestreNome:bs.options[bs.selectedIndex]?bs.options[bs.selectedIndex].textContent:b,
+                cabecalhos:s[0].val()||{},alunos:alunosExportacaoNormalizados(s[1].val()),vistos:s[2].val()||{},
+                recuperacoes:s[3].val()||{},diarios:diarios};
+        }
+        function calcularFechamentoExportacao(d){
+            return d.alunos.map((nome,i)=>{
+                const soma=[0,0,0,0,0];
+                Object.keys(d.vistos).forEach(data=>{
+                    const dia=(d.vistos[data]&&d.vistos[data][i])||{};
+                    for(let a=1;a<=5;a++){
+                        const v=dia[a];
+                        if(v!==undefined&&v!==null&&String(v).trim()!==''){
+                            const n=parseFloat(String(v).replace(',','.'));if(Number.isFinite(n))soma[a-1]+=n;
+                        }
+                    }
+                });
+                const total=Math.min(soma.reduce((x,y)=>x+y,0),10),rb=d.recuperacoes[i];
+                const rn=rb!==undefined&&rb!==null&&String(rb).trim()!==''?parseFloat(String(rb).replace(',','.')):null;
+                const rec=rn!==null&&Number.isFinite(rn)&&rn!==-1?rn:null;
+                return {nome:String(nome||''),atividades:soma,total:total,recuperacao:rec,notaFinal:rec!==null&&rec>total?rec:total};
+            });
+        }
+        function tabelaFechamentoExportacao(d,linhas){
+            let x='<div><table class="report-table"><thead><tr><th>Estudante</th>';
+            for(let a=1;a<=5;a++)x+='<th>'+escapeHTML(d.cabecalhos['h'+a]||('Ativ. '+a))+'</th>';
+            x+='<th>Soma</th><th>Rec.</th><th>Nota final</th></tr></thead><tbody>';
+            if(!linhas.length)x+='<tr><td colspan="9">Nenhum estudante cadastrado nesta turma.</td></tr>';
+            linhas.forEach(l=>{
+                x+='<tr><td>'+escapeHTML(l.nome)+'</td>';
+                l.atividades.forEach(v=>x+='<td>'+(v>0?notaExportacaoFormatada(v):'—')+'</td>');
+                x+='<td><strong>'+notaExportacaoFormatada(l.total)+'</strong></td><td>'+(l.recuperacao===null?'—':notaExportacaoFormatada(l.recuperacao))+'</td><td><strong>'+notaExportacaoFormatada(l.notaFinal)+'</strong></td></tr>';
+            });
+            return x+'</tbody></table></div>';
+        }
+        function tabelaDiarioExportacao(d){
+            let x='<div><table class="report-table"><thead><tr><th style="width:18%">Data</th><th>Conteúdo / registro da aula</th></tr></thead><tbody>';
+            if(!d.diarios.length)x+='<tr><td colspan="2">Não há registros no Diário para esta turma e este bimestre.</td></tr>';
+            d.diarios.forEach(r=>x+='<tr><td style="white-space:nowrap;font-weight:700">'+escapeHTML(dataExportacaoFormatada(r.data))+'</td><td>'+escapeHTML(r.conteudo||r.conteúdo||'').replace(/\r?\n/g,'<br>')+'</td></tr>');
+            return x+'</tbody></table></div>';
+        }
+        function cabecalhoDocumentoExportacao(titulo,d){
+            return '<div class="export-document"><p style="margin:0 0 7px;color:#2563eb;font-size:.72rem;font-weight:800">CONNECT ESCOLAR · DOCUMENTO DOCENTE</p>'+
+                '<h2>'+escapeHTML(titulo)+'</h2><p class="export-doc-subtitle">'+escapeHTML(d.turmaNome)+' · '+escapeHTML(d.bimestreNome)+'</p>'+
+                '<div class="export-doc-meta"><strong>Turma:</strong> '+escapeHTML(d.turmaNome)+' &nbsp; | &nbsp; <strong>Período:</strong> '+escapeHTML(d.bimestreNome)+
+                ' &nbsp; | &nbsp; <strong>Emissão:</strong> '+new Date().toLocaleDateString('pt-BR')+'</div>';
+        }
+        async function prepararDocumentoExportacao(tipo){
+            const status=document.getElementById('export-status'),preview=document.getElementById('export-preview'),botao=document.getElementById('btn-imprimir-exportacao');
+            status.textContent='Consultando os registros da turma selecionada...';botao.disabled=true;preview.dataset.tipo='';
+            preview.innerHTML='<div class="export-preview-empty">Preparando o documento...</div>';
+            try{
+                const d=await obterDadosExportacao(),linhas=calcularFechamentoExportacao(d);let titulo='',conteudo='';
+                if(tipo==='completo'){
+                    titulo='Relatório Pedagógico Completo';
+                    conteudo='<section><h3>1. Conteúdos e aulas registradas</h3>'+tabelaDiarioExportacao(d)+'</section>'+
+                        '<section><h3>2. Acompanhamento das notas</h3>'+tabelaFechamentoExportacao(d,linhas)+'</section>';
+                }else if(tipo==='diario'){titulo='Diário de Classe';conteudo='<section><h3>Registros de aula</h3>'+tabelaDiarioExportacao(d)+'</section>';
+                }else if(tipo==='fechamento'){titulo='Fechamento de Notas';conteudo='<section><h3>Acompanhamento das notas</h3>'+tabelaFechamentoExportacao(d,linhas)+'</section>';
+                }else throw new Error('Tipo de documento não reconhecido.');
+                preview.innerHTML=cabecalhoDocumentoExportacao(titulo,d)+conteudo+
+                    '<div class="export-doc-foot">Documento gerado a partir dos registros disponíveis no Connect Escolar. A exportação não modifica cadastros, notas ou diários.</div></div>';
+                preview.dataset.tipo=tipo;botao.disabled=false;
+                status.textContent='Prévia pronta: '+titulo+'. Confira e toque em “Imprimir / Salvar em PDF”.';
+                preview.scrollIntoView({behavior:'smooth',block:'start'});
+            }catch(e){
+                preview.innerHTML='<div class="export-preview-empty">Não foi possível preparar o documento. Nenhum registro foi alterado.</div>';
+                status.textContent=e&&e.message?e.message:'Falha ao preparar o documento.';
+                console.error('Connect Escolar: falha na exportação:',e);
+            }
+        }
+        function imprimirDocumentoExportacao(){
+            const p=document.getElementById('export-preview');
+            if(!p||!p.dataset.tipo||!p.innerHTML.trim()){alert('Prepare a prévia do documento antes de imprimir.');return;}
+            const limpar=()=>document.body.classList.remove('printing-export-document');
+            document.body.classList.add('printing-export-document');
+            window.addEventListener('afterprint',limpar,{once:true});window.print();
+        }
+        function csvCelulaExportacao(valor){
+            let t=String(valor===null||valor===undefined?'':valor);
+            if(/^[=+\-@\t\r]/.test(t))t="'"+t;
+            return '"'+t.replace(/"/g,'""')+'"';
+        }
+        function baixarCsvExportacao(linhas,nome){
+            const conteudo='\uFEFF'+linhas.map(l=>l.map(csvCelulaExportacao).join(';')).join('\r\n');
+            const blob=new Blob([conteudo],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+            a.href=url;a.download=nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+        }
+        async function exportarPlanilhaFechamento(){
+            const status=document.getElementById('export-status');status.textContent='Preparando a planilha de notas...';
+            try{
+                const d=await obterDadosExportacao(),linhasNotas=calcularFechamentoExportacao(d);
+                const linhas=[['Connect Escolar - Fechamento de Notas'],['Turma',d.turmaNome],['Bimestre',d.bimestreNome],[],
+                    ['Estudante'].concat([1,2,3,4,5].map(n=>d.cabecalhos['h'+n]||('Ativ. '+n))).concat(['Soma','Recuperação','Nota Final'])];
+                linhasNotas.forEach(l=>linhas.push([l.nome].concat(l.atividades.map(v=>v>0?notaExportacaoFormatada(v):''))
+                    .concat([notaExportacaoFormatada(l.total),l.recuperacao===null?'':notaExportacaoFormatada(l.recuperacao),notaExportacaoFormatada(l.notaFinal)])));
+                const nome='connect-escolar-notas-'+nomeArquivoExportacao(d.turmaNome)+'-'+nomeArquivoExportacao(d.bimestre)+'-'+new Date().toISOString().slice(0,10)+'.csv';
+                baixarCsvExportacao(linhas,nome);status.textContent='Planilha de notas baixada. O arquivo CSV abre no Excel; os registros do Connect Escolar não foram alterados.';
+            }catch(e){status.textContent=e&&e.message?e.message:'Não foi possível baixar a planilha de notas.';console.error('Connect Escolar: planilha de notas:',e);}
+        }
+        async function exportarPlanilhaDiario(){
+            const status=document.getElementById('export-status');status.textContent='Preparando a planilha do Diário...';
+            try{
+                const d=await obterDadosExportacao();
+                const linhas=[['Connect Escolar - Diário de Classe'],['Turma',d.turmaNome],['Bimestre',d.bimestreNome],[],['Data','Conteúdo / registro da aula']];
+                d.diarios.forEach(r=>linhas.push([dataExportacaoFormatada(r.data),r.conteudo||r.conteúdo||'']));
+                const nome='connect-escolar-diario-'+nomeArquivoExportacao(d.turmaNome)+'-'+nomeArquivoExportacao(d.bimestre)+'-'+new Date().toISOString().slice(0,10)+'.csv';
+                baixarCsvExportacao(linhas,nome);status.textContent='Planilha do Diário baixada. O arquivo CSV abre no Excel; os registros do Connect Escolar não foram alterados.';
+            }catch(e){status.textContent=e&&e.message?e.message:'Não foi possível baixar a planilha do Diário.';console.error('Connect Escolar: planilha do Diário:',e);}
         }
 
     </script>
