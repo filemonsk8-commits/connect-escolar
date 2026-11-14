@@ -4028,6 +4028,8 @@
         }
         async function prepararDocumentoExportacao(tipo){
             const status=document.getElementById('export-status'),preview=document.getElementById('export-preview'),botao=document.getElementById('btn-imprimir-exportacao');
+            const botaoCsv=document.getElementById('btn-baixar-planilha-exportacao');
+            window.planilhaExportacaoPreparada=null;if(botaoCsv)botaoCsv.disabled=true;
             status.textContent='Consultando os registros da turma selecionada...';botao.disabled=true;preview.dataset.tipo='';
             preview.innerHTML='<div class="export-preview-empty">Preparando o documento...</div>';
             try{
