@@ -3905,7 +3905,7 @@
 
                 let limpo = candidato
                     .replace(/^\s*(?:(?:n[º°o.]?\s*)?\d+\s*[.)º°-]?\s*)+/, "")
-                    .replace(/^\s*n[º°o.]\s*/i, "")
+                    .replace(/^\s*n[º°.]\s*/i, "")
                     .replace(/^\s*(?:nome(?:\s+completo)?\s*[:：-]\s*)/i, "")
                     .replace(/[^\p{L}\s'’-]/gu, " ")
                     .replace(/[’]/g, "'")
