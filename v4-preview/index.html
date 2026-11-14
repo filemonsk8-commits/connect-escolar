@@ -928,6 +928,11 @@
                         <button onclick="exportarBackupCompleto()" class="btn-main btn-blue" style="margin-top:0;">Baixar backup completo</button>
                         <button onclick="document.getElementById('arquivo-backup').click()" class="btn-main btn-orange" style="margin-top:0;">Restaurar um backup</button>
                     </div>
+                    <div class="sec-box" style="margin-top:12px; border-color:#f59e0b;">
+                        <h4>🧹 Limpeza de registros de turmas antigas</h4>
+                        <p class="backup-description">Remove somente as listas de estudantes e os diários das cinco turmas antigas identificadas na auditoria. Antes da exclusão, o sistema gera um backup completo e pede uma confirmação adicional.</p>
+                        <button type="button" onclick="limparRegistrosTurmasAntigas()" class="btn-main btn-orange" style="margin-top:0;">Preparar limpeza das turmas antigas</button>
+                    </div>
                     <input id="arquivo-backup" type="file" accept="application/json,.json" class="hidden" onchange="restaurarBackupCompleto(this)">
                     <p class="backup-warning">Ao restaurar, somente as áreas de dados do Connect Escolar serão substituídas. Antes disso, o sistema baixará uma cópia do estado atual.</p>
 
@@ -3887,6 +3892,98 @@
             link.click();
             link.remove();
             setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }
+
+        async function limparRegistrosTurmasAntigas() {
+            const alvos = {
+                turmas: ['1ºB História', '9A PC', '9B PC'],
+                diario: ['1ºB História', '2º B (Soc)', '9ºA Letramento Digital']
+            };
+            const normalizar = valor => limparT(String(valor || '')).toLocaleLowerCase('pt-BR');
+            const nomesAlvo = [...new Set([...alvos.turmas, ...alvos.diario])];
+
+            if (!navigator.onLine || !conectadoAoFirebase()) {
+                alert('Para fazer essa limpeza com segurança, conecte o aplicativo ao Firebase. Nenhum dado foi alterado.');
+                return;
+            }
+
+            try {
+                const cadastroSnap = await db.ref('cadastros_turmas').once('value');
+                const cadastro = cadastroSnap.val() || {};
+                const nomesAtuais = Object.values(cadastro).filter(item => item && item.nome).map(item => normalizar(item.nome));
+                const conflitoAtual = nomesAlvo.filter(nome => nomesAtuais.includes(normalizar(nome)));
+                if (conflitoAtual.length) {
+                    alert('A limpeza foi cancelada porque uma ou mais turmas aparecem no cadastro atual. Nenhum dado foi alterado.');
+                    return;
+                }
+
+                const caminhos = ['turmas', 'diario'];
+                const snapshots = await Promise.all(caminhos.map(caminho => db.ref(caminho).once('value')));
+                const raizes = Object.fromEntries(caminhos.map((caminho, i) => [caminho, snapshots[i].val() || {}]));
+                const encontrados = [];
+                Object.entries(alvos).forEach(([caminho, nomes]) => {
+                    nomes.forEach(nome => {
+                        const chaves = Object.keys(raizes[caminho]).filter(chave => normalizar(chave) === normalizar(nome));
+                        if (chaves.length > 1) throw new Error('Foram encontradas chaves ambíguas para ' + nome + ' em ' + caminho + '.');
+                        if (chaves.length === 1) encontrados.push({ caminho, chave: chaves[0], valor: raizes[caminho][chaves[0]] });
+                    });
+                });
+
+                if (!encontrados.length) {
+                    alert('Nenhum dos registros antigos indicados foi encontrado. Nenhum dado foi alterado.');
+                    return;
+                }
+
+                const resumo = encontrados.map(item => item.caminho + '/' + item.chave).join('\n');
+                const iniciar = confirm(
+                    'A limpeza encontrou estes registros antigos:\n\n' + resumo +
+                    '\n\nSerá gerado um BACKUP COMPLETO antes da exclusão. Deseja preparar o backup?'
+                );
+                if (!iniciar) return;
+
+                const backup = await montarObjetoBackup();
+                baixarObjetoBackup(backup, 'seguranca-antes-da-limpeza-turmas-antigas');
+
+                const confirmacao = prompt(
+                    'O backup completo foi enviado para download. Guarde o arquivo em local seguro.\n\n' +
+                    'Serão removidos somente os caminhos listados acima, dentro de turmas e diario.\n' +
+                    'As demais áreas e todas as turmas atuais serão preservadas.\n\n' +
+                    'Digite EXCLUIR TURMAS ANTIGAS para confirmar:'
+                );
+                if (confirmacao !== 'EXCLUIR TURMAS ANTIGAS') {
+                    alert('Limpeza cancelada. Os dados permanecem intactos; o backup já foi gerado.');
+                    return;
+                }
+
+                // Revalida o cadastro e as chaves imediatamente antes da exclusão.
+                const cadastroAtualSnap = await db.ref('cadastros_turmas').once('value');
+                const cadastroAtual = cadastroAtualSnap.val() || {};
+                const atuaisAgora = Object.values(cadastroAtual).filter(item => item && item.nome).map(item => normalizar(item.nome));
+                if (nomesAlvo.some(nome => atuaisAgora.includes(normalizar(nome)))) {
+                    alert('A limpeza foi interrompida porque o cadastro de turmas mudou durante a confirmação. Nenhum registro antigo foi removido.');
+                    return;
+                }
+
+                for (const item of encontrados) {
+                    const atualSnap = await db.ref(item.caminho).child(item.chave).once('value');
+                    if (JSON.stringify(atualSnap.val()) !== JSON.stringify(item.valor)) {
+                        alert('A limpeza foi interrompida porque os dados de ' + item.chave + ' foram alterados depois do backup. Nenhum registro foi removido.');
+                        return;
+                    }
+                }
+
+                let removidos = 0;
+                for (const item of encontrados) {
+                    await db.ref(item.caminho).child(item.chave).remove();
+                    removidos++;
+                }
+
+                if (typeof carregarPainelGeral === 'function') await carregarPainelGeral();
+                alert('Limpeza concluída. ' + removidos + ' conjunto(s) antigo(s) foram removidos. As turmas atuais e os demais dados foram preservados. Guarde o backup gerado antes da limpeza.');
+            } catch (erro) {
+                console.error('Falha na limpeza de registros antigos:', erro);
+                alert('Não foi possível concluir a limpeza. Verifique a conexão e as permissões do Firebase. Confira o banco antes de tentar novamente; pode ter ocorrido uma interrupção durante a operação.');
+            }
         }
 
         async function exportarBackupCompleto() {
