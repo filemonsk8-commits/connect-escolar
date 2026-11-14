@@ -441,6 +441,21 @@
             .calendar-form-actions { flex-direction:column; }
             .calendar-form-actions .btn-main { width:100%; }
         }
+
+        /* Personalização visual: preferências locais, sem alterar dados escolares */
+        .appearance-section { max-width: 900px; margin: 0 auto; }
+        .appearance-options { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin:14px 0 22px; }
+        .appearance-choice { border:2px solid #cbd5e1; border-radius:12px; background:var(--card); color:var(--text); padding:14px; text-align:left; cursor:pointer; min-height:82px; }
+        .appearance-choice strong { display:block; margin-bottom:7px; }
+        .appearance-choice span { display:block; font-size:.8rem; opacity:.8; }
+        .appearance-choice.selected { border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent); }
+        .appearance-swatches { display:flex; gap:5px; margin-top:8px; }
+        .appearance-swatches i { width:18px; height:18px; border-radius:50%; display:block; border:1px solid #94a3b8; }
+        .appearance-size-row { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+        .appearance-size-row button { border:1px solid #cbd5e1; border-radius:8px; padding:10px 16px; background:var(--card); color:var(--text); font-weight:700; cursor:pointer; }
+        .appearance-size-row button.selected { border-color:var(--accent); background:var(--accent); color:#fff; }
+        .appearance-note { color:#64748b; font-size:.85rem; line-height:1.5; }
+
 </style>
 </head>
 <body>
@@ -481,6 +496,7 @@
             <button class="tab-btn" onclick="aba('r')">RECUPERAÇÃO</button>
             <button class="tab-btn" onclick="aba('l')">FECHAMENTO</button>
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
+            <button class="tab-btn" onclick="aba('visual', this)">APARÊNCIA</button>
             <button class="tab-btn" onclick="aba('cad')">CADASTRO</button>
             <button class="tab-btn" onclick="aba('sobre')">SOBRE</button>
             <button id="btn-instalar-app" class="tab-btn install-nav-btn" onclick="instalarAplicativo()" style="display:none;">＋ INSTALAR APLICATIVO</button>
@@ -511,6 +527,39 @@
         </header>
 
         <div class="container">
+            <div id="aba-visual" class="card hidden appearance-section">
+                <div class="panel-hero">
+                    <div>
+                        <p class="panel-kicker">PERSONALIZAÇÃO</p>
+                        <h2>Aparência do Connect Escolar</h2>
+                        <p class="panel-subtitle">Escolha as cores e o tamanho do texto para deixar a tela mais confortável.</p>
+                    </div>
+                </div>
+                <h3>Temas de cores</h3>
+                <div class="appearance-options">
+                    <button type="button" class="appearance-choice" data-theme-choice="azul" onclick="aplicarTemaVisual('azul')">
+                        <strong>Azul profissional</strong><span>Visual atual, claro e organizado.</span>
+                        <span class="appearance-swatches"><i style="background:#0f172a"></i><i style="background:#3b82f6"></i><i style="background:#f8fafc"></i></span>
+                    </button>
+                    <button type="button" class="appearance-choice" data-theme-choice="preto-azul" onclick="aplicarTemaVisual('preto-azul')">
+                        <strong>Preto e azul</strong><span>Contraste marcante e moderno.</span>
+                        <span class="appearance-swatches"><i style="background:#020617"></i><i style="background:#2563eb"></i><i style="background:#eaf0f8"></i></span>
+                    </button>
+                    <button type="button" class="appearance-choice" data-theme-choice="verde" onclick="aplicarTemaVisual('verde')">
+                        <strong>Verde escolar</strong><span>Uma alternativa suave e discreta.</span>
+                        <span class="appearance-swatches"><i style="background:#12352b"></i><i style="background:#15803d"></i><i style="background:#f0fdf4"></i></span>
+                    </button>
+                </div>
+                <h3>Tamanho do texto</h3>
+                <div class="appearance-size-row">
+                    <button type="button" data-font-size="90" onclick="aplicarTamanhoTexto(90)">Pequeno</button>
+                    <button type="button" data-font-size="100" onclick="aplicarTamanhoTexto(100)">Padrão</button>
+                    <button type="button" data-font-size="110" onclick="aplicarTamanhoTexto(110)">Grande</button>
+                </div>
+                <p id="appearance-status" class="appearance-note" role="status">Suas preferências ficam salvas neste dispositivo e não alteram os registros escolares.</p>
+                <button type="button" class="btn-main btn-blue" style="max-width:240px" onclick="restaurarAparenciaPadrao()">Restaurar aparência padrão</button>
+            </div>
+
             <div id="aba-home" class="card">
                 <div class="panel-hero">
                     <div>
@@ -2410,10 +2459,45 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            carregarPreferenciasVisuais();
             somCalendarioAtivo = localStorage.getItem('connectCalendarioSomAtivo') === '1';
             atualizarBotaoSomCalendario();
             window.setInterval(verificarAlertasCalendario, 15000);
         });
+
+        const TEMAS_VISUAIS = {
+            'azul': { primary:'#0f172a', accent:'#3b82f6', bg:'#f8fafc', card:'#ffffff', text:'#334155' },
+            'preto-azul': { primary:'#020617', accent:'#2563eb', bg:'#eaf0f8', card:'#ffffff', text:'#172554' },
+            'verde': { primary:'#12352b', accent:'#15803d', bg:'#f0fdf4', card:'#ffffff', text:'#1f2937' }
+        };
+        function aplicarTemaVisual(tema, salvar=true) {
+            const paleta = TEMAS_VISUAIS[tema] || TEMAS_VISUAIS.azul;
+            const raiz = document.documentElement;
+            Object.entries(paleta).forEach(([chave, valor]) => raiz.style.setProperty('--'+chave, valor));
+            raiz.dataset.theme = tema;
+            document.querySelectorAll('[data-theme-choice]').forEach(btn => btn.classList.toggle('selected', btn.dataset.themeChoice === tema));
+            if (salvar) localStorage.setItem('connectEscolarTema', tema);
+            const status = document.getElementById('appearance-status');
+            if (status) status.textContent = 'Tema aplicado e salvo neste dispositivo.';
+        }
+        function aplicarTamanhoTexto(tamanho, salvar=true) {
+            const valor = [90,100,110].includes(Number(tamanho)) ? Number(tamanho) : 100;
+            document.documentElement.style.fontSize = valor+'%';
+            document.querySelectorAll('[data-font-size]').forEach(btn => btn.classList.toggle('selected', Number(btn.dataset.fontSize) === valor));
+            if (salvar) localStorage.setItem('connectEscolarFonte', String(valor));
+            const status = document.getElementById('appearance-status');
+            if (status) status.textContent = 'Tamanho do texto aplicado e salvo neste dispositivo.';
+        }
+        function restaurarAparenciaPadrao() {
+            aplicarTemaVisual('azul');
+            aplicarTamanhoTexto(100);
+            const status = document.getElementById('appearance-status');
+            if (status) status.textContent = 'Aparência padrão restaurada.';
+        }
+        function carregarPreferenciasVisuais() {
+            aplicarTemaVisual(localStorage.getItem('connectEscolarTema') || 'azul', false);
+            aplicarTamanhoTexto(localStorage.getItem('connectEscolarFonte') || 100, false);
+        }
 
         function marcarDataComoNaoAberta() {
             dataOficialmenteAberta = false;
@@ -2553,11 +2637,12 @@
             }
         }
         
-        function aba(a) { 
+        function aba(a, botao) { 
             document.querySelectorAll('.card').forEach(c => c.classList.add('hidden')); 
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
             document.getElementById('aba-'+a).classList.remove('hidden'); 
-            event.currentTarget.classList.add('active'); 
+            const acionador = botao || (typeof event !== 'undefined' ? event.currentTarget : null);
+            if (acionador) acionador.classList.add('active'); 
             
             setTimeout(() => {
                 if(a === 'home') carregarPainelGeral();
