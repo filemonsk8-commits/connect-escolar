@@ -543,6 +543,7 @@
             <button class="tab-btn" onclick="aba('export')">EXPORTAR DOCUMENTOS</button>
             <button class="tab-btn" onclick="aba('c')">AJUSTES</button>
             <button class="tab-btn" onclick="aba('cad')">CADASTRO</button>
+            <button class="tab-btn" onclick="aba('admin', this)">ADMINISTRAÇÃO</button>
             <button class="tab-btn" onclick="aba('visual', this)">APARÊNCIA</button>
             <button class="tab-btn" onclick="aba('sobre')">SOBRE</button>
             <button id="btn-instalar-app" class="tab-btn install-nav-btn" onclick="instalarAplicativo()" style="display:none;">＋ INSTALAR APLICATIVO</button>
@@ -912,23 +913,7 @@
                     </div>
                 </div>
 
-                <div class="sec-box" style="border:2px solid #ef4444; background:#fff7f7;">
-                    <h4 style="color:#991b1b; font-size:1rem;">⚠️ ZONA DE PERIGO — Encerramento do ano letivo</h4>
-                    <p style="font-size:.84rem; color:#7f1d1d; line-height:1.5;">Use estas ferramentas somente quando quiser começar um novo ano. O sistema fará um backup completo antes da limpeza e exigirá uma confirmação digitada.</p>
-                    <div style="background:#fff; border:1px solid #fecaca; border-radius:8px; padding:12px; margin:10px 0;">
-                        <strong style="color:#991b1b;">1. Preparar sistema para novo ano</strong>
-                        <p style="font-size:.78rem; margin:6px 0 10px;">Apaga turmas, estudantes, notas, vistos, diários, recuperações, horários e calendário. Mantém sua conta, senha, aplicativo e preferências visuais.</p>
-                        <button onclick="executarLimpezaConnectEscolar('anual')" class="btn-main btn-red" style="margin:0;">Preparar sistema para novo ano</button>
-                    </div>
-                    <div style="background:#fff; border:1px solid #fecaca; border-radius:8px; padding:12px; margin:10px 0;">
-                        <strong style="color:#991b1b;">2. Apagar todos os dados escolares</strong>
-                        <p style="font-size:.78rem; margin:6px 0 10px;">Remove as mesmas informações do banco e também a cópia offline deste aparelho. A conta de acesso não será excluída.</p>
-                        <button onclick="executarLimpezaConnectEscolar('total')" class="btn-main btn-red" style="margin:0; background:#7f1d1d;">Apagar todos os dados escolares</button>
-                    </div>
-                    <p style="font-size:.73rem; color:#7f1d1d; margin-bottom:0;"><strong>Importante:</strong> exige internet, backup e ausência de alterações pendentes. Nos outros aparelhos, conecte-se à internet e use “Preparar / atualizar cópia local” antes de voltar a trabalhar offline.</p>
-                </div>
-
-                <div class="sec-box backup-box">
+                                <div class="sec-box backup-box">
                     <h4>🛡️ Backup e proteção dos registros</h4>
                     <p class="backup-description">Exporte uma cópia das turmas, estudantes, vistos, atividades, diários, recuperações e horários. O backup não altera os dados que estão no Firebase.</p>
                     <div class="backup-actions">
@@ -960,6 +945,38 @@
         </div>
     </div>
 
+            <div id="aba-admin" class="card hidden">
+                <div class="panel-hero"><div><p class="panel-kicker">CONTROLE E SEGURANÇA</p><h2>Administração do Sistema</h2><p class="panel-subtitle">Área reservada para operações administrativas e encerramento do ano letivo.</p></div></div>
+                <div id="admin-login-box" class="sec-box" style="max-width:560px;border:1px solid #cbdaf5;background:#f8fbff;">
+                    <h3>🔐 Acesso protegido</h3>
+                    <p style="font-size:.84rem;color:#64748b;line-height:1.55;">Confirme a senha da sua conta Connect Escolar para abrir esta área. Sua senha não será salva pelo aplicativo.</p>
+                    <label for="admin-senha" style="display:block;font-size:.82rem;font-weight:700;margin:12px 0 6px;">Senha da conta</label>
+                    <input type="password" id="admin-senha" autocomplete="current-password" placeholder="Digite sua senha" onkeydown="if(event.key==='Enter') desbloquearAdministracao()" style="width:100%;">
+                    <p id="admin-login-erro" role="alert" aria-live="polite" style="color:#b91c1c;font-size:.8rem;"></p>
+                    <button type="button" id="btn-admin-desbloquear" onclick="desbloquearAdministracao()" class="btn-main btn-blue">Confirmar senha e acessar</button>
+                </div>
+                <div id="admin-conteudo-protegido" class="hidden">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0;">
+                        <span style="font-size:.8rem;color:#15803d;font-weight:700;">✓ Acesso administrativo confirmado nesta sessão.</span>
+                        <button type="button" onclick="bloquearAdministracao()" class="btn-main" style="margin:0;background:#e2e8f0;color:#334155;">Bloquear área</button>
+                    </div>
+                    <div class="sec-box" style="border:2px solid #ef4444;background:#fff7f7;">
+                        <h3 style="color:#991b1b;margin-bottom:8px;">⚠️ Zona de Perigo — Encerramento do ano letivo</h3>
+                        <p style="font-size:.84rem;color:#7f1d1d;line-height:1.55;">Estas operações apagam dados escolares. O sistema exige conexão, ausência de alterações pendentes, backup e confirmação digitada.</p>
+                        <div style="background:#fff;border:1px solid #fecaca;border-radius:9px;padding:13px;margin:12px 0;">
+                            <strong style="color:#991b1b;">1. Preparar sistema para novo ano</strong>
+                            <p style="font-size:.8rem;margin:7px 0 11px;">Apaga turmas, estudantes, notas, vistos, diários, recuperações, horários e calendário. Mantém sua conta, senha, aplicativo e preferências visuais.</p>
+                            <button type="button" onclick="executarLimpezaConnectEscolar('anual')" class="btn-main btn-red" style="margin:0;">Preparar sistema para novo ano</button>
+                        </div>
+                        <div style="background:#fff;border:1px solid #fecaca;border-radius:9px;padding:13px;margin:12px 0;">
+                            <strong style="color:#991b1b;">2. Apagar todos os dados escolares</strong>
+                            <p style="font-size:.8rem;margin:7px 0 11px;">Remove os mesmos dados do banco e também a cópia offline deste aparelho. A conta de acesso não será excluída.</p>
+                            <button type="button" onclick="executarLimpezaConnectEscolar('total')" class="btn-main btn-red" style="margin:0;background:#7f1d1d;">Apagar todos os dados escolares</button>
+                        </div>
+                        <p style="font-size:.74rem;color:#7f1d1d;margin-bottom:0;"><strong>Importante:</strong> depois da limpeza, conecte os outros aparelhos à internet e atualize a cópia local antes de voltar a trabalhar offline.</p>
+                    </div>
+                </div>
+            </div>
     <script>
         if (window.pdfjsLib) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -2720,6 +2737,7 @@
         }
         
         function aba(a, botao) { 
+            if (a !== 'admin' && typeof bloquearAdministracao === 'function') bloquearAdministracao();
             document.querySelectorAll('.card').forEach(c => c.classList.add('hidden')); 
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
             document.getElementById('aba-'+a).classList.remove('hidden'); 
@@ -3598,7 +3616,53 @@
             }
         }
 
+
+        let administracaoDesbloqueada = false;
+
+        async function desbloquearAdministracao() {
+            const usuario = auth.currentUser;
+            const campo = document.getElementById('admin-senha');
+            const erro = document.getElementById('admin-login-erro');
+            const botao = document.getElementById('btn-admin-desbloquear');
+            const senha = campo ? campo.value : '';
+            if (!usuario || !usuario.email) { if (erro) erro.textContent = 'Sua sessão expirou. Entre novamente na conta.'; return; }
+            if (!senha) { if (erro) erro.textContent = 'Digite a senha da sua conta.'; return; }
+            if (botao) { botao.disabled = true; botao.textContent = 'Verificando senha...'; }
+            if (erro) erro.textContent = '';
+            try {
+                const credencial = firebase.auth.EmailAuthProvider.credential(usuario.email, senha);
+                await usuario.reauthenticateWithCredential(credencial);
+                administracaoDesbloqueada = true;
+                campo.value = '';
+                document.getElementById('admin-login-box').classList.add('hidden');
+                document.getElementById('admin-conteudo-protegido').classList.remove('hidden');
+            } catch (falha) {
+                console.warn('Connect Escolar: falha na reautenticação administrativa:', falha);
+                if (erro) erro.textContent = (falha && (falha.code === 'auth/wrong-password' || falha.code === 'auth/invalid-credential'))
+                    ? 'Senha incorreta. Confira a senha da sua conta e tente novamente.'
+                    : 'Não foi possível confirmar a senha. Verifique a conexão e tente novamente.';
+            } finally {
+                if (botao) { botao.disabled = false; botao.textContent = 'Confirmar senha e acessar'; }
+            }
+        }
+
+        function bloquearAdministracao() {
+            administracaoDesbloqueada = false;
+            const gate = document.getElementById('admin-login-box');
+            const conteudo = document.getElementById('admin-conteudo-protegido');
+            const campo = document.getElementById('admin-senha');
+            const erro = document.getElementById('admin-login-erro');
+            if (gate) gate.classList.remove('hidden');
+            if (conteudo) conteudo.classList.add('hidden');
+            if (campo) campo.value = '';
+            if (erro) erro.textContent = '';
+        }
+
         async function executarLimpezaConnectEscolar(modo) {
+            if (!administracaoDesbloqueada) {
+                alert('Acesse a aba Administração e confirme sua senha antes de realizar esta operação.');
+                return;
+            }
             const caminhos = ['cadastros_turmas','turmas','vistos','headers','diario','recuperacao','horario_professor','calendario_escolar'];
             const uid = usuarioAtualOffline();
             const total = modo === 'total';
