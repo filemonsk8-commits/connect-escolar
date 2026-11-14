@@ -3869,10 +3869,10 @@
         }
         function normalizarNomeImportacao(valor) {
             return String(valor || "")
-                .replace(/\\s*\\((transferido|inativo)\\)/ig, "")
-                .normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
-                .toLowerCase().replace(/[^a-z\\s'-]/g, " ")
-                .replace(/\\s+/g, " ").trim();
+                .replace(/\s*\((transferido|inativo)\)/ig, "")
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase().replace(/[^a-z\s'-]/g, " ")
+                .replace(/\s+/g, " ").trim();
         }
 
         function limparENormalizarLista(textoBruto) {
@@ -3892,30 +3892,30 @@
             const preposicoes = new Set(["de", "da", "do", "das", "dos", "e"]);
             const resultado = [];
 
-            String(textoBruto || "").split(/\\r?\\n/).forEach(linhaOriginal => {
+            String(textoBruto || "").split(/\r?\n/).forEach(linhaOriginal => {
                 if (!linhaOriginal.trim()) return;
                 // Ao colar uma tabela, prioriza a coluna do nome; se a primeira coluna
                 // for apenas numeração, usa a próxima coluna preenchida.
-                let partes = linhaOriginal.split(/\\t/).map(p => p.trim()).filter(Boolean);
+                let partes = linhaOriginal.split(/\t/).map(p => p.trim()).filter(Boolean);
                 if (!partes.length) partes = [linhaOriginal.trim()];
                 let candidato = partes[0];
-                if (/^(?:n[º°o.]?\\s*)?\\d+[.)-]?$/.test(candidato) && partes.length > 1) candidato = partes[1];
-                if (/^(?:n[º°o.]?\\s*)?\\d+[.)-]?\\s*$/.test(candidato)) return;
-                if (/[ⓘ]|\\((?:i|info)\\)|\\[(?:i|info)\\]/i.test(candidato)) return;
+                if (/^(?:n[º°o.]?\s*)?\d+[.)-]?$/.test(candidato) && partes.length > 1) candidato = partes[1];
+                if (/^(?:n[º°o.]?\s*)?\d+[.)-]?\s*$/.test(candidato)) return;
+                if (/[ⓘ]|\((?:i|info)\)|\[(?:i|info)\]/i.test(candidato)) return;
 
                 let limpo = candidato
-                    .replace(/^\\s*(?:(?:n[º°o.]?\\s*)?\\d+\\s*[.)º°-]?\\s*)+/, "")
-                    .replace(/^\\s*n[º°o.]\\s*/i, "")
-                    .replace(/^\\s*(?:nome(?:\\s+completo)?\\s*[:：-]\\s*)/i, "")
-                    .replace(/[^\\p{L}\\s'’-]/gu, " ")
+                    .replace(/^\s*(?:(?:n[º°o.]?\s*)?\d+\s*[.)º°-]?\s*)+/, "")
+                    .replace(/^\s*n[º°o.]\s*/i, "")
+                    .replace(/^\s*(?:nome(?:\s+completo)?\s*[:：-]\s*)/i, "")
+                    .replace(/[^\p{L}\s'’-]/gu, " ")
                     .replace(/[’]/g, "'")
-                    .replace(/\\s+/g, " ").trim();
+                    .replace(/\s+/g, " ").trim();
                 if (!limpo) return;
 
-                const chaveCabecalho = limpo.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9º°]+/g, " ").trim();
+                const chaveCabecalho = limpo.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9º°]+/g, " ").trim();
                 if (cabecalhos.has(chaveCabecalho)) return;
                 // Rejeita cabeçalhos compostos conhecidos sem bloquear sobrenomes legítimos.
-                if (/^(?:n(?:º|o|umero)?\\s+)?(?:nome|aluno|estudante)(?:\\s+(?:do\\s+)?(?:aluno|estudante|completo))?$/.test(chaveCabecalho)) return;
+                if (/^(?:n(?:º|o|umero)?\s+)?(?:nome|aluno|estudante)(?:\s+(?:do\s+)?(?:aluno|estudante|completo))?$/.test(chaveCabecalho)) return;
 
                 const palavras = limpo.split(" ");
                 limpo = palavras.map((p, i) => {
@@ -3923,7 +3923,7 @@
                     if (i > 0 && preposicoes.has(min)) return min;
                     return min.charAt(0).toLocaleUpperCase("pt-BR") + min.slice(1);
                 }).join(" ");
-                if (limpo.length >= 3 && /\\p{L}/u.test(limpo)) resultado.push(limpo);
+                if (limpo.length >= 3 && /\p{L}/u.test(limpo)) resultado.push(limpo);
             });
 
             return resultado;
@@ -3979,11 +3979,11 @@
             }
 
             const avisoMigracao = semCorrespondencia
-                ? "\\nATENÇÃO: " + semCorrespondencia + " nome(s) não têm correspondência única com a lista atual. As notas/vistos desses alunos não poderão ser associados automaticamente."
-                : "\\nTodos os nomes encontrados têm correspondência única com a lista atual.";
-            if (confirm("Prévia: " + novosAlunos.length + " alunos.\\n" +
+                ? "\nATENÇÃO: " + semCorrespondencia + " nome(s) não têm correspondência única com a lista atual. As notas/vistos desses alunos não poderão ser associados automaticamente."
+                : "\nTodos os nomes encontrados têm correspondência única com a lista atual.";
+            if (confirm("Prévia: " + novosAlunos.length + " alunos.\n" +
                 correspondentes + " com correspondência única para preservar notas/vistos. " +
-                avisoMigracao + "\\n\\nConfirma a atualização da lista?")) {
+                avisoMigracao + "\n\nConfirma a atualização da lista?")) {
                 try {
                     await realizarRemapeamentoGeralVistosEAlunos(t, novosAlunos);
                     document.getElementById('imp').value = "";
