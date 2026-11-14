@@ -844,7 +844,8 @@
                     Cole a lista de nomes abaixo para aplicar a migração sem perder as notas já lançadas.
                 </p>
                 <textarea id="imp" style="height:140px;" placeholder="Cole a lista de alunos aqui (um por linha)..."></textarea>
-                <button onclick="importarComMigracao()" class="btn-main btn-orange">Atualizar Lista Migrando Vistos</button>
+                <div id="imp-preview" aria-live="polite"></div>
+                <button onclick="importarComMigracao()" class="btn-main btn-orange">Conferir e Atualizar Lista</button>
             </div>
 
             <div id="aba-sobre" class="card hidden">
@@ -3866,76 +3867,132 @@
                 alert('Não foi possível atualizar a situação do aluno. Verifique a conexão e tente novamente. Confira a conexão antes de repetir a operação.');
             }
         }
+        function normalizarNomeImportacao(valor) {
+            return String(valor || "")
+                .replace(/\\s*\\((transferido|inativo)\\)/ig, "")
+                .normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
+                .toLowerCase().replace(/[^a-z\\s'-]/g, " ")
+                .replace(/\\s+/g, " ").trim();
+        }
+
         function limparENormalizarLista(textoBruto) {
-            const termosInvalidados = [
-                "siap", "frequencia", "frequência", "conteudos", "conteúdos", "notas", "acesso",
-                "remoto", "setembro", "cadastrado", "letivo", "ensino", "medio", "médio", 
-                "sociologia", "componente", "curricular", "serie", "série", "semestre", 
-                "turma", "bimestre", "historico", "detalhado", "escola", "educacao", "educação",
-                "dias", "aulas", "previstas", "ministradas", "selecionada", "ano", "base",
-                "dados", "preenchimento", "obrigatorio", "obrigatoriamente", "menu", "sistema",
-                "imprimir", "exportar", "aluno", "alunos", "estudante", "situação", "situacao", 
-                "matrícula", "matricula", "salvar", "cancelar", "tancredo", "vespertino"
-            ];
+            const cabecalhos = new Set([
+                "nome", "nomes", "nome completo", "nome do aluno", "nome do estudante",
+                "aluno", "alunos", "estudante", "estudantes", "nº nome", "no nome",
+                "numero nome", "número nome", "matricula", "matrícula",
+                "numero de matricula", "número de matrícula", "lista de alunos",
+                "lista de estudantes", "relacao de alunos", "relação de alunos",
+                "siap", "frequencia", "frequência", "conteudos", "conteúdos",
+                "notas", "acesso", "ensino medio", "ensino médio", "componente curricular",
+                "serie", "série", "semestre", "turma", "bimestre", "historico",
+                "histórico", "escola", "educacao", "educação", "dias", "aulas",
+                "ano", "base", "dados", "menu", "sistema", "imprimir", "exportar",
+                "salvar", "cancelar"
+            ]);
+            const preposicoes = new Set(["de", "da", "do", "das", "dos", "e"]);
+            const resultado = [];
 
-            const preposicoes = ["de", "da", "do", "das", "dos", "e"];
+            String(textoBruto || "").split(/\\r?\\n/).forEach(linhaOriginal => {
+                if (!linhaOriginal.trim()) return;
+                // Ao colar uma tabela, prioriza a coluna do nome; se a primeira coluna
+                // for apenas numeração, usa a próxima coluna preenchida.
+                let partes = linhaOriginal.split(/\\t|\\s{2,}/).map(p => p.trim()).filter(Boolean);
+                if (!partes.length) partes = [linhaOriginal.trim()];
+                let candidato = partes[0];
+                if (/^(?:n[º°o.]?\\s*)?\\d+[.)-]?$/.test(candidato) && partes.length > 1) candidato = partes[1];
+                if (/^(?:n[º°o.]?\\s*)?\\d+[.)-]?\\s*$/.test(candidato)) return;
+                if (/[ⓘ]|\\((?:i|info)\\)|\\[(?:i|info)\\]/i.test(candidato)) return;
 
-            return textoBruto
-                .split('\n')
-                .map(linha => linha.trim())
-                .filter(linha => {
-                    if (!linha) return false;
-                    const temSimboloInativo = /[!ⓘ]|\((i|info)\)|\[(i|info)\]/i.test(linha);
-                    return !temSimboloInativo;
-                })
-                .map(linha => {
-                    let limpa = linha.replace(/^[\d\s.\-–—]+/, "");
-                    
-                    limpa = limpa.replace(/[^a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s'\-]/g, " ")
-                                 .replace(/\s+/g, " ")
-                                 .trim();
+                let limpo = candidato
+                    .replace(/^\\s*(?:(?:n[º°o.]?\\s*)?\\d+\\s*[.)º°-]?\\s*)+/, "")
+                    .replace(/^\\s*(?:nome(?:\\s+completo)?\\s*[:：-]\\s*)/i, "")
+                    .replace(/[^\\p{L}\\s'’-]/gu, " ")
+                    .replace(/[’]/g, "'")
+                    .replace(/\\s+/g, " ").trim();
+                if (!limpo) return;
 
-                    if (limpa.length > 0) {
-                        const palavras = limpa.split(' ');
-                        limpa = palavras.map((p, index) => {
-                            const pMin = p.toLowerCase();
-                            if (pMin.length === 0) return "";
-                            if (index > 0 && preposicoes.includes(pMin)) return pMin;
-                            return pMin.charAt(0).toUpperCase() + pMin.slice(1).toLowerCase();
-                        }).join(' ');
-                    }
+                const chaveCabecalho = limpo.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9º°]+/g, " ").trim();
+                if (cabecalhos.has(chaveCabecalho)) return;
+                // Rejeita cabeçalhos compostos conhecidos sem bloquear sobrenomes legítimos.
+                if (/^(?:n(?:º|o|umero)?\\s+)?(?:nome|aluno|estudante)(?:\\s+(?:do\\s+)?(?:aluno|estudante|completo))?$/.test(chaveCabecalho)) return;
 
-                    return limpa;
-                })
-                .filter(nome => {
-                    if (!nome || nome.length < 2) return false;
+                const palavras = limpo.split(" ");
+                limpo = palavras.map((p, i) => {
+                    const min = p.toLocaleLowerCase("pt-BR");
+                    if (i > 0 && preposicoes.has(min)) return min;
+                    return min.charAt(0).toLocaleUpperCase("pt-BR") + min.slice(1);
+                }).join(" ");
+                if (limpo.length >= 3 && /\\p{L}/u.test(limpo)) resultado.push(limpo);
+            });
 
-                    const nomeMin = nome.toLowerCase();
-                    const contemLixoInterface = termosInvalidados.some(termo => nomeMin === termo || nomeMin.startsWith(termo + " "));
-                    if (contemLixoInterface) return false;
-
-                    return true;
-                });
+            return resultado;
         }
 
         async function importarComMigracao() {
             const t = limparT(document.getElementById('turma').value);
             const textoBruto = document.getElementById('imp').value;
-            if(!t) { alert("Selecione uma turma primeiro!"); return; }
-            if(!textoBruto.trim()) { alert("Cole os nomes na caixa de texto!"); return; }
-            
-            const novosAlunos = limparENormalizarLista(textoBruto);
+            const areaPrevia = document.getElementById('imp-preview');
+            if (!t) { alert("Selecione uma turma primeiro!"); return; }
+            if (!textoBruto.trim()) { alert("Cole os nomes na caixa de texto!"); return; }
 
-            if(novosAlunos.length === 0) {
-                alert("Nenhum aluno ativo válido encontrado para importação.");
+            const novosAlunos = limparENormalizarLista(textoBruto);
+            if (!novosAlunos.length) {
+                areaPrevia.innerHTML = '<p>Nenhum nome válido foi identificado. Confira o conteúdo colado.</p>';
+                alert("Nenhum aluno válido encontrado para importação.");
                 return;
             }
 
-            if(confirm(`Deseja rodar a migração automática de ${novosAlunos.length} alunos?\nO sistema vai parear os nomes e reindexar todas as notas cadastradas.`)) {
-                await realizarRemapeamentoGeralVistosEAlunos(t, novosAlunos);
-                document.getElementById('imp').value = "";
-                renderizarEditorAlunos();
-                alert("Lista atualizada e notas migradas com sucesso!");
+            const contagem = new Map();
+            novosAlunos.forEach(nome => {
+                const chave = normalizarNomeImportacao(nome);
+                contagem.set(chave, (contagem.get(chave) || 0) + 1);
+            });
+            const duplicados = [...contagem.entries()].filter(([, qtd]) => qtd > 1);
+            const snapshotAntigo = await db.ref('turmas/' + t).once('value');
+            const listaAntiga = snapshotAntigo.val() || [];
+            const chavesAntigas = new Map();
+            listaAntiga.forEach(nome => {
+                const chave = normalizarNomeImportacao(nome);
+                chavesAntigas.set(chave, (chavesAntigas.get(chave) || 0) + 1);
+            });
+            const correspondentes = novosAlunos.filter(nome => chavesAntigas.get(normalizarNomeImportacao(nome)) === 1).length;
+            const semCorrespondencia = novosAlunos.length - correspondentes;
+
+            const escapar = valor => String(valor).replace(/[&<>"']/g, c => ({
+                '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+            }[c]));
+            areaPrevia.innerHTML =
+                '<div style="padding:12px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;margin-top:10px;">' +
+                '<strong>Prévia da lista limpa</strong>' +
+                '<p style="margin:6px 0;font-size:.82rem;">' + novosAlunos.length + ' nomes identificados · ' +
+                correspondentes + ' correspondências únicas com a lista atual · ' + semCorrespondencia +
+                ' sem correspondência garantida.</p>' +
+                (duplicados.length ? '<p style="color:#b45309;font-size:.82rem;"><strong>Atenção:</strong> há nomes repetidos nesta colagem. Corrija as duplicatas antes de importar.</p>' : '') +
+                '<ol style="max-height:220px;overflow:auto;padding-left:24px;margin:8px 0;">' +
+                novosAlunos.map(nome => '<li>' + escapar(nome) + '</li>').join('') +
+                '</ol></div>';
+
+            if (duplicados.length) {
+                alert("A importação foi interrompida porque há nomes repetidos na lista colada. Corrija as duplicatas na caixa de texto e tente novamente. Nenhum registro foi alterado.");
+                return;
+            }
+
+            const avisoMigracao = semCorrespondencia
+                ? "\\nATENÇÃO: " + semCorrespondencia + " nome(s) não têm correspondência única com a lista atual. As notas/vistos desses alunos não poderão ser associados automaticamente."
+                : "\\nTodos os nomes encontrados têm correspondência única com a lista atual.";
+            if (confirm("Prévia: " + novosAlunos.length + " alunos.\\n" +
+                correspondentes + " com correspondência única para preservar notas/vistos. " +
+                avisoMigracao + "\\n\\nConfirma a atualização da lista?")) {
+                try {
+                    await realizarRemapeamentoGeralVistosEAlunos(t, novosAlunos);
+                    document.getElementById('imp').value = "";
+                    areaPrevia.innerHTML = '<p style="color:#15803d;">Lista atualizada. Confira a turma antes de continuar.</p>';
+                    await renderizarEditorAlunos();
+                    alert("Lista atualizada. A migração dos registros foi concluída.");
+                } catch (erro) {
+                    console.error("Falha na importação em massa:", erro);
+                    alert("Não foi possível concluir a atualização. Verifique a conexão e confira a lista antes de tentar novamente.");
+                }
             }
         }
 
