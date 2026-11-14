@@ -4029,6 +4029,13 @@
         async function prepararDocumentoExportacao(tipo){
             const status=document.getElementById('export-status'),preview=document.getElementById('export-preview'),botao=document.getElementById('btn-imprimir-exportacao');
             const botaoCsv=document.getElementById('btn-baixar-planilha-exportacao');
+            const seletorTurma=document.getElementById('turma');
+            if(!seletorTurma||!limparT(seletorTurma.value)){
+                const aviso='Antes de preparar o documento, selecione uma turma na barra superior.';
+                status.textContent=aviso;preview.dataset.tipo='';
+                preview.innerHTML='<div class="export-preview-empty">Selecione uma turma na barra superior e tente novamente.</div>';
+                alert(aviso);return;
+            }
             window.planilhaExportacaoPreparada=null;if(botaoCsv)botaoCsv.disabled=true;
             status.textContent='Consultando os registros da turma selecionada...';botao.disabled=true;preview.dataset.tipo='';
             preview.innerHTML='<div class="export-preview-empty">Preparando o documento...</div>';
@@ -4101,6 +4108,13 @@
         async function prepararPreviaPlanilhaExportacao(tipo){
             const status=document.getElementById('export-status'),preview=document.getElementById('export-preview');
             const btnPdf=document.getElementById('btn-imprimir-exportacao'),btnCsv=document.getElementById('btn-baixar-planilha-exportacao');
+            const seletorTurma=document.getElementById('turma');
+            if(!seletorTurma||!limparT(seletorTurma.value)){
+                const aviso='Antes de preparar a planilha, selecione uma turma na barra superior.';
+                status.textContent=aviso;preview.dataset.tipo='';
+                preview.innerHTML='<div class="export-preview-empty">Selecione uma turma na barra superior e tente novamente.</div>';
+                alert(aviso);return;
+            }
             status.textContent='Carregando os dados para a pré-visualização...';btnPdf.disabled=true;btnCsv.disabled=true;
             window.planilhaExportacaoPreparada=null;preview.dataset.tipo='';
             try{
