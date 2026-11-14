@@ -912,13 +912,20 @@
                     </div>
                 </div>
 
-                <div class="sec-box" style="border-color: #fca5a5; background: #fff5f5;">
-                    <h4 style="color: var(--danger);">⚠️ Zona de Perigo - Reset Geral</h4>
-                    <p style="font-size: 0.78rem; color: #991b1b; margin-top: -5px;">Atalho para restaurar as turmas padrão do sistema ou apagar todos os registros de notas/vistos de todas as turmas.</p>
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button onclick="restaurarTurmasPadrao()" class="btn-main btn-red" style="margin-top:0;">Restaurar Lista Padronizada de Turmas</button>
-                        <button onclick="resetarSistemaCompleto()" class="btn-main btn-red" style="margin-top:0; background:#991b1b;">Reset Geral de Todos os Vistos e Diários</button>
+                <div class="sec-box" style="border:2px solid #ef4444; background:#fff7f7;">
+                    <h4 style="color:#991b1b; font-size:1rem;">⚠️ ZONA DE PERIGO — Encerramento do ano letivo</h4>
+                    <p style="font-size:.84rem; color:#7f1d1d; line-height:1.5;">Use estas ferramentas somente quando quiser começar um novo ano. O sistema fará um backup completo antes da limpeza e exigirá uma confirmação digitada.</p>
+                    <div style="background:#fff; border:1px solid #fecaca; border-radius:8px; padding:12px; margin:10px 0;">
+                        <strong style="color:#991b1b;">1. Preparar sistema para novo ano</strong>
+                        <p style="font-size:.78rem; margin:6px 0 10px;">Apaga turmas, estudantes, notas, vistos, diários, recuperações, horários e calendário. Mantém sua conta, senha, aplicativo e preferências visuais.</p>
+                        <button onclick="executarLimpezaConnectEscolar('anual')" class="btn-main btn-red" style="margin:0;">Preparar sistema para novo ano</button>
                     </div>
+                    <div style="background:#fff; border:1px solid #fecaca; border-radius:8px; padding:12px; margin:10px 0;">
+                        <strong style="color:#991b1b;">2. Apagar todos os dados escolares</strong>
+                        <p style="font-size:.78rem; margin:6px 0 10px;">Remove as mesmas informações do banco e também a cópia offline deste aparelho. A conta de acesso não será excluída.</p>
+                        <button onclick="executarLimpezaConnectEscolar('total')" class="btn-main btn-red" style="margin:0; background:#7f1d1d;">Apagar todos os dados escolares</button>
+                    </div>
+                    <p style="font-size:.73rem; color:#7f1d1d; margin-bottom:0;"><strong>Importante:</strong> exige internet, backup e ausência de alterações pendentes. Outros aparelhos deverão se conectar à internet para atualizar suas cópias locais.</p>
                 </div>
 
                 <div class="sec-box backup-box">
@@ -1852,10 +1859,8 @@
             let turmasCadastradas = sCad.val();
 
             if (!turmasCadastradas || Object.keys(turmasCadastradas).length === 0) {
-                let objSalvar = {};
-                turmasPadrao.forEach((item, i) => { objSalvar['t' + i] = item; });
-                await db.ref('cadastros_turmas').set(objSalvar);
-                turmasCadastradas = objSalvar;
+                st.innerHTML = '<option value="">Cadastre as novas turmas na aba Cadastro...</option>';
+                return;
             }
 
             // Ordena pelo atributo 'ordem'
@@ -3593,19 +3598,65 @@
             }
         }
 
-        async function resetarSistemaCompleto() {
-            const confirmacao = prompt("⚠ ZONA DE PERIGO!\nIsso vai apagar TODOS OS VISTOS e TODOS OS DIÁRIOS de TODAS as turmas.\nDigite 'RESETAR' em maiúsculas para confirmar:");
-            if(confirmacao === "RESETAR") {
-                await Promise.all([
-                    db.ref('vistos').remove(),
-                    db.ref('diario').remove(),
-                    db.ref('recuperacao').remove(),
-                    db.ref('headers').remove(),
-                    db.ref('horario_professor').remove()
-                ]);
+        async function executarLimpezaConnectEscolar(modo) {
+            const caminhos = ['cadastros_turmas','turmas','vistos','headers','diario','recuperacao','horario_professor','calendario_escolar'];
+            const uid = usuarioAtualOffline();
+            const total = modo === 'total';
+            if (!conectadoAoFirebase() || !uid) {
+                alert('Conecte-se à internet e aguarde o status “Conectado ao banco”. Nenhum dado foi alterado.');
+                return;
+            }
+            if (gravacoesPendentes > 0 || camposAlterados || sincronizacaoOfflineEmAndamento) {
+                alert('Há uma gravação ou sincronização em andamento. Aguarde e sincronize todas as alterações antes de iniciar a limpeza. Nenhum dado foi alterado.');
+                return;
+            }
+            try {
+                const filaAtual = (await offlineGetAll('fila') || []).filter(item => item.uid === uid);
+                if (filaAtual.length) {
+                    alert('Existem ' + filaAtual.length + ' alteração(ões) aguardando sincronização neste aparelho. Sincronize-as primeiro. Nenhum dado foi alterado.');
+                    return;
+                }
+                const titulo = total ? 'APAGAR TODOS OS DADOS ESCOLARES' : 'PREPARAR O SISTEMA PARA O NOVO ANO';
+                const resumo = 'Serão apagados do banco: cadastro de turmas, listas de estudantes, notas, vistos, diários, recuperações, horários e calendário.';
+                if (!confirm('ATENÇÃO — ' + titulo + '\n\n' + resumo + '\n\nSua conta, senha, aplicativo e preferências visuais serão mantidos.\n\nDeseja continuar para gerar um backup completo?')) return;
+
+                const backup = await montarObjetoBackup();
+                baixarObjetoBackup(backup, 'backup-antes-da-limpeza-' + (total ? 'total' : 'novo-ano'));
+                const frase = total ? 'APAGAR TODOS OS DADOS' : 'PREPARAR NOVO ANO';
+                const confirmacao = prompt('O download do backup completo foi iniciado. Guarde o arquivo em local seguro.\n\nPara confirmar a exclusão, digite exatamente:\n' + frase);
+                if (confirmacao !== frase) {
+                    alert('Operação cancelada. Os dados do Firebase permanecem intactos; o backup foi gerado.');
+                    return;
+                }
+
+                // Atualização multipath atômica: ou todos os caminhos são limpos, ou nenhum é.
+                const atualizacoes = {};
+                caminhos.forEach(caminho => { atualizacoes[caminho] = null; });
+                await metodosFirebaseOriginais.update.call(db.ref(), atualizacoes);
+
+                // Mantém os snapshots deste aparelho coerentes com o banco recém-limpo.
+                for (const caminho of caminhos) await guardarSnapshotOffline(uid, caminho, null);
+                if (total) {
+                    const snapshots = (await offlineGetAll('snapshots') || []).filter(item => item.uid === uid);
+                    const metas = (await offlineGetAll('meta') || []).filter(item => String(item.id || '').startsWith(uid + '|'));
+                    for (const item of snapshots) await offlineDelete('snapshots', item.id);
+                    for (const item of metas) await offlineDelete('meta', item.id);
+                }
+
                 dataOficialmenteAberta = false;
-                carregarAlunos();
-                alert("O sistema foi resetado com sucesso! Todos os registros de vistos e diários foram zerados.");
+                const seletor = document.getElementById('turma');
+                if (seletor) seletor.innerHTML = '<option value="">Cadastre as novas turmas...</option>';
+                const recentes = document.getElementById('painel-registros-recentes');
+                if (recentes) recentes.innerHTML = '<div class="panel-empty">Nenhum registro escolar.</div>';
+                await atualizarPainelOffline();
+                alert(total
+                    ? 'Os dados escolares foram apagados do banco e a cópia offline deste aparelho foi removida. Sua conta permanece ativa.'
+                    : 'Sistema preparado para um novo ano! Os dados escolares foram apagados e a cópia offline deste aparelho foi atualizada. Cadastre as novas turmas e horários.');
+                await popularMenus();
+                await carregarPainelGeral();
+            } catch (erro) {
+                console.error('Connect Escolar: falha na limpeza:', erro);
+                alert('Não foi possível concluir a limpeza com segurança. Verifique a conexão e o estado do banco antes de tentar novamente. Detalhe: ' + (erro.message || erro));
             }
         }
 
