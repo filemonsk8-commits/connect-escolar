@@ -3880,7 +3880,7 @@
                 "nome", "nomes", "nome completo", "nome do aluno", "nome do estudante",
                 "aluno", "alunos", "estudante", "estudantes", "nº nome", "no nome",
                 "numero nome", "número nome", "matricula", "matrícula",
-                "numero de matricula", "número de matrícula", "lista de alunos",
+                "numero de matricula", "número de matrícula", "de matricula", "de matrícula", "lista de alunos",
                 "lista de estudantes", "relacao de alunos", "relação de alunos",
                 "siap", "frequencia", "frequência", "conteudos", "conteúdos",
                 "notas", "acesso", "ensino medio", "ensino médio", "componente curricular",
@@ -3921,7 +3921,10 @@
                 limpo = palavras.map((p, i) => {
                     const min = p.toLocaleLowerCase("pt-BR");
                     if (i > 0 && preposicoes.has(min)) return min;
-                    return min.charAt(0).toLocaleUpperCase("pt-BR") + min.slice(1);
+                    return min.split(/([-'])/).map(parte => {
+                        if (parte === "-" || parte === "'") return parte;
+                        return parte.charAt(0).toLocaleUpperCase("pt-BR") + parte.slice(1);
+                    }).join("");
                 }).join(" ");
                 if (limpo.length >= 3 && /\p{L}/u.test(limpo)) resultado.push(limpo);
             });
