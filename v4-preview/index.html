@@ -491,6 +491,16 @@
           body.printing-export-document .export-document tr{break-inside:avoid;page-break-inside:avoid}
         }
 
+
+        .export-sheet-meta{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 14px}
+        .export-sheet-meta span{padding:7px 10px;border-radius:7px;background:#eff6ff;color:#1e3a66;font-size:.78rem}
+        .export-sheet-wrap{overflow-x:auto;border:1px solid #dbe5f2;border-radius:9px;background:#fff}
+        .export-sheet-table{width:100%;min-width:650px;border-collapse:collapse;color:#1e293b}
+        .export-sheet-table th{background:#eaf1fb;color:#1e3a66;font-weight:800;text-align:left;white-space:nowrap}
+        .export-sheet-table th,.export-sheet-table td{padding:9px 10px;border-bottom:1px solid #e2e8f0;font-size:.78rem}
+        .export-sheet-table tbody tr:nth-child(even){background:#f8fafc}
+        .export-sheet-count{margin:10px 0;color:#64748b;font-size:.78rem}
+
 </style>
 </head>
 <body>
@@ -809,12 +819,12 @@
                 </div>
                 <h3>Planilhas compatíveis com Excel</h3>
                 <div class="export-actions-grid">
-                    <button type="button" class="export-action" onclick="exportarPlanilhaFechamento()"><strong>Baixar planilha de notas (.csv)</strong><span>Notas e fechamento, uma linha por estudante.</span></button>
-                    <button type="button" class="export-action" onclick="exportarPlanilhaDiario()"><strong>Baixar planilha do Diário (.csv)</strong><span>Datas e conteúdos do Diário de Classe.</span></button>
+                    <button type="button" class="export-action" onclick="prepararPreviaPlanilhaExportacao('notas')"><strong>Pré-visualizar planilha de notas</strong><span>Confira os nomes, cabeçalhos e notas antes de baixar.</span></button>
+                    <button type="button" class="export-action" onclick="prepararPreviaPlanilhaExportacao('diario')"><strong>Pré-visualizar planilha do Diário</strong><span>Confira as datas e os conteúdos antes de baixar.</span></button>
                 </div>
                 <div id="export-status" class="export-status" role="status" aria-live="polite">Selecione um documento ou uma planilha. A exportação não altera seus registros.</div>
-                <div class="export-preview-actions no-print"><button type="button" id="btn-imprimir-exportacao" class="btn-main btn-green" onclick="imprimirDocumentoExportacao()" disabled>Imprimir / Salvar em PDF</button></div>
-                <div id="export-preview" class="export-preview"><div class="export-preview-empty">A prévia aparecerá aqui depois que você escolher um documento em PDF.</div></div>
+                <div class="export-preview-actions no-print"><button type="button" id="btn-imprimir-exportacao" class="btn-main btn-green" onclick="imprimirDocumentoExportacao()" disabled>Imprimir / Salvar em PDF</button><button type="button" id="btn-baixar-planilha-exportacao" class="btn-main btn-blue" onclick="baixarPlanilhaExportacaoPreparada()" disabled style="margin-top:8px;">Baixar planilha (.csv)</button></div>
+                <div id="export-preview" class="export-preview"><div class="export-preview-empty">A prévia do documento ou da planilha aparecerá aqui antes da impressão ou do download.</div></div>
             </div>
 
             <div id="aba-c" class="card hidden">
@@ -4057,28 +4067,64 @@
             const blob=new Blob([conteudo],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
             a.href=url;a.download=nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
         }
-        async function exportarPlanilhaFechamento(){
-            const status=document.getElementById('export-status');status.textContent='Preparando a planilha de notas...';
-            try{
-                const d=await obterDadosExportacao(),linhasNotas=calcularFechamentoExportacao(d);
-                const linhas=[['Connect Escolar - Fechamento de Notas'],['Turma',d.turmaNome],['Bimestre',d.bimestreNome],[],
-                    ['Estudante'].concat([1,2,3,4,5].map(n=>d.cabecalhos['h'+n]||('Ativ. '+n))).concat(['Soma','Recuperação','Nota Final'])];
-                linhasNotas.forEach(l=>linhas.push([l.nome].concat(l.atividades.map(v=>v>0?notaExportacaoFormatada(v):''))
-                    .concat([notaExportacaoFormatada(l.total),l.recuperacao===null?'':notaExportacaoFormatada(l.recuperacao),notaExportacaoFormatada(l.notaFinal)])));
-                const nome='connect-escolar-notas-'+nomeArquivoExportacao(d.turmaNome)+'-'+nomeArquivoExportacao(d.bimestre)+'-'+new Date().toISOString().slice(0,10)+'.csv';
-                baixarCsvExportacao(linhas,nome);status.textContent='Planilha de notas baixada. O arquivo CSV abre no Excel; os registros do Connect Escolar não foram alterados.';
-            }catch(e){status.textContent=e&&e.message?e.message:'Não foi possível baixar a planilha de notas.';console.error('Connect Escolar: planilha de notas:',e);}
+
+        window.planilhaExportacaoPreparada = null;
+
+        function dadosTabelaPlanilhaExportacao(tipo,d){
+            if(tipo==='notas'){
+                const fechamento=calcularFechamentoExportacao(d);
+                const cabecalho=['Estudante'].concat([1,2,3,4,5].map(n=>d.cabecalhos['h'+n]||('Atividade '+n))).concat(['Soma','Recuperação','Nota final']);
+                const linhas=fechamento.map(l=>[l.nome].concat(l.atividades.map(v=>v>0?notaExportacaoFormatada(v):'—'))
+                    .concat([notaExportacaoFormatada(l.total),l.recuperacao===null?'—':notaExportacaoFormatada(l.recuperacao),notaExportacaoFormatada(l.notaFinal)]));
+                return {titulo:'Planilha de notas e fechamento',cabecalho:cabecalho,linhas:linhas,arquivo:'connect-escolar-notas-'+nomeArquivoExportacao(d.turmaNome)+'-'+nomeArquivoExportacao(d.bimestre)+'-'+new Date().toISOString().slice(0,10)+'.csv'};
+            }
+            const cabecalho=['Data','Conteúdo / registro da aula'];
+            const linhas=d.diarios.map(r=>[dataExportacaoFormatada(r.data),r.conteudo||r.conteúdo||'']);
+            return {titulo:'Planilha do Diário de Classe',cabecalho:cabecalho,linhas:linhas,arquivo:'connect-escolar-diario-'+nomeArquivoExportacao(d.turmaNome)+'-'+nomeArquivoExportacao(d.bimestre)+'-'+new Date().toISOString().slice(0,10)+'.csv'};
         }
-        async function exportarPlanilhaDiario(){
-            const status=document.getElementById('export-status');status.textContent='Preparando a planilha do Diário...';
-            try{
-                const d=await obterDadosExportacao();
-                const linhas=[['Connect Escolar - Diário de Classe'],['Turma',d.turmaNome],['Bimestre',d.bimestreNome],[],['Data','Conteúdo / registro da aula']];
-                d.diarios.forEach(r=>linhas.push([dataExportacaoFormatada(r.data),r.conteudo||r.conteúdo||'']));
-                const nome='connect-escolar-diario-'+nomeArquivoExportacao(d.turmaNome)+'-'+nomeArquivoExportacao(d.bimestre)+'-'+new Date().toISOString().slice(0,10)+'.csv';
-                baixarCsvExportacao(linhas,nome);status.textContent='Planilha do Diário baixada. O arquivo CSV abre no Excel; os registros do Connect Escolar não foram alterados.';
-            }catch(e){status.textContent=e&&e.message?e.message:'Não foi possível baixar a planilha do Diário.';console.error('Connect Escolar: planilha do Diário:',e);}
+
+        function montarPreviaTabelaPlanilha(tipo,d,planilha){
+            let html='<div class="export-document"><p style="margin:0 0 7px;color:#2563eb;font-size:.72rem;font-weight:800">CONNECT ESCOLAR · PRÉ-VISUALIZAÇÃO DE PLANILHA</p>'+
+                '<h2>'+escapeHTML(planilha.titulo)+'</h2><div class="export-sheet-meta"><span><strong>Turma:</strong> '+escapeHTML(d.turmaNome)+'</span><span><strong>Bimestre:</strong> '+escapeHTML(d.bimestreNome)+'</span></div>'+
+                '<div class="export-sheet-wrap"><table class="export-sheet-table"><thead><tr>';
+            planilha.cabecalho.forEach(c=>html+='<th>'+escapeHTML(c)+'</th>');
+            html+='</tr></thead><tbody>';
+            if(!planilha.linhas.length)html+='<tr><td colspan="'+planilha.cabecalho.length+'">Não há registros para exibir nesta planilha.</td></tr>';
+            planilha.linhas.forEach(l=>{html+='<tr>';l.forEach(v=>html+='<td>'+escapeHTML(v===null||v===undefined?'':String(v))+'</td>');html+='</tr>';});
+            html+='</tbody></table></div><p class="export-sheet-count">'+planilha.linhas.length+' registro(s). O cabeçalho será a primeira linha do arquivo baixado.</p>'+
+                '<div class="export-doc-foot">Confira a prévia. O download só começa quando você tocar no botão “Baixar planilha”.</div></div>';
+            return html;
         }
+
+        async function prepararPreviaPlanilhaExportacao(tipo){
+            const status=document.getElementById('export-status'),preview=document.getElementById('export-preview');
+            const btnPdf=document.getElementById('btn-imprimir-exportacao'),btnCsv=document.getElementById('btn-baixar-planilha-exportacao');
+            status.textContent='Carregando os dados para a pré-visualização...';btnPdf.disabled=true;btnCsv.disabled=true;
+            window.planilhaExportacaoPreparada=null;preview.dataset.tipo='';
+            try{
+                const d=await obterDadosExportacao(),planilha=dadosTabelaPlanilhaExportacao(tipo,d);
+                window.planilhaExportacaoPreparada={linhas:[planilha.cabecalho].concat(planilha.linhas),arquivo:planilha.arquivo,tipo:tipo};
+                preview.innerHTML=montarPreviaTabelaPlanilha(tipo,d,planilha);
+                preview.dataset.tipo='planilha';btnCsv.disabled=false;
+                status.textContent='Pré-visualização pronta. Confira os cabeçalhos e os dados; o arquivo ainda não foi baixado.';
+                preview.scrollIntoView({behavior:'smooth',block:'start'});
+            }catch(e){
+                status.textContent=e&&e.message?e.message:'Não foi possível preparar a pré-visualização.';
+                preview.innerHTML='<div class="export-preview-empty">Não foi possível carregar a planilha. Nenhum registro foi alterado.</div>';
+                console.error('Connect Escolar: pré-visualização de planilha:',e);
+            }
+        }
+
+        function baixarPlanilhaExportacaoPreparada(){
+            const p=window.planilhaExportacaoPreparada;
+            if(!p||!p.linhas){alert('Primeiro, pré-visualize a planilha que deseja baixar.');return;}
+            baixarCsvExportacao(p.linhas,p.arquivo);
+            document.getElementById('export-status').textContent='Download iniciado: '+p.arquivo+'. A primeira linha do arquivo contém os cabeçalhos das colunas.';
+        }
+
+        async function exportarPlanilhaFechamento(){return prepararPreviaPlanilhaExportacao('notas');}
+        async function exportarPlanilhaDiario(){return prepararPreviaPlanilhaExportacao('diario');}
+
 
     </script>
     <script>
