@@ -399,6 +399,9 @@
         .calendar-more-events { margin:4px 0 0 3px; color:#64748b; font-size:.62rem; }
         .calendar-grid.calendar-week-view .calendar-day-cell { min-height:220px; }
         .calendar-day-agenda { margin-top:20px; }
+        #cal-alerta { margin:10px 0; padding:14px; border:1px solid #f59e0b; border-radius:10px; background:#fffbeb; color:#92400e; font-weight:800; }
+        #cal-som-toggle { border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8; padding:9px 12px; border-radius:8px; font-weight:800; cursor:pointer; }
+        #cal-som-toggle.ativo { background:#dcfce7; border-color:#86efac; color:#166534; }
         .calendar-day-agenda h3 { margin:0 0 10px; color:#17243c; font-size:.98rem; }
         .calendar-agenda-item { display:grid; grid-template-columns:82px minmax(0,1fr) auto; gap:12px; align-items:start; padding:12px; margin-bottom:8px; border:1px solid var(--line); border-radius:10px; background:#fff; }
         .calendar-agenda-time { color:#2563eb; font-size:.78rem; font-weight:800; }
@@ -573,7 +576,9 @@
                     </div>
                     <strong id="cal-titulo-periodo">Carregando calendário...</strong>
                     <span id="cal-status" role="status">Preparando agenda...</span>
+                    <button type="button" id="cal-som-toggle" class="calendar-today-btn" onclick="alternarSomCalendario()">Ativar som dos alertas</button>
                 </div>
+                <div id="cal-alerta" class="panel-empty hidden" role="alert" aria-live="assertive"></div>
 
                 <div class="calendar-form sec-box no-print">
                     <div class="calendar-form-heading">
@@ -2324,6 +2329,91 @@
                 alert('Não foi possível excluir o compromisso. Verifique a conexão e tente novamente.');
             }
         }
+
+        // Alertas sonoros do calendário: funcionam enquanto o Connect Escolar estiver aberto.
+        let somCalendarioAtivo = false;
+        let contextoAudioCalendario = null;
+        const alertasCalendarioDisparados = new Set();
+
+        function atualizarBotaoSomCalendario() {
+            const botao = document.getElementById('cal-som-toggle');
+            if (!botao) return;
+            botao.textContent = somCalendarioAtivo ? 'Som dos alertas ativado' : 'Ativar som dos alertas';
+            botao.classList.toggle('ativo', somCalendarioAtivo);
+        }
+
+        function tocarSomCalendario() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                if (!contextoAudioCalendario) contextoAudioCalendario = new AudioCtx();
+                if (contextoAudioCalendario.state === 'suspended') contextoAudioCalendario.resume();
+                const agora = contextoAudioCalendario.currentTime;
+                [0, 0.28, 0.56].forEach((atraso, indice) => {
+                    const oscilador = contextoAudioCalendario.createOscillator();
+                    const ganho = contextoAudioCalendario.createGain();
+                    oscilador.type = 'sine';
+                    oscilador.frequency.value = indice === 1 ? 880 : 660;
+                    ganho.gain.setValueAtTime(0.0001, agora + atraso);
+                    ganho.gain.exponentialRampToValueAtTime(0.18, agora + atraso + 0.025);
+                    ganho.gain.exponentialRampToValueAtTime(0.0001, agora + atraso + 0.20);
+                    oscilador.connect(ganho);
+                    ganho.connect(contextoAudioCalendario.destination);
+                    oscilador.start(agora + atraso);
+                    oscilador.stop(agora + atraso + 0.22);
+                });
+            } catch (erro) {
+                console.warn('Connect Escolar: não foi possível tocar o alerta sonoro:', erro);
+            }
+        }
+
+        function alternarSomCalendario() {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) {
+                alert('Este navegador não oferece suporte ao alerta sonoro.');
+                return;
+            }
+            somCalendarioAtivo = !somCalendarioAtivo;
+            if (somCalendarioAtivo) {
+                try {
+                    if (!contextoAudioCalendario) contextoAudioCalendario = new AudioCtx();
+                    if (contextoAudioCalendario.state === 'suspended') contextoAudioCalendario.resume();
+                    tocarSomCalendario();
+                    localStorage.setItem('connectCalendarioSomAtivo', '1');
+                } catch (erro) {
+                    somCalendarioAtivo = false;
+                    alert('Não foi possível ativar o som. Verifique as permissões do navegador.');
+                }
+            } else {
+                localStorage.setItem('connectCalendarioSomAtivo', '0');
+            }
+            atualizarBotaoSomCalendario();
+        }
+
+        function verificarAlertasCalendario() {
+            if (!somCalendarioAtivo || document.hidden || !navigator.onLine) return;
+            const agora = new Date();
+            const data = calendarioDataChave(agora);
+            const horario = String(agora.getHours()).padStart(2, '0') + ':' + String(agora.getMinutes()).padStart(2, '0');
+            eventosCalendarioCache.filter(evento => evento.data === data && evento.horario === horario).forEach(evento => {
+                const chave = evento.id + '|' + data + '|' + horario;
+                if (alertasCalendarioDisparados.has(chave)) return;
+                alertasCalendarioDisparados.add(chave);
+                tocarSomCalendario();
+                const aviso = document.getElementById('cal-alerta');
+                if (aviso) {
+                    aviso.textContent = '🔔 Está na hora: ' + evento.titulo + (evento.turma ? ' · ' + evento.turma : '');
+                    aviso.classList.remove('hidden');
+                    aviso.scrollIntoView({behavior:'smooth', block:'nearest'});
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            somCalendarioAtivo = localStorage.getItem('connectCalendarioSomAtivo') === '1';
+            atualizarBotaoSomCalendario();
+            window.setInterval(verificarAlertasCalendario, 15000);
+        });
 
         function marcarDataComoNaoAberta() {
             dataOficialmenteAberta = false;
