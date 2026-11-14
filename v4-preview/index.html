@@ -618,7 +618,7 @@
                 <div id="painel-status" class="panel-status" role="status">Carregando informações...</div>
                 <div class="panel-stats">
                     <div class="panel-stat"><span>Turmas cadastradas</span><strong id="painel-total-turmas">—</strong></div>
-                    <div class="panel-stat"><span>Estudantes cadastrados</span><strong id="painel-total-alunos">—</strong></div>
+                    <div class="panel-stat"><span>Estudantes ativos</span><strong id="painel-total-alunos">—</strong></div>
                     <div class="panel-stat"><span>Registros no Diário</span><strong id="painel-total-diarios">—</strong></div>
                     <div class="panel-stat"><span>Notas lançadas</span><strong id="painel-total-notas">—</strong></div>
                 </div>
@@ -1912,10 +1912,17 @@
                     .filter(item => item && item.nome)
                     .sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0));
 
+                const alunoEstaTransferido = nome =>
+                    /\((transferido|inativo)\)/i.test(String(nome || ''));
+
                 const contarAlunos = valor => {
-                    if (Array.isArray(valor)) return valor.filter(nome => String(nome || '').trim()).length;
-                    if (valor && typeof valor === 'object') return Object.values(valor).filter(nome => String(nome || '').trim()).length;
-                    return 0;
+                    const nomes = Array.isArray(valor)
+                        ? valor
+                        : (valor && typeof valor === 'object' ? Object.values(valor) : []);
+                    return nomes.filter(nome => {
+                        const texto = String(nome || '').trim();
+                        return texto.length > 0 && !alunoEstaTransferido(texto);
+                    }).length;
                 };
 
                 const contarNotas = dadosPeriodo => {
@@ -1979,7 +1986,7 @@
                 document.getElementById('painel-total-notas').textContent = totalNotas.toLocaleString('pt-BR');
 
                 if (linhas.length) {
-                    let html = '<table class="panel-table"><thead><tr><th>Turma</th><th>Etapa</th><th>Estudantes</th><th>Diários</th><th>Notas</th></tr></thead><tbody>';
+                    let html = '<table class="panel-table"><thead><tr><th>Turma</th><th>Etapa</th><th>Estudantes ativos</th><th>Diários</th><th>Notas</th></tr></thead><tbody>';
                     linhas.forEach(linha => {
                         html += '<tr>' +
                             '<td><strong>' + escapeHTML(linha.nome) + '</strong></td>' +
@@ -3624,7 +3631,7 @@
                         <button onclick="moverAluno('${idx}', 1)" class="btn-movimentacao btn-down" title="Descer uma posição">↓</button>
                         <button onclick="moverAlunoParaFinal('${idx}')" class="btn-movimentacao btn-last" title="Mover para o final da lista">⤓</button>
                         <button onclick="removerAlunoIndividual('${idx}', '${nome.replace(/'/g, "\\'")}')" class="btn-movimentacao btn-del-aluno" title="Excluir aluno">×</button>
-                        <button onclick="alternarAlunoTransferido('${idx}', '${nome.replace(/'/g, "\\'")}')" class="btn-movimentacao ${btnClasse}" title="${btnTitulo}">T</button>
+                        <button onclick="alternarAlunoTransferido('${idx}')"\\'")}')" class="btn-movimentacao ${btnClasse}" title="${btnTitulo}">T</button>
                     </div>
                 </div>`;
             });
@@ -3694,32 +3701,55 @@
             }
         }
 
-        async function alternarAlunoTransferido(idx, nome) {
-            idx = parseInt(idx);
-            const t = limparT(document.getElementById('turma').value);
-            const sA = await db.ref('turmas/'+t).once('value');
-            let arr = sA.val() || [];
-            
-            let nomeLimpo = nome.replace(/\s*\((transferido|inativo)\)/ig, "").trim();
-            const ehTransferido = nome.toLowerCase().includes('(transferido)') || nome.toLowerCase().includes('(inativo)');
+        async function alternarAlunoTransferido(idx) {
+            const indice = Number.parseInt(idx, 10);
+            const turma = limparT(document.getElementById('turma').value);
 
-            if (ehTransferido) {
-                if(confirm(`Deseja REATIVAR o(a) aluno(a) "${nomeLimpo}"?\nA marcação de transferido será removida e os lançamentos serão liberados novamente.`)) {
-                    arr[idx] = nomeLimpo;
-                    await realizarRemapeamentoGeralVistosEAlunos(t, arr);
-                    renderizarEditorAlunos();
-                    alert("Aluno reativado com sucesso!");
+            if (!turma || !Number.isInteger(indice) || indice < 0) {
+                alert('Não foi possível identificar o aluno. Selecione a turma e tente novamente.');
+                return;
+            }
+
+            try {
+                const snapshot = await db.ref('turmas/' + turma).once('value');
+                const arr = snapshot.val() || [];
+                if (!Array.isArray(arr) || indice >= arr.length || !arr[indice]) {
+                    alert('A lista de alunos mudou. Atualize a lista e tente novamente. Nenhum dado foi alterado.');
+                    await renderizarEditorAlunos();
+                    return;
                 }
-            } else {
-                if(confirm(`Deseja marcar o(a) aluno(a) "${nomeLimpo}" como TRANSFERIDO?\nO nome continuará na lista sinalizado como transferido e os campos de nota serão bloqueados.`)) {
-                    arr[idx] = `${nomeLimpo} (Transferido)`;
-                    await realizarRemapeamentoGeralVistosEAlunos(t, arr);
-                    renderizarEditorAlunos();
-                    alert("Aluno marcado como transferido com sucesso!");
+
+                const nomeAtual = String(arr[indice]).trim();
+                const ehTransferido = /\((transferido|inativo)\)/i.test(nomeAtual);
+                const nomeLimpo = nomeAtual.replace(/\s*\((transferido|inativo)\)/ig, '').trim();
+
+                if (!nomeLimpo) {
+                    alert('Não foi possível identificar o nome do aluno. Nenhum dado foi alterado.');
+                    return;
                 }
+
+                if (ehTransferido) {
+                    if (!confirm('Deseja REATIVAR o(a) aluno(a) "' + nomeLimpo + '"?\nA marcação de transferido será removida e os lançamentos serão liberados novamente.')) return;
+                    arr[indice] = nomeLimpo;
+                } else {
+                    if (!confirm('Deseja marcar o(a) aluno(a) "' + nomeLimpo + '" como TRANSFERIDO?\nO nome continuará na lista sinalizado como transferido e os campos de nota serão bloqueados.')) return;
+                    arr[indice] = nomeLimpo + ' (Transferido)';
+                }
+
+                // O remapeamento mantém os registros associados ao aluno mesmo com a inclusão
+                // ou remoção do sufixo "(Transferido)".
+                await realizarRemapeamentoGeralVistosEAlunos(turma, arr);
+                await renderizarEditorAlunos();
+                if (typeof carregarPainelGeral === 'function') await carregarPainelGeral();
+
+                alert(ehTransferido
+                    ? 'Aluno reativado com sucesso! Ele voltou a ser contado como estudante ativo.'
+                    : 'Aluno marcado como transferido com sucesso! Ele deixou de ser contado como estudante ativo.');
+            } catch (erro) {
+                console.error('Falha ao alterar situação do aluno:', erro);
+                alert('Não foi possível atualizar a situação do aluno. Verifique a conexão e tente novamente. Confira a conexão antes de repetir a operação.');
             }
         }
-
         function limparENormalizarLista(textoBruto) {
             const termosInvalidados = [
                 "siap", "frequencia", "frequência", "conteudos", "conteúdos", "notas", "acesso",
