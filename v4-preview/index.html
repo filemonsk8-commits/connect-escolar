@@ -2925,8 +2925,10 @@
                 if (!campo) return;
                 campo.classList.toggle('hidden', !necessarios.includes(id));
             });
-            controles.classList.toggle('hidden', necessarios.length === 0);
             const seletorTurma = document.getElementById('turma');
+            const seletorTurmaVisual = document.getElementById('turma-picker');
+            if (seletorTurmaVisual) seletorTurmaVisual.classList.toggle('hidden', !necessarios.includes('turma'));
+            controles.classList.toggle('hidden', necessarios.length === 0);
             if (seletorTurma) seletorTurma.style.gridColumn =
                 necessarios.includes('turma') && necessarios.includes('bimestre') ? 'span 2' : 'auto';
         }
