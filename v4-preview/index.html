@@ -572,18 +572,9 @@
                 <div id="status-conexao" class="connection-pill" role="status"><span class="connection-dot"></span> Verificando conexão...</div>
             </div>
             <div class="controls-grid">
-                <div class="turma-picker" id="turma-picker">
-                    <button type="button" class="turma-picker-trigger" id="turma-picker-trigger" aria-haspopup="dialog" aria-expanded="false" onclick="alternarSeletorTurmas()">
-                        <span id="turma-picker-label">Selecione a Turma...</span><span class="turma-picker-chevron">⌄</span>
-                    </button>
-                    <div class="turma-picker-panel hidden" id="turma-picker-panel" role="dialog" aria-label="Selecionar turma">
-                        <div class="turma-picker-search"><span aria-hidden="true">⌕</span><input id="turma-picker-search" type="search" placeholder="Pesquisar turma ou categoria..." autocomplete="off" oninput="filtrarSeletorTurmas()"></div>
-                        <div class="turma-picker-list" id="turma-picker-list"></div>
-                    </div>
-                    <select id="turma" class="hidden" aria-hidden="true" tabindex="-1" onchange="atualizarTudo()" style="grid-column: span 2;">
-                        <option value="">Selecione a Turma...</option>
-                    </select>
-                </div>
+                <select id="turma" onchange="atualizarTudo()" style="grid-column: span 2;">
+                    <option value="">Selecione a Turma...</option>
+                </select>
                 <select id="bimestre" onchange="alterarBimestre()">
                     <option value="1B">1º Bimestre</option>
                     <option value="2B">2º Bimestre</option>
