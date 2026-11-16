@@ -2013,22 +2013,13 @@
                 return;
             }
 
-            // Ordena pelo atributo 'ordem' e elimina nomes repetidos apenas na lista visual.
-            // Os cadastros originais no banco permanecem intactos.
-            let listaOrdenada = Object.values(turmasCadastradas)
-                .filter(item => item && item.nome)
-                .sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0));
+            // Ordena pelo atributo 'ordem', sem filtrar nem ocultar cadastros.
+            let listaOrdenada = Object.values(turmasCadastradas).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
 
             const grupos = {};
-            const nomesJaExibidos = new Set();
             listaOrdenada.forEach(item => {
-                const nome = String(item.nome).trim().replace(/\\s+/g, ' ');
-                const chave = nome.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLocaleLowerCase('pt-BR');
-                if (!nome || nomesJaExibidos.has(chave)) return;
-                nomesJaExibidos.add(chave);
-                const categoria = String(item.cat || 'Outras turmas').trim();
-                if (!grupos[categoria]) grupos[categoria] = [];
-                grupos[categoria].push(nome);
+                if (!grupos[item.cat]) grupos[item.cat] = [];
+                grupos[item.cat].push(item.nome);
             });
 
             Object.keys(grupos).forEach(categoria => {
