@@ -2650,6 +2650,7 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             restaurarBimestreSelecionado();
+            atualizarVisibilidadeDosFiltros('home');
             popularMenus();
             
             const hoje = new Date();
@@ -2766,11 +2767,45 @@
             }
         }
         
+        // Mostra somente os filtros necessários para a área aberta.
+        const FILTROS_POR_ABA = {
+            home: ['bimestre'],
+            cal: [],
+            v: ['turma', 'bimestre', 'data'],
+            ag: ['turma'],
+            d: ['turma', 'bimestre', 'data'],
+            rd: ['turma', 'bimestre'],
+            r: ['turma', 'bimestre'],
+            l: ['turma', 'bimestre'],
+            export: ['turma', 'bimestre'],
+            c: ['turma'],
+            cad: [],
+            admin: [],
+            visual: [],
+            sobre: []
+        };
+
+        function atualizarVisibilidadeDosFiltros(abaAtual) {
+            const controles = document.querySelector('.controls-grid');
+            if (!controles) return;
+            const necessarios = FILTROS_POR_ABA[abaAtual] || [];
+            ['turma', 'bimestre', 'data'].forEach(id => {
+                const campo = document.getElementById(id);
+                if (!campo) return;
+                campo.classList.toggle('hidden', !necessarios.includes(id));
+            });
+            controles.classList.toggle('hidden', necessarios.length === 0);
+            const seletorTurma = document.getElementById('turma');
+            if (seletorTurma) seletorTurma.style.gridColumn =
+                necessarios.includes('turma') && necessarios.includes('bimestre') ? 'span 2' : 'auto';
+        }
+
         function aba(a, botao) { 
             if (a !== 'admin' && typeof bloquearAdministracao === 'function') bloquearAdministracao();
             document.querySelectorAll('.card').forEach(c => c.classList.add('hidden')); 
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
             document.getElementById('aba-'+a).classList.remove('hidden'); 
+            atualizarVisibilidadeDosFiltros(a);
             const acionador = botao || (typeof event !== 'undefined' ? event.currentTarget : null);
             if (acionador) acionador.classList.add('active'); 
             
