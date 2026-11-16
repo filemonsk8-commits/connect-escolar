@@ -2007,10 +2007,19 @@
             // Ordena pelo atributo 'ordem', sem filtrar nem ocultar cadastros.
             let listaOrdenada = Object.values(turmasCadastradas).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
 
+            // Evita repetir a mesma turma no seletor visual.
+            // A deduplicação é apenas da lista exibida: nenhum cadastro no Firebase é alterado.
             const grupos = {};
+            const nomesJaExibidos = new Set();
             listaOrdenada.forEach(item => {
-                if (!grupos[item.cat]) grupos[item.cat] = [];
-                grupos[item.cat].push(item.nome);
+                const nome = String(item.nome || '').trim().replace(/\s+/g, ' ');
+                if (!nome) return;
+                const chave = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+                if (nomesJaExibidos.has(chave)) return;
+                nomesJaExibidos.add(chave);
+                const categoria = item.cat || 'OUTROS';
+                if (!grupos[categoria]) grupos[categoria] = [];
+                grupos[categoria].push(nome);
             });
 
             Object.keys(grupos).forEach(categoria => {
