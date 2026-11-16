@@ -559,7 +559,7 @@
                 <select id="turma" onchange="atualizarTudo()" style="grid-column: span 2;">
                     <option value="">Selecione a Turma...</option>
                 </select>
-                <select id="bimestre" onchange="atualizarTudo()">
+                <select id="bimestre" onchange="alterarBimestre()">
                     <option value="1B">1º Bimestre</option>
                     <option value="2B">2º Bimestre</option>
                     <option value="3B" selected>3º Bimestre</option>
@@ -2604,6 +2604,33 @@
             dataOficialmenteAberta = false;
         }
 
+        const CHAVE_ULTIMO_BIMESTRE = 'connectEscolarUltimoBimestre';
+
+        function restaurarBimestreSelecionado() {
+            const seletor = document.getElementById('bimestre');
+            if (!seletor) return;
+            try {
+                const salvo = localStorage.getItem(CHAVE_ULTIMO_BIMESTRE);
+                if (salvo && Array.from(seletor.options).some(opcao => opcao.value === salvo)) {
+                    seletor.value = salvo;
+                }
+            } catch (erro) {
+                console.warn('Connect Escolar: não foi possível restaurar o bimestre:', erro);
+            }
+        }
+
+        function alterarBimestre() {
+            const seletor = document.getElementById('bimestre');
+            if (seletor) {
+                try {
+                    localStorage.setItem(CHAVE_ULTIMO_BIMESTRE, seletor.value);
+                } catch (erro) {
+                    console.warn('Connect Escolar: não foi possível salvar o bimestre:', erro);
+                }
+            }
+            atualizarTudo();
+        }
+
         function atualizarTudo() {
             dataOficialmenteAberta = false;
             const selectAba = document.querySelector('.tab-btn.active');
@@ -2622,6 +2649,7 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
+            restaurarBimestreSelecionado();
             popularMenus();
             
             const hoje = new Date();
