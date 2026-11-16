@@ -177,6 +177,22 @@
         .connection-pill.is-offline .connection-dot { background:#d97706; }
         .controls-grid { grid-template-columns:minmax(220px,2fr) minmax(150px,1fr) minmax(160px,1fr); gap:10px; }
         .controls-grid select, .controls-grid input { min-height:44px; background:#fbfcfe; border-color:#dce4ef; font-weight:600; color:#283750; }
+        .turma-picker { position:relative; min-width:0; grid-column:span 2; z-index:110; }
+        .turma-picker-trigger { width:100%; min-height:52px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; border:1px solid #cbd8ea; border-radius:12px; background:#fbfcfe; color:#26364f; font-size:1rem; font-weight:700; text-align:left; cursor:pointer; }
+        .turma-picker-trigger:focus-visible { outline:3px solid #93c5fd; outline-offset:2px; }
+        .turma-picker-chevron { font-size:1.3rem; color:#64748b; }
+        .turma-picker-panel { position:absolute; top:calc(100% + 7px); left:0; right:0; max-height:min( min(66vh, 560px), 560px); overflow:hidden; border:1px solid #dbe4f0; border-radius:14px; background:#fff; box-shadow:0 18px 48px rgba(15,23,42,.22); z-index:250; }
+        .turma-picker-search { display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid #e5eaf2; color:#64748b; }
+        .turma-picker-search input { min-height:42px; border:0; background:transparent; box-shadow:none; font-size:.95rem; }
+        .turma-picker-list { max-height:calc(min(66vh, 560px) - 64px); overflow-y:auto; overscroll-behavior:contain; padding:6px; }
+        .turma-picker-group { margin:5px 0 8px; overflow:hidden; border:1px solid var(--group-border); border-radius:10px; background:var(--group-bg); }
+        .turma-picker-group-title { display:flex; align-items:center; gap:8px; padding:9px 11px; color:var(--group-color); background:var(--group-bg); font-size:.76rem; font-weight:800; letter-spacing:.035em; text-transform:uppercase; }
+        .turma-picker-group-title:before { content:""; width:8px; height:8px; flex:0 0 auto; border-radius:50%; background:var(--group-color); }
+        .turma-picker-option { display:flex; width:100%; align-items:center; justify-content:space-between; gap:10px; padding:12px 11px; border:0; border-top:1px solid rgba(100,116,139,.13); background:#fff; color:#26364f; text-align:left; font-size:.92rem; cursor:pointer; }
+        .turma-picker-option:hover, .turma-picker-option:focus-visible { background:var(--group-bg); outline:none; }
+        .turma-picker-option.is-selected { color:var(--group-color); font-weight:800; background:var(--group-bg); }
+        .turma-picker-empty { padding:22px 12px; color:#64748b; text-align:center; font-size:.9rem; }
+        @media(max-width:680px) { .turma-picker-panel { max-height:64vh; } .turma-picker-list { max-height:calc(64vh - 64px); } .turma-picker-trigger { min-height:48px; font-size:.92rem; } }
         .container { margin-left:246px; padding:26px 30px 50px; max-width:1500px; }
         .card { padding:22px; border:1px solid #e7edf5; border-radius:16px; box-shadow:0 5px 22px rgba(15,23,42,.045); margin-bottom:20px; }
         .card h3 { margin-top:0; color:#17243c; font-size:1.15rem; letter-spacing:-.25px; }
@@ -556,9 +572,18 @@
                 <div id="status-conexao" class="connection-pill" role="status"><span class="connection-dot"></span> Verificando conexão...</div>
             </div>
             <div class="controls-grid">
-                <select id="turma" onchange="atualizarTudo()" style="grid-column: span 2;">
-                    <option value="">Selecione a Turma...</option>
-                </select>
+                <div class="turma-picker" id="turma-picker">
+                    <button type="button" class="turma-picker-trigger" id="turma-picker-trigger" aria-haspopup="dialog" aria-expanded="false" onclick="alternarSeletorTurmas()">
+                        <span id="turma-picker-label">Selecione a Turma...</span><span class="turma-picker-chevron">⌄</span>
+                    </button>
+                    <div class="turma-picker-panel hidden" id="turma-picker-panel" role="dialog" aria-label="Selecionar turma">
+                        <div class="turma-picker-search"><span aria-hidden="true">⌕</span><input id="turma-picker-search" type="search" placeholder="Pesquisar turma ou categoria..." autocomplete="off" oninput="filtrarSeletorTurmas()"></div>
+                        <div class="turma-picker-list" id="turma-picker-list"></div>
+                    </div>
+                    <select id="turma" class="hidden" aria-hidden="true" tabindex="-1" onchange="atualizarTudo()" style="grid-column: span 2;">
+                        <option value="">Selecione a Turma...</option>
+                    </select>
+                </div>
                 <select id="bimestre" onchange="alterarBimestre()">
                     <option value="1B">1º Bimestre</option>
                     <option value="2B">2º Bimestre</option>
@@ -1869,6 +1894,111 @@
             { cat: "TÉCNICO (DG)", nome: "2ºB DG Filosofia", ordem: 19 }
         ];
 
+        const CORES_CATEGORIAS_TURMAS = [
+            { cor:'#2563eb', fundo:'#eff6ff', borda:'#bfdbfe' },
+            { cor:'#7c3aed', fundo:'#f5f3ff', borda:'#ddd6fe' },
+            { cor:'#0f766e', fundo:'#f0fdfa', borda:'#99f6e4' },
+            { cor:'#c2410c', fundo:'#fff7ed', borda:'#fed7aa' },
+            { cor:'#be185d', fundo:'#fdf2f8', borda:'#fbcfe8' },
+            { cor:'#4d7c0f', fundo:'#f7fee7', borda:'#d9f99d' }
+        ];
+
+        function alternarSeletorTurmas() {
+            const painel=document.getElementById('turma-picker-panel');
+            const botao=document.getElementById('turma-picker-trigger');
+            if(!painel||!botao)return;
+            const abrir=painel.classList.contains('hidden');
+            painel.classList.toggle('hidden',!abrir);
+            botao.setAttribute('aria-expanded',String(abrir));
+            if(abrir){
+                const busca=document.getElementById('turma-picker-search');
+                if(busca){busca.value='';filtrarSeletorTurmas();setTimeout(()=>busca.focus(),30);}
+            }
+        }
+
+        function fecharSeletorTurmas(){
+            const painel=document.getElementById('turma-picker-panel');
+            const botao=document.getElementById('turma-picker-trigger');
+            if(painel)painel.classList.add('hidden');
+            if(botao)botao.setAttribute('aria-expanded','false');
+        }
+
+        function renderizarSeletorTurmas(){
+            const seletor=document.getElementById('turma');
+            const lista=document.getElementById('turma-picker-list');
+            const rotulo=document.getElementById('turma-picker-label');
+            if(!seletor||!lista||!rotulo)return;
+            const atual=seletor.options[seletor.selectedIndex];
+            rotulo.textContent=seletor.value?(atual?.textContent||seletor.value):'Selecione a Turma...';
+            lista.innerHTML='';
+            const grupos=Array.from(seletor.querySelectorAll('optgroup'));
+            const paleta=CORES_CATEGORIAS_TURMAS;
+            grupos.forEach((grupo,indice)=>{
+                const cor=paleta[indice%paleta.length];
+                const sec=document.createElement('section');
+                sec.className='turma-picker-group';
+                sec.dataset.group=grupo.label.toLocaleLowerCase('pt-BR');
+                sec.style.setProperty('--group-color',cor.cor);
+                sec.style.setProperty('--group-bg',cor.fundo);
+                sec.style.setProperty('--group-border',cor.borda);
+                const titulo=document.createElement('div');
+                titulo.className='turma-picker-group-title';
+                titulo.textContent=grupo.label;
+                sec.appendChild(titulo);
+                Array.from(grupo.children).forEach(opcao=>{
+                    const item=document.createElement('button');
+                    item.type='button';item.className='turma-picker-option';
+                    item.textContent=opcao.textContent;
+                    item.dataset.value=opcao.value;
+                    item.dataset.search=(opcao.textContent+' '+grupo.label).toLocaleLowerCase('pt-BR');
+                    if(opcao.value===seletor.value){item.classList.add('is-selected');item.setAttribute('aria-current','true');}
+                    const marca=document.createElement('span');
+                    marca.textContent=opcao.value===seletor.value?'✓':'';
+                    item.appendChild(marca);
+                    item.addEventListener('click',()=>{
+                        seletor.value=opcao.value;
+                        seletor.dispatchEvent(new Event('change',{bubbles:true}));
+                        renderizarSeletorTurmas();
+                        fecharSeletorTurmas();
+                    });
+                    sec.appendChild(item);
+                });
+                lista.appendChild(sec);
+            });
+            if(!grupos.length){
+                const vazio=document.createElement('div');vazio.className='turma-picker-empty';
+                vazio.textContent='Nenhuma turma cadastrada.';lista.appendChild(vazio);
+            }
+            filtrarSeletorTurmas();
+        }
+
+        function filtrarSeletorTurmas(){
+            const busca=(document.getElementById('turma-picker-search')?.value||'').trim().toLocaleLowerCase('pt-BR');
+            const lista=document.getElementById('turma-picker-list');
+            if(!lista)return;
+            let total=0;
+            lista.querySelectorAll('.turma-picker-group').forEach(grupo=>{
+                let visiveis=0;
+                grupo.querySelectorAll('.turma-picker-option').forEach(item=>{
+                    const mostrar=!busca||item.dataset.search.includes(busca);
+                    item.classList.toggle('hidden',!mostrar);
+                    if(mostrar)visiveis++;
+                });
+                grupo.classList.toggle('hidden',visiveis===0);
+                total+=visiveis;
+            });
+            let vazio=lista.querySelector('.turma-picker-empty');
+            if(busca&&total===0){
+                if(!vazio){vazio=document.createElement('div');vazio.className='turma-picker-empty';lista.appendChild(vazio);}
+                vazio.textContent='Nenhuma turma encontrada para essa pesquisa.';
+            }else if(vazio&&total>0){vazio.remove();}
+        }
+
+        document.addEventListener('click',evento=>{
+            const picker=document.getElementById('turma-picker');
+            if(picker&&!picker.contains(evento.target))fecharSeletorTurmas();
+        });
+
         async function popularMenus() {
             const st = document.getElementById('turma');
             const valorAnterior = st.value;
@@ -1902,6 +2032,7 @@
             });
 
             if (valorAnterior) st.value = valorAnterior;
+            renderizarSeletorTurmas();
         }
 
 
