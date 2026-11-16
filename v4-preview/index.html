@@ -1990,12 +1990,21 @@
             if(picker&&!picker.contains(evento.target))fecharSeletorTurmas();
         });
 
+        // Impede que consultas simultâneas ao Firebase preencham o seletor mais de uma vez.
+        let versaoCarregamentoTurmas = 0;
+
         async function popularMenus() {
+            const minhaVersao = ++versaoCarregamentoTurmas;
             const st = document.getElementById('turma');
-            const valorAnterior = st.value;
-            st.innerHTML = '<option value="">Selecione a Turma...</option>';
+            if (!st) return;
 
             const sCad = await db.ref('cadastros_turmas').once('value');
+
+            // Se outra chamada começou depois desta, descarta esta resposta antiga.
+            if (minhaVersao !== versaoCarregamentoTurmas) return;
+
+            const valorAnterior = st.value;
+            st.innerHTML = '<option value="">Selecione a Turma...</option>';
             let turmasCadastradas = sCad.val();
 
             if (!turmasCadastradas || Object.keys(turmasCadastradas).length === 0) {
