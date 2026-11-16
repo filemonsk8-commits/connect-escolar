@@ -517,6 +517,35 @@
         .export-sheet-table tbody tr:nth-child(even){background:#f8fafc}
         .export-sheet-count{margin:10px 0;color:#64748b;font-size:.78rem}
 
+
+        /* Ajuste exclusivamente visual do seletor nativo de turmas.
+           Não altera opções, carregamento, categorias ou dados. */
+        #turma {
+            grid-column: span 2;
+            min-height: 52px;
+            padding: 12px 46px 12px 15px;
+            border: 1.5px solid #c7d6eb;
+            border-radius: 12px;
+            background-color: #f8fbff;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            color: #1e3354;
+            font-size: 1rem;
+            font-weight: 750;
+            letter-spacing: .01em;
+            box-shadow: 0 2px 7px rgba(30,64,175,.06);
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        #turma:hover { border-color: #8fb2ed; background-color: #f1f6ff; }
+        #turma:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.14); }
+        #turma option { color: #24324a; background: #fff; font-weight: 600; }
+        #turma optgroup { color: #1d4ed8; background: #eef4ff; font-weight: 800; }
+        @media (max-width: 680px) {
+            #turma { min-height: 50px; font-size: .96rem; padding-left: 13px; }
+        }
 </style>
 </head>
 <body>
