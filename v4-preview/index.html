@@ -2009,16 +2009,26 @@
 
             if (!turmasCadastradas || Object.keys(turmasCadastradas).length === 0) {
                 st.innerHTML = '<option value="">Cadastre as novas turmas na aba Cadastro...</option>';
+                renderizarSeletorTurmas();
                 return;
             }
 
-            // Ordena pelo atributo 'ordem'
-            let listaOrdenada = Object.values(turmasCadastradas).sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+            // Ordena pelo atributo 'ordem' e elimina nomes repetidos apenas na lista visual.
+            // Os cadastros originais no banco permanecem intactos.
+            let listaOrdenada = Object.values(turmasCadastradas)
+                .filter(item => item && item.nome)
+                .sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0));
 
             const grupos = {};
+            const nomesJaExibidos = new Set();
             listaOrdenada.forEach(item => {
-                if(!grupos[item.cat]) grupos[item.cat] = [];
-                grupos[item.cat].push(item.nome);
+                const nome = String(item.nome).trim().replace(/\\s+/g, ' ');
+                const chave = nome.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLocaleLowerCase('pt-BR');
+                if (!nome || nomesJaExibidos.has(chave)) return;
+                nomesJaExibidos.add(chave);
+                const categoria = String(item.cat || 'Outras turmas').trim();
+                if (!grupos[categoria]) grupos[categoria] = [];
+                grupos[categoria].push(nome);
             });
 
             Object.keys(grupos).forEach(categoria => {
