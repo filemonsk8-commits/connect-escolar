@@ -397,8 +397,7 @@
         .calendar-form-actions .btn-main { width:auto; min-width:140px; margin:0; padding:11px 15px; }
         .calendar-grid-area { border:1px solid var(--line); border-radius:11px; overflow:hidden; background:#fff; }
         .calendar-weekday-row,.calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
-        .calendar-weekday { padding:10px 4px; text-align:center; color:#64748b; background:#f1f5fb; border-right:1px solid var(--line); font-size:.7rem; font-weight:800; }
-        .calendar-weekday:last-child { border-right:0; }
+        .calendar-weekday { padding:10px 4px; text-align:center; color:#64748b; background:#f1f5fb; border-right:1px solid var(--line); font-size:.7rem; font-weight:800; }        .calendar-weekday:last-child { border-right:0; }
         .calendar-day-cell { min-width:0; min-height:118px; padding:6px; border-top:1px solid var(--line); border-right:1px solid var(--line); background:#fff; }
         .calendar-day-cell:nth-child(7n) { border-right:0; }
         .calendar-day-cell.is-outside { background:#f8fafc; }
@@ -797,8 +796,7 @@
                 <h3>Horário das Aulas do Professor</h3>
                 <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 15px;">Organize onde você estará em cada aula da semana ou carregue o arquivo de horário em PDF/TXT.</p>
                 
-                <div class="sec-box no-print" style="background: #f1f5f9;">
-                    <h4 style="margin-bottom: 5px;">📄 Carregar Horário via Arquivo (PDF ou TXT)</h4>
+                <div class="sec-box no-print" style="background: #f1f5f9;">                    <h4 style="margin-bottom: 5px;">📄 Carregar Horário via Arquivo (PDF ou TXT)</h4>
                     <p style="font-size: 0.75rem; color: #64748b; margin-top: 0;">Selecione o PDF ou TXT contendo sua grade para importação automática dos horários.</p>
                     <input type="file" id="pdf-horario-file" accept=".pdf,.txt" onchange="processarArquivoHorario(this)">
                 </div>
@@ -1197,8 +1195,7 @@
                 };
                 pedido.onsuccess = () => resolve(pedido.result);
                 pedido.onerror = () => reject(pedido.error || new Error('Falha ao abrir o armazenamento local.'));
-                pedido.onblocked = () => reject(new Error('Feche outras abas do Connect Escolar para preparar o modo offline.'));
-            }).catch(erro => {
+                pedido.onblocked = () => reject(new Error('Feche outras abas do Connect Escolar para preparar o modo offline.'));            }).catch(erro => {
                 promessaBancoOffline = null;
                 throw erro;
             });
@@ -1597,8 +1594,7 @@
                     if (filaRestante.length === 0) {
                         localStorage.setItem(CHAVE_ULTIMO_SALVAMENTO, new Date().toISOString());
                         atualizarHorarioUltimoSalvamento();
-                        if (gravacoesPendentes === 0 && !camposAlterados) {
-                            atualizarIndicadorSalvamento('salvo', 'Salvo e sincronizado');
+                        if (gravacoesPendentes === 0 && !camposAlterados) {                            atualizarIndicadorSalvamento('salvo', 'Salvo e sincronizado');
                         }
                     }
                 }
@@ -1997,8 +1993,7 @@
             });
             if(!grupos.length){
                 const vazio=document.createElement('div');vazio.className='turma-picker-empty';
-                vazio.textContent='Nenhuma turma cadastrada.';lista.appendChild(vazio);
-            }
+                vazio.textContent='Nenhuma turma cadastrada.';lista.appendChild(vazio);            }
             filtrarSeletorTurmas();
         }
 
@@ -2397,7 +2392,6 @@
             const status = document.getElementById('cal-status');
             const turmaSelect = document.getElementById('cal-event-turma');
             if (!status || !turmaSelect) return;
-
             status.textContent = 'Atualizando agenda...';
             try {
                 const principal = document.getElementById('turma');
@@ -2798,7 +2792,6 @@
                 console.warn('Connect Escolar: não foi possível restaurar o bimestre:', erro);
             }
         }
-
         function alterarBimestre() {
             const seletor = document.getElementById('bimestre');
             if (seletor) {
@@ -3197,8 +3190,7 @@
 
         async function carregarHorarioAulas() {
             const tbody = document.getElementById('grid-horario-aulas');
-            const sHor = await db.ref('horario_professor').once('value');
-            const dadosHorario = sHor.val() || {};
+            const sHor = await db.ref('horario_professor').once('value');            const dadosHorario = sHor.val() || {};
 
             let html = '';
             horariosPadrao.forEach((hNome, hIndex) => {
@@ -3261,20 +3253,28 @@
         }
 
         async function extrairHorarioProfessorPDF(pdf) {
+            // As linhas de segunda e sexta trazem dia + horário no mesmo rótulo
+            // (ex.: "SEG 13h", "SEX 13h" e "SEX 13h5").
             const centrosColunas = [113, 170, 226, 282, 343, 400, 461, 514, 570, 626, 682, 733];
             const turmasColunas = ["8º A", "9º A", "9º B", "9º C", "9º D", "1º B", "1º A DG", "2º B", "2º C", "2º D", "2º A DG", "2º B DG"];
-            const mapaDias = {
-                "seg": "seg", "segunda": "seg", "segunda-feira": "seg",
-                "terca": "ter", "ter": "ter", "terca-feira": "ter",
-                "quarta": "qua", "qua": "qua", "quarta-feira": "qua",
-                "quinta": "qui", "qui": "qui", "quinta-feira": "qui",
-                "sexta": "sex", "sex": "sex", "sexta-feira": "sex"
-            };
+            const mapaDias = [
+                { re: /^(?:seg|segunda)(?:-feira)?(?:\\s|$)/, dia: "seg" },
+                { re: /^(?:ter|terca)(?:-feira)?(?:\\s|$)/, dia: "ter" },
+                { re: /^(?:qua|quarta)(?:-feira)?(?:\\s|$)/, dia: "qua" },
+                { re: /^(?:qui|quinta)(?:-feira)?(?:\\s|$)/, dia: "qui" },
+                { re: /^(?:sex|sexta)(?:-feira)?(?:\\s|$)/, dia: "sex" }
+            ];
             const resultado = {};
             diasSemana.forEach(dia => resultado[dia] = {});
             let diaAtual = null;
             let aulaDoDia = 0;
             const achados = [];
+            const limitesEsquerdos = centrosColunas.map((centro, i) =>
+                i === 0 ? 90 : (centrosColunas[i - 1] + centro) / 2
+            );
+            const limitesDireitos = centrosColunas.map((centro, i) =>
+                i === centrosColunas.length - 1 ? 770 : (centro + centrosColunas[i + 1]) / 2
+            );
 
             for (let paginaNumero = 1; paginaNumero <= pdf.numPages; paginaNumero++) {
                 const pagina = await pdf.getPage(paginaNumero);
@@ -3291,10 +3291,12 @@
                 const linhasHorario = [];
                 itens.forEach(item => {
                     if (item.x >= 90) return;
-                    const chave = normalizarTextoHorario(item.texto).replace(/[^a-z-]/g, "");
-                    if (mapaDias[chave]) {
-                        marcadores.push({ y: item.y, dia: mapaDias[chave] });
-                    } else if (/^\d{1,2}\s*h/i.test(item.texto)) {
+                    const texto = normalizarTextoHorario(item.texto);
+                    const diaEncontrado = mapaDias.find(m => m.re.test(texto));
+                    if (diaEncontrado) marcadores.push({ y: item.y, dia: diaEncontrado.dia });
+
+                    // Aceita horário isolado ou combinado com o dia da semana.
+                    if (/(?:^|\\s)(?:13|14|15|16|17)\\s*h\\s*\\d{0,2}/i.test(texto)) {
                         linhasHorario.push({ y: item.y, texto: item.texto });
                     }
                 });
@@ -3314,21 +3316,12 @@
                     }
 
                     if (!diaAtual || aulaDoDia >= horariosPadrao.length) continue;
-                    const indiceAula = aulaDoDia;
-                    aulaDoDia++;
-
-                    const limiteEsquerdo = centrosColunas.map((centro, i) =>
-                        i === 0 ? 90 : (centrosColunas[i - 1] + centro) / 2
-                    );
-                    const limiteDireito = centrosColunas.map((centro, i) =>
-                        i === centrosColunas.length - 1 ? 770 : (centro + centrosColunas[i + 1]) / 2
-                    );
-
+                    const indiceAula = aulaDoDia++;
                     centrosColunas.forEach((centro, coluna) => {
                         const itensCelula = itens.filter(item => {
                             const meio = item.x + item.largura / 2;
-                            return meio >= limiteEsquerdo[coluna] && meio < limiteDireito[coluna] &&
-                                item.y >= linhaHorario.y - 2 && item.y <= linhaHorario.y + 25;
+                            return meio >= limitesEsquerdos[coluna] && meio < limitesDireitos[coluna] &&
+                                item.y >= linhaHorario.y - 2 && item.y <= linhaHorario.y + 26;
                         }).sort((a, b) => a.y - b.y || a.x - b.x);
 
                         const linhasCelula = [];
@@ -3345,11 +3338,11 @@
                             l.partes.sort((a, b) => a.x - b.x).map(p => p.texto).join(" ").trim()
                         ).filter(Boolean);
 
-                        const temEduardo = textos.some(t => normalizarTextoHorario(t).includes("eduardo"));
-                        if (!temEduardo) return;
-
-                        const disciplina = textos.filter(t => !normalizarTextoHorario(t).includes("eduardo"))
-                            .join(" ").replace(/\s+/g, " ").trim();
+                        const indiceProfessor = textos.findIndex(t => normalizarTextoHorario(t).includes("eduardo"));
+                        if (indiceProfessor < 0) return;
+                        const disciplina = textos.filter((t, i) => i !== indiceProfessor &&
+                            !normalizarTextoHorario(t).includes("eduardo"))
+                            .join(" ").replace(/\\s+/g, " ").trim();
                         if (!disciplina) return;
 
                         const valor = turmasColunas[coluna] + " — " + disciplina;
@@ -3358,7 +3351,6 @@
                     });
                 }
             }
-
             return { horarios: resultado, achados };
         }
 
@@ -3597,7 +3589,6 @@
         async function gerarRelatorio() {
             const t = limparT(document.getElementById('turma').value); const b = document.getElementById('bimestre').value;
             if(!t) { document.getElementById('relatorio-lista').innerHTML = "Escolha uma turma..."; return; }
-
             const [sH, sA, sV, sR] = await Promise.all([
                 db.ref(`headers/${t}/${b}`).once('value'),
                 db.ref('turmas/'+t).once('value'),
@@ -3997,8 +3988,7 @@
             try {
                 const credencial = firebase.auth.EmailAuthProvider.credential(usuario.email, senha);
                 await usuario.reauthenticateWithCredential(credencial);
-                administracaoDesbloqueada = true;
-                campo.value = '';
+                administracaoDesbloqueada = true;                campo.value = '';
                 document.getElementById('admin-login-box').classList.add('hidden');
                 document.getElementById('admin-conteudo-protegido').classList.remove('hidden');
             } catch (falha) {
@@ -4397,8 +4387,7 @@
                 });
             });
 
-            Object.keys(arvoreRecsAntiga).forEach(bimestre => {
-                novaArvoreRecs[bimestre] = {};
+            Object.keys(arvoreRecsAntiga).forEach(bimestre => {                novaArvoreRecs[bimestre] = {};
                 novaListaAlunos.forEach((nomeNovo, idxNovo) => {
                     let idxAntigo = encontrarIndiceAntigo(nomeNovo);
                     if(idxAntigo !== -1 && arvoreRecsAntiga[bimestre][idxAntigo] !== undefined) {
@@ -4797,7 +4786,6 @@
                 console.error('Connect Escolar: pré-visualização de planilha:',e);
             }
         }
-
         function baixarPlanilhaExportacaoPreparada(){
             const p=window.planilhaExportacaoPreparada;
             if(!p||!p.linhas){alert('Primeiro, pré-visualize a planilha que deseja baixar.');return;}
