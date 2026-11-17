@@ -3349,7 +3349,7 @@
                         if (!temEduardo) return;
 
                         const disciplina = textos.filter(t => !normalizarTextoHorario(t).includes("eduardo"))
-                            .join(" ").replace(/\\s+/g, " ").trim();
+                            .join(" ").replace(/\s+/g, " ").trim();
                         if (!disciplina) return;
 
                         const valor = turmasColunas[coluna] + " — " + disciplina;
