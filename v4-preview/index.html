@@ -3232,72 +3232,158 @@
         }
 
         async function processarArquivoHorario(input) {
-            const file = input.files[0];
+            const file = input.files && input.files[0];
             if (!file) return;
 
-            if (file.type === "text/plain") {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preencherHorarioComTexto(e.target.result);
-                };
-                reader.readAsText(file);
-            } else if (file.type === "application/pdf") {
-                const fileReader = new FileReader();
-                fileReader.onload = async function() {
-                    const typedarray = new Uint8Array(this.result);
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    let textoCompleto = "";
-
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const tokenized = await page.getTextContent();
-                        const pageText = tokenized.items.map(token => token.str).join(" ");
-                        textoCompleto += pageText + "\n";
-                    }
-
-                    preencherHorarioComTexto(textoCompleto);
-                };
-                fileReader.readAsArrayBuffer(file);
-            } else {
-                alert("Por favor, selecione um arquivo PDF ou TXT.");
+            try {
+                if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+                    const bytes = new Uint8Array(await file.arrayBuffer());
+                    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+                    const resultado = await extrairHorarioProfessorPDF(pdf);
+                    aplicarHorarioProfessorImportado(resultado);
+                } else if (file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt")) {
+                    const texto = await file.text();
+                    preencherHorarioComTexto(texto);
+                } else {
+                    alert("Por favor, selecione um arquivo PDF ou TXT.");
+                }
+            } catch (erro) {
+                console.error("Falha ao interpretar o horário:", erro);
+                alert("Não foi possível interpretar este arquivo. Nenhum horário foi salvo. Confira se o PDF contém texto selecionável e tente novamente.");
+            } finally {
+                input.value = "";
             }
         }
 
-        function preencherHorarioComTexto(texto) {
-            const sTurmas = document.getElementById('turma');
-            let turmasOpcoes = [];
-            for (let i = 0; i < sTurmas.options.length; i++) {
-                if (sTurmas.options[i].value) turmasOpcoes.push(sTurmas.options[i].value);
-            }
+        function normalizarTextoHorario(valor) {
+            return String(valor || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
+                .toLowerCase().replace(/\\s+/g, " ").trim();
+        }
 
-            const linhas = texto.split('\n');
-            let inseridos = 0;
+        async function extrairHorarioProfessorPDF(pdf) {
+            const centrosColunas = [113, 170, 226, 282, 343, 400, 461, 514, 570, 626, 682, 733];
+            const turmasColunas = ["8º A", "9º A", "9º B", "9º C", "9º D", "1º B", "1º A DG", "2º B", "2º C", "2º D", "2º A DG", "2º B DG"];
+            const mapaDias = {
+                "seg": "seg", "segunda": "seg", "segunda-feira": "seg",
+                "terca": "ter", "ter": "ter", "terca-feira": "ter",
+                "quarta": "qua", "qua": "qua", "quarta-feira": "qua",
+                "quinta": "qui", "qui": "qui", "quinta-feira": "qui",
+                "sexta": "sex", "sex": "sex", "sexta-feira": "sex"
+            };
+            const resultado = {};
+            diasSemana.forEach(dia => resultado[dia] = {});
+            let diaAtual = null;
+            let aulaDoDia = 0;
+            const achados = [];
 
-            linhas.forEach(linha => {
-                turmasOpcoes.forEach(turma => {
-                    if (linha.toLowerCase().includes(turma.toLowerCase())) {
-                        diasSemana.forEach(dia => {
-                            if (linha.toLowerCase().includes(dia)) {
-                                horariosPadrao.forEach((_, hIndex) => {
-                                    if (linha.includes((hIndex + 1) + 'ª') || linha.includes((hIndex + 1) + 'a')) {
-                                        const el = document.querySelector(`.input-horario-aula[data-aula="${hIndex}"][data-dia="${dia}"]`);
-                                        if (el) {
-                                            el.value = turma;
-                                            inseridos++;
-                                        }
-                                    }
-                                });
-                            }
-                        });
+            for (let paginaNumero = 1; paginaNumero <= pdf.numPages; paginaNumero++) {
+                const pagina = await pdf.getPage(paginaNumero);
+                const viewport = pagina.getViewport({ scale: 1 });
+                const conteudo = await pagina.getTextContent();
+                const itens = conteudo.items.filter(item => item.str && item.str.trim()).map(item => ({
+                    texto: item.str.trim(),
+                    x: item.transform[4],
+                    y: viewport.height - item.transform[5] - (item.height || 0),
+                    largura: item.width || 0
+                }));
+
+                const marcadores = [];
+                const linhasHorario = [];
+                itens.forEach(item => {
+                    if (item.x >= 90) return;
+                    const chave = normalizarTextoHorario(item.texto).replace(/[^a-z-]/g, "");
+                    if (mapaDias[chave]) {
+                        marcadores.push({ y: item.y, dia: mapaDias[chave] });
+                    } else if (/^\\d{1,2}\\s*h/i.test(item.texto)) {
+                        linhasHorario.push({ y: item.y, texto: item.texto });
                     }
                 });
+
+                marcadores.sort((a, b) => a.y - b.y);
+                linhasHorario.sort((a, b) => a.y - b.y);
+                let marcadorIndex = 0;
+
+                for (const linhaHorario of linhasHorario) {
+                    while (marcadorIndex < marcadores.length && marcadores[marcadorIndex].y <= linhaHorario.y + 2) {
+                        const novoDia = marcadores[marcadorIndex].dia;
+                        if (novoDia !== diaAtual) {
+                            diaAtual = novoDia;
+                            aulaDoDia = 0;
+                        }
+                        marcadorIndex++;
+                    }
+
+                    if (!diaAtual || aulaDoDia >= horariosPadrao.length) continue;
+                    const indiceAula = aulaDoDia;
+                    aulaDoDia++;
+
+                    const limiteEsquerdo = centrosColunas.map((centro, i) =>
+                        i === 0 ? 90 : (centrosColunas[i - 1] + centro) / 2
+                    );
+                    const limiteDireito = centrosColunas.map((centro, i) =>
+                        i === centrosColunas.length - 1 ? 770 : (centro + centrosColunas[i + 1]) / 2
+                    );
+
+                    centrosColunas.forEach((centro, coluna) => {
+                        const itensCelula = itens.filter(item => {
+                            const meio = item.x + item.largura / 2;
+                            return meio >= limiteEsquerdo[coluna] && meio < limiteDireito[coluna] &&
+                                item.y >= linhaHorario.y - 2 && item.y <= linhaHorario.y + 25;
+                        }).sort((a, b) => a.y - b.y || a.x - b.x);
+
+                        const linhasCelula = [];
+                        itensCelula.forEach(item => {
+                            let linha = linhasCelula.find(l => Math.abs(l.y - item.y) <= 3);
+                            if (!linha) {
+                                linha = { y: item.y, partes: [] };
+                                linhasCelula.push(linha);
+                            }
+                            linha.partes.push(item);
+                        });
+
+                        const textos = linhasCelula.sort((a, b) => a.y - b.y).map(l =>
+                            l.partes.sort((a, b) => a.x - b.x).map(p => p.texto).join(" ").trim()
+                        ).filter(Boolean);
+
+                        const temEduardo = textos.some(t => normalizarTextoHorario(t).includes("eduardo"));
+                        if (!temEduardo) return;
+
+                        const disciplina = textos.filter(t => !normalizarTextoHorario(t).includes("eduardo"))
+                            .join(" ").replace(/\\s+/g, " ").trim();
+                        if (!disciplina) return;
+
+                        const valor = turmasColunas[coluna] + " — " + disciplina;
+                        resultado[diaAtual][indiceAula] = valor;
+                        achados.push({ dia: diaAtual, aula: indiceAula + 1, turma: turmasColunas[coluna], disciplina });
+                    });
+                }
+            }
+
+            return { horarios: resultado, achados };
+        }
+
+        function aplicarHorarioProfessorImportado(resultado) {
+            const achados = resultado && resultado.achados ? resultado.achados : [];
+            if (!achados.length) {
+                alert("O PDF foi lido, mas não encontrei células identificadas com o nome Eduardo. Nenhum campo foi alterado.");
+                return;
+            }
+
+            achados.forEach(item => {
+                const el = document.querySelector('.input-horario-aula[data-aula="' + item.aula - 1 + '"][data-dia="' + item.dia + '"]');
+                if (el) el.value = resultado.horarios[item.dia][item.aula - 1];
             });
 
-            if (inseridos > 0) {
-                alert(`Extração concluída! ${inseridos} horários preenchidos automaticamente.`);
-            } else {
-                alert("Leitura concluída! Caso alguns campos não tenham sido preenchidos automaticamente devido à formatação do arquivo, você pode digitá-los diretamente na tabela.");
-            }
+            const resumo = achados.map(item => {
+                const dia = { seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta" }[item.dia] || item.dia;
+                return dia + " · " + item.aula + "ª aula: " + item.turma + " — " + item.disciplina;
+            }).join("\\n");
+
+            alert(achados.length + " aula(s) identificada(s) e colocada(s) na grade. Confira os campos antes de tocar em “Salvar horário”.\\n\\n" + resumo + "\\n\\nA importação não grava nada no Firebase automaticamente.");
+        }
+
+        function preencherHorarioComTexto(texto) {
+            alert("O preenchimento automático por TXT ainda não reconhece quadros em colunas. Para importar seu quadro semanal, utilize o PDF original. Nenhum horário foi alterado.");
         }
 
         function salvarD() {
