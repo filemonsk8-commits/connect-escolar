@@ -3374,12 +3374,12 @@
                 if (el) el.value = resultado.horarios[item.dia][item.aula - 1];
             });
 
-            const resumo = achados.map(item => {
-                const dia = { seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta" }[item.dia] || item.dia;
-                return dia + " · " + item.aula + "ª aula: " + item.turma + " — " + item.disciplina;
-            }).join("\n");
-
-            alert(achados.length + " aula(s) identificada(s) e colocada(s) na grade. Confira os campos antes de tocar em “Salvar horário”.\\n\\n" + resumo + "\\n\\nA importação não grava nada no Firebase automaticamente.");
+            const porDia = { seg: 0, ter: 0, qua: 0, qui: 0, sex: 0 };
+            achados.forEach(item => porDia[item.dia] = (porDia[item.dia] || 0) + 1);
+            alert(achados.length + " aula(s) identificada(s) e colocada(s) na grade.\n" +
+                "Segunda: " + porDia.seg + " · Terça: " + porDia.ter + " · Quarta: " + porDia.qua +
+                " · Quinta: " + porDia.qui + " · Sexta: " + porDia.sex +
+                "\n\nConfira os campos antes de tocar em “Salvar horário”. A importação não grava nada no Firebase automaticamente.");
         }
 
         function preencherHorarioComTexto(texto) {
