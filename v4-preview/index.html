@@ -3383,7 +3383,39 @@
         }
 
         function preencherHorarioComTexto(texto) {
-            alert("O preenchimento automático por TXT ainda não reconhece quadros em colunas. Para importar seu quadro semanal, utilize o PDF original. Nenhum horário foi alterado.");
+            const sTurmas = document.getElementById('turma');
+            const turmasOpcoes = [];
+            for (let i = 0; i < sTurmas.options.length; i++) {
+                if (sTurmas.options[i].value) turmasOpcoes.push(sTurmas.options[i].value);
+            }
+
+            const linhas = texto.split('\n');
+            let inseridos = 0;
+            linhas.forEach(linha => {
+                turmasOpcoes.forEach(turma => {
+                    if (linha.toLowerCase().includes(turma.toLowerCase())) {
+                        diasSemana.forEach(dia => {
+                            if (linha.toLowerCase().includes(dia)) {
+                                horariosPadrao.forEach((_, hIndex) => {
+                                    if (linha.includes((hIndex + 1) + 'ª') || linha.includes((hIndex + 1) + 'a')) {
+                                        const el = document.querySelector('.input-horario-aula[data-aula="' + hIndex + '"][data-dia="' + dia + '"]');
+                                        if (el) {
+                                            el.value = turma;
+                                            inseridos++;
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            if (inseridos > 0) {
+                alert("Extração concluída! " + inseridos + " horários preenchidos automaticamente. Confira antes de salvar.");
+            } else {
+                alert("Leitura concluída, mas não foi possível relacionar automaticamente os campos. Nenhum horário foi salvo.");
+            }
         }
 
         function salvarD() {
