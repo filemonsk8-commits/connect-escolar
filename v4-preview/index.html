@@ -3256,8 +3256,8 @@
         }
 
         function normalizarTextoHorario(valor) {
-            return String(valor || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
-                .toLowerCase().replace(/\\s+/g, " ").trim();
+            return String(valor || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase().replace(/\s+/g, " ").trim();
         }
 
         async function extrairHorarioProfessorPDF(pdf) {
@@ -3294,7 +3294,7 @@
                     const chave = normalizarTextoHorario(item.texto).replace(/[^a-z-]/g, "");
                     if (mapaDias[chave]) {
                         marcadores.push({ y: item.y, dia: mapaDias[chave] });
-                    } else if (/^\\d{1,2}\\s*h/i.test(item.texto)) {
+                    } else if (/^\d{1,2}\s*h/i.test(item.texto)) {
                         linhasHorario.push({ y: item.y, texto: item.texto });
                     }
                 });
@@ -3370,14 +3370,14 @@
             }
 
             achados.forEach(item => {
-                const el = document.querySelector('.input-horario-aula[data-aula="' + item.aula - 1 + '"][data-dia="' + item.dia + '"]');
+                const el = document.querySelector('.input-horario-aula[data-aula="' + (item.aula - 1) + '"][data-dia="' + item.dia + '"]');
                 if (el) el.value = resultado.horarios[item.dia][item.aula - 1];
             });
 
             const resumo = achados.map(item => {
                 const dia = { seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta" }[item.dia] || item.dia;
                 return dia + " · " + item.aula + "ª aula: " + item.turma + " — " + item.disciplina;
-            }).join("\\n");
+            }).join("\n");
 
             alert(achados.length + " aula(s) identificada(s) e colocada(s) na grade. Confira os campos antes de tocar em “Salvar horário”.\\n\\n" + resumo + "\\n\\nA importação não grava nada no Firebase automaticamente.");
         }
