@@ -867,6 +867,10 @@
                         <button type="button" id="btn-abrir-painel-vistos" class="btn-main btn-blue" style="margin:0;" onclick="alternarPainelColetivoVistos()">Abrir painel</button>
                     </div>
                     <div id="conteudo-painel-coletivo-vistos" class="hidden" style="margin-top:14px;">
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+                            <button type="button" id="btn-liberar-edicao-vistos" class="btn-main btn-blue" style="margin:0;" onclick="habilitarEdicaoPainelVistos()">Editar notas desta data</button>
+                            <span style="font-size:.76rem;color:#64748b;">Use esta opção para liberar a edição de uma data que já foi salva.</span>
+                        </div>
                         <div id="tabela-painel-coletivo-vistos" style="overflow-x:auto;"></div>
                         <p style="font-size:.76rem;color:#64748b;margin:8px 0;">Os valores digitados aqui também atualizam os quadrinhos originais. O salvamento usa o mesmo registro da data selecionada.</p>
                         <button type="button" id="btn-salvar-painel-vistos" class="btn-main btn-green" style="margin-top:8px;" onclick="salvarPainelColetivoVistos()">Salvar lançamentos</button>
@@ -3155,6 +3159,16 @@
                 conteudo.classList.add('hidden');
                 botao.textContent = 'Abrir painel';
             }
+        }
+
+        function habilitarEdicaoPainelVistos() {
+            const dataSelecionada = document.getElementById('data').value;
+            if (!dataSelecionada) {
+                alert('Selecione uma data antes de editar os vistos.');
+                return;
+            }
+            dataOficialmenteAberta = true;
+            carregarAlunos();
         }
 
         function escaparTextoPainelVistos(valor) {
