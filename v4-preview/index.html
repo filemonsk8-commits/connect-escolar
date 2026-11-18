@@ -863,17 +863,12 @@
                 <button id="btn-salvar-vistos" onclick="salvarVistos()" class="btn-main btn-blue no-print">Salvar Notas</button>
                 <section id="painel-coletivo-vistos" class="sec-box no-print" style="margin-top:16px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-                        <div><h3 style="margin:0 0 4px;">Lançamento coletivo de vistos</h3><p style="font-size:.8rem;color:#64748b;margin:0;">Visualize todos os alunos da turma e preencha as cinco atividades em uma única tabela.</p></div>
-                        <button type="button" id="btn-abrir-painel-vistos" class="btn-main btn-blue" style="margin:0;" onclick="alternarPainelColetivoVistos()">Abrir painel</button>
+                        <div><h3 style="margin:0 0 4px;">Consulta de todos os vistos</h3><p style="font-size:.8rem;color:#64748b;margin:0;">Abra, em uma única tela, todas as datas que já possuem lançamentos nesta turma e neste bimestre.</p></div>
+                        <button type="button" id="btn-abrir-painel-vistos" class="btn-main btn-blue" style="margin:0;" onclick="alternarPainelColetivoVistos()">Abrir todas as notas</button>
                     </div>
                     <div id="conteudo-painel-coletivo-vistos" class="hidden" style="margin-top:14px;">
-                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-                            <button type="button" id="btn-liberar-edicao-vistos" class="btn-main btn-blue" style="margin:0;" onclick="habilitarEdicaoPainelVistos()">Editar notas desta data</button>
-                            <span style="font-size:.76rem;color:#64748b;">Use esta opção para liberar a edição de uma data que já foi salva.</span>
-                        </div>
+                        <p style="font-size:.78rem;color:#64748b;margin:0 0 12px;">Cada data aparece separadamente. Você pode editar as notas e salvar somente aquela data. Esta consulta não cria datas nem altera o histórico ao ser aberta.</p>
                         <div id="tabela-painel-coletivo-vistos" style="overflow-x:auto;"></div>
-                        <p style="font-size:.76rem;color:#64748b;margin:8px 0;">Os valores digitados aqui também atualizam os quadrinhos originais. O salvamento usa o mesmo registro da data selecionada.</p>
-                        <button type="button" id="btn-salvar-painel-vistos" class="btn-main btn-green" style="margin-top:8px;" onclick="salvarPainelColetivoVistos()">Salvar lançamentos</button>
                     </div>
                 </section>
                 <div id="hist-vistos-lista" style="margin-top:20px;" class="no-print"></div>
@@ -3147,28 +3142,18 @@
             if (!document.getElementById('conteudo-painel-coletivo-vistos').classList.contains('hidden')) renderizarPainelColetivoVistos();
         }
 
-        function alternarPainelColetivoVistos() {
+        async function alternarPainelColetivoVistos() {
             const conteudo = document.getElementById('conteudo-painel-coletivo-vistos');
             const botao = document.getElementById('btn-abrir-painel-vistos');
             const abrir = conteudo.classList.contains('hidden');
             if (abrir) {
-                renderizarPainelColetivoVistos();
                 conteudo.classList.remove('hidden');
-                botao.textContent = 'Fechar painel';
+                botao.textContent = 'Fechar todas as notas';
+                await carregarTodasNotasVistos();
             } else {
                 conteudo.classList.add('hidden');
-                botao.textContent = 'Abrir painel';
+                botao.textContent = 'Abrir todas as notas';
             }
-        }
-
-        function habilitarEdicaoPainelVistos() {
-            const dataSelecionada = document.getElementById('data').value;
-            if (!dataSelecionada) {
-                alert('Selecione uma data antes de editar os vistos.');
-                return;
-            }
-            dataOficialmenteAberta = true;
-            carregarAlunos();
         }
 
         function escaparTextoPainelVistos(valor) {
@@ -3176,62 +3161,117 @@
                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
 
-        function renderizarPainelColetivoVistos() {
+        async function carregarTodasNotasVistos() {
             const destino = document.getElementById('tabela-painel-coletivo-vistos');
-            const originais = Array.from(document.querySelectorAll('#lista-container .input-v'));
-            if (!originais.length) {
-                destino.innerHTML = '<p style="color:#64748b;">Selecione uma turma para visualizar os lançamentos.</p>';
-                document.getElementById('btn-salvar-painel-vistos').disabled = true;
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            if (!t) {
+                destino.innerHTML = '<p style="color:#64748b;">Selecione uma turma para consultar os vistos.</p>';
                 return;
             }
 
-            let tabela = '<table style="width:100%;min-width:520px;border-collapse:collapse;font-size:.82rem;"><thead><tr style="background:#eff6ff;"><th style="padding:9px;text-align:left;">Aluno</th>';
-            for (let v = 1; v <= 5; v++) {
-                const cabecalho = document.getElementById('h' + v);
-                tabela += '<th style="padding:9px;text-align:center;">' + escaparTextoPainelVistos(cabecalho ? cabecalho.value : 'Ativ. ' + v) + '</th>';
-            }
-            tabela += '</tr></thead><tbody>';
-            const linhas = new Map();
-            originais.forEach(inp => {
-                const idx = inp.dataset.idx;
-                if (!linhas.has(idx)) linhas.set(idx, { nome: inp.closest('tr')?.querySelector('td')?.textContent || ('Aluno ' + (Number(idx) + 1)), campos: [] });
-                linhas.get(idx).campos.push(inp);
-            });
-            linhas.forEach((linha, idx) => {
-                tabela += '<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:8px 6px;min-width:140px;">' + escaparTextoPainelVistos(linha.nome) + '</td>';
-                for (let v = 1; v <= 5; v++) {
-                    const original = linha.campos.find(c => Number(c.dataset.v) === v);
-                    const valor = original ? original.value : '';
-                    const bloqueado = !original || original.disabled;
-                    tabela += '<td style="padding:6px;text-align:center;"><input type="text" inputmode="decimal" class="campo-painel-visto" oninput="sanitizarCampoNumerico(this)" data-idx="' + idx + '" data-v="' + v + '" value="' + escaparTextoPainelVistos(valor) + '" ' + (bloqueado ? 'disabled' : '') + ' style="width:54px;max-width:100%;height:34px;text-align:center;border:1px solid #cbd5e1;border-radius:6px;padding:3px;"></td>';
+            destino.innerHTML = '<p style="color:#64748b;">Carregando os lançamentos já registrados...</p>';
+            try {
+                const [sH, sA, sV] = await Promise.all([
+                    db.ref('headers/' + t + '/' + b).once('value'),
+                    db.ref('turmas/' + t).once('value'),
+                    db.ref('vistos/' + t + '/' + b).once('value')
+                ]);
+                const cabecalhos = sH.val() || {};
+                const alunos = sA.val() || [];
+                const vistos = sV.val() || {};
+                const datas = Object.keys(vistos).filter(data => /^\\d{4}-\\d{2}-\\d{2}$/.test(data) && vistos[data] && typeof vistos[data] === 'object').sort().reverse();
+
+                if (!datas.length) {
+                    destino.innerHTML = '<div class="panel-empty">Esta turma ainda não possui vistos salvos neste bimestre.</div>';
+                    return;
                 }
-                tabela += '</tr>';
-            });
-            tabela += '</tbody></table>';
-            destino.innerHTML = tabela;
-            document.getElementById('btn-salvar-painel-vistos').disabled = !!document.getElementById('btn-salvar-vistos').disabled;
-            destino.querySelectorAll('.campo-painel-visto').forEach(campo => {
-                campo.addEventListener('input', () => {
-                    const original = document.querySelector('#lista-container .input-v[data-idx="' + campo.dataset.idx + '"][data-v="' + campo.dataset.v + '"]');
-                    if (original && !original.disabled) original.value = campo.value;
-                });
-                campo.addEventListener('blur', () => {
-                    const original = document.querySelector('#lista-container .input-v[data-idx="' + campo.dataset.idx + '"][data-v="' + campo.dataset.v + '"]');
-                    if (original && !original.disabled) {
-                        original.value = campo.value;
-                        formatarAoSair(original);
-                        campo.value = original.value;
+
+                let html = '<div style="display:flex;flex-direction:column;gap:16px;">';
+                datas.forEach(data => {
+                    const dia = vistos[data] || {};
+                    html += '<section data-data="' + data + '" class="sec-box" style="margin:0;background:#fff;">' +
+                        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' +
+                        '<h4 style="margin:0;color:#1e3a8a;">Vistos de ' + data.split('-').reverse().join('/') + '</h4>' +
+                        '<button type="button" class="btn-main btn-green" style="margin:0;" onclick="salvarNotasDataExistente(\\'' + data + '\\',this)">Salvar esta data</button></div>' +
+                        '<div style="overflow-x:auto;"><table style="width:100%;min-width:520px;border-collapse:collapse;font-size:.82rem;"><thead><tr style="background:#eff6ff;"><th style="padding:9px;text-align:left;">Aluno</th>';
+                    for (let v = 1; v <= 5; v++) {
+                        html += '<th style="padding:9px;text-align:center;">' + escaparTextoPainelVistos(cabecalhos['h' + v] || ('Ativ. ' + v)) + '</th>';
                     }
+                    html += '</tr></thead><tbody>';
+                    alunos.forEach((nome, idx) => {
+                        const inativo = String(nome || '').toLowerCase().includes('(transferido)') || String(nome || '').toLowerCase().includes('(inativo)');
+                        html += '<tr style="border-bottom:1px solid #e2e8f0;"><td style="padding:8px 6px;min-width:140px;' + (inativo ? 'color:#94a3b8;text-decoration:line-through;' : '') + '">' + escaparTextoPainelVistos(nome) + '</td>';
+                        for (let v = 1; v <= 5; v++) {
+                            const valorOriginal = dia[idx] && dia[idx][v] !== undefined ? dia[idx][v] : '';
+                            const valor = valorOriginal === '' ? '' : String(parseFloat(valorOriginal)).replace('.', ',');
+                            html += '<td style="padding:6px;text-align:center;"><input type="text" inputmode="decimal" class="campo-painel-visto" oninput="sanitizarCampoNumerico(this)" data-idx="' + idx + '" data-v="' + v + '" value="' + escaparTextoPainelVistos(valor) + '" ' + (inativo ? 'disabled' : '') + ' style="width:58px;max-width:100%;height:36px;text-align:center;border:1px solid #cbd5e1;border-radius:6px;padding:3px;"></td>';
+                        }
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table></div></section>';
                 });
-            });
+                html += '</div>';
+                destino.innerHTML = html;
+            } catch (erro) {
+                console.error('Falha ao carregar todos os vistos:', erro);
+                destino.innerHTML = '<p style="color:#b91c1c;">Não foi possível carregar os vistos. Tente novamente.</p>';
+            }
         }
 
-        function salvarPainelColetivoVistos() {
-            document.querySelectorAll('#tabela-painel-coletivo-vistos .campo-painel-visto').forEach(campo => {
-                const original = document.querySelector('#lista-container .input-v[data-idx="' + campo.dataset.idx + '"][data-v="' + campo.dataset.v + '"]');
-                if (original && !original.disabled) original.value = campo.value;
-            });
-            salvarVistos();
+        async function salvarNotasDataExistente(data, botao) {
+            const t = limparT(document.getElementById('turma').value);
+            const b = document.getElementById('bimestre').value;
+            if (!t || !/^\\d{4}-\\d{2}-\\d{2}$/.test(data)) return;
+
+            const cartao = document.querySelector('#tabela-painel-coletivo-vistos [data-data="' + data + '"]');
+            if (!cartao) return;
+            const textoOriginal = botao ? botao.textContent : '';
+            if (botao) { botao.disabled = true; botao.textContent = 'Salvando...'; }
+
+            try {
+                const referencia = db.ref('vistos/' + t + '/' + b + '/' + data);
+                const snapshot = await referencia.once('value');
+                const existente = snapshot.val();
+                if (!existente || typeof existente !== 'object') {
+                    alert('Esta data não existe mais no histórico. Nenhuma nova data foi criada.');
+                    await carregarTodasNotasVistos();
+                    return;
+                }
+
+                const dadosAtualizados = JSON.parse(JSON.stringify(existente));
+                cartao.querySelectorAll('.campo-painel-visto').forEach(campo => {
+                    if (campo.disabled) return;
+                    const idx = campo.dataset.idx;
+                    const atividade = campo.dataset.v;
+                    const texto = String(campo.value || '').replace(',', '.').trim();
+                    if (!texto) {
+                        if (dadosAtualizados[idx] && typeof dadosAtualizados[idx] === 'object') {
+                            delete dadosAtualizados[idx][atividade];
+                            if (Object.keys(dadosAtualizados[idx]).length === 0) delete dadosAtualizados[idx];
+                        }
+                        return;
+                    }
+                    const numero = Number(texto);
+                    if (!Number.isFinite(numero)) return;
+                    if (!dadosAtualizados[idx] || typeof dadosAtualizados[idx] !== 'object') dadosAtualizados[idx] = {};
+                    dadosAtualizados[idx][atividade] = numero;
+                });
+
+                await referencia.set(dadosAtualizados);
+                tocarSomSalvamento();
+                if (botao) botao.textContent = 'Salvo!';
+                await carregarTodasNotasVistos();
+                carregarHistoricoVistos();
+            } catch (erro) {
+                console.error('Falha ao salvar vistos da data ' + data + ':', erro);
+                alert('Não foi possível salvar as alterações desta data. Confira a conexão e tente novamente.');
+            } finally {
+                if (botao && botao.isConnected) {
+                    botao.disabled = false;
+                    if (botao.textContent !== 'Salvo!') botao.textContent = textoOriginal;
+                }
+            }
         }
 
         function sanitizarCampoNumerico(inp) {
