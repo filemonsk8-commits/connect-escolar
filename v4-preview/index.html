@@ -675,9 +675,9 @@
                 </div>
                 <div class="maintenance-grid">
                     <button type="button" class="maintenance-card" onclick="aba('cad')">
-                        <span class="maintenance-icon">🛡️</span><strong>Backup, restauração e modo offline</strong>
-                        <span>Cópias de segurança, sincronização, limpeza de registros antigos e gestão de turmas.</span>
-                        <em>Abrir ferramentas de cadastro e proteção</em>
+                        <span class="maintenance-icon">🏫</span><strong>Gestão de turmas</strong>
+                        <span>Cadastre, edite, exclua e organize a ordem das turmas.</span>
+                        <em>Abrir cadastro de turmas</em>
                     </button>
                     <button type="button" class="maintenance-card" onclick="aba('admin')">
                         <span class="maintenance-icon">🔐</span><strong>Administração do sistema</strong>
@@ -695,7 +695,48 @@
                         <em>Ver informações do sistema</em>
                     </button>
                 </div>
-                <div class="maintenance-note"><strong>Proteção:</strong> esta central apenas organiza o acesso às ferramentas existentes. Ela não executa limpeza, restauração ou alteração de dados automaticamente.</div>
+                <div class="maintenance-tools">
+                <h3>Proteção dos dados e funcionamento</h3>
+                <div class="sec-box">
+                    <h4>🧹 Reset de Dados da Turma Selecionada</h4>
+                    <p style="font-size: 0.78rem; color: #64748b; margin-top: -5px;">Ações para apagar lançamentos da turma selecionada no menu superior no bimestre atual.</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <button onclick="resetarVistosTurmaBimestre()" class="btn-main btn-orange" style="margin-top:0;">Limpar Lançamentos de Vistos</button>
+                        <button onclick="resetarDiarioTurmaBimestre()" class="btn-main btn-orange" style="margin-top:0;">Limpar Diários do Bimestre</button>
+                    </div>
+                </div>
+
+                                
+                <div class="sec-box backup-box">
+                    <h4>🛡️ Backup e proteção dos registros</h4>
+                    <p class="backup-description">Exporte uma cópia das turmas, estudantes, vistos, atividades, diários, recuperações e horários. O backup não altera os dados que estão no Firebase.</p>
+                    <div class="backup-actions">
+                        <button onclick="exportarBackupCompleto()" class="btn-main btn-blue" style="margin-top:0;">Baixar backup completo</button>
+                        <button onclick="document.getElementById('arquivo-backup').click()" class="btn-main btn-orange" style="margin-top:0;">Restaurar um backup</button>
+                    </div>
+                    <div class="sec-box" style="margin-top:12px; border-color:#f59e0b;">
+                        <h4>🧹 Limpeza de registros de turmas antigas</h4>
+                        <p class="backup-description">Remove somente as listas de estudantes e os diários das cinco turmas antigas identificadas na auditoria. Antes da exclusão, o sistema gera um backup completo e pede uma confirmação adicional.</p>
+                        <button type="button" onclick="limparRegistrosTurmasAntigas()" class="btn-main btn-orange" style="margin-top:0;">Preparar limpeza das turmas antigas</button>
+                    </div>
+                    <input id="arquivo-backup" type="file" accept="application/json,.json" class="hidden" onchange="restaurarBackupCompleto(this)">
+                    <p class="backup-warning">Ao restaurar, somente as áreas de dados do Connect Escolar serão substituídas. Antes disso, o sistema baixará uma cópia do estado atual.</p>
+
+                    <div class="offline-panel">
+                        <h4>💾 Modo offline deste aparelho</h4>
+                        <p class="offline-description">Prepare uma cópia local das turmas, estudantes, vistos, diários, recuperações e horários. Depois, você poderá consultar e registrar informações sem internet; as alterações serão enviadas ao Firebase quando a conexão voltar.</p>
+                        <p id="offline-status" class="offline-state">Verificando armazenamento local…</p>
+                        <p id="offline-pendencias" class="offline-pending">Nenhuma informação de sincronização disponível.</p>
+                        <div class="offline-actions">
+                            <button id="btn-preparar-offline" onclick="prepararDadosOffline()" class="btn-main btn-blue" style="margin-top:0;">Preparar / atualizar cópia local</button>
+                            <button id="btn-sincronizar-offline" onclick="window.iniciarSincronizacaoManualOffline()" class="btn-main btn-orange" style="margin-top:0;">Sincronizar pendências</button>
+                            <button id="btn-forcar-sincronizacao" onclick="forcarSincronizacaoOffline()" class="btn-main btn-red" style="display:none; margin-top:0;">Forçar envio após conferir</button>
+                        </div>
+                        <p class="offline-warning">Faça a preparação separadamente no computador e no celular, enquanto estiver conectado. O primeiro login neste aparelho precisa ser feito com internet. Os dados offline ficam armazenados neste navegador; evite usar um perfil compartilhado ou computador público.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="maintenance-note"><strong>Proteção:</strong> as ferramentas ficam reunidas aqui. Limpeza e restauração só acontecem quando você aciona a opção correspondente e confirma a operação.</div>
             </div>
 
             <div id="aba-home" class="card">
@@ -993,44 +1034,6 @@
                     <h4>☰ Reordenar / Editar / Excluir Turmas</h4>
                     <p style="font-size: 0.75rem; color: #64748b; margin-top: -5px; margin-bottom: 10px;">Arraste pelo ícone <b>☰</b> para posicionar na ordem que preferir.</p>
                     <div id="lista-turmas-cadastradas">Carregando turmas...</div>
-                </div>
-
-                <div class="sec-box">
-                    <h4>🧹 Reset de Dados da Turma Selecionada</h4>
-                    <p style="font-size: 0.78rem; color: #64748b; margin-top: -5px;">Ações para apagar lançamentos da turma selecionada no menu superior no bimestre atual.</p>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                        <button onclick="resetarVistosTurmaBimestre()" class="btn-main btn-orange" style="margin-top:0;">Limpar Lançamentos de Vistos</button>
-                        <button onclick="resetarDiarioTurmaBimestre()" class="btn-main btn-orange" style="margin-top:0;">Limpar Diários do Bimestre</button>
-                    </div>
-                </div>
-
-                                <div class="sec-box backup-box">
-                    <h4>🛡️ Backup e proteção dos registros</h4>
-                    <p class="backup-description">Exporte uma cópia das turmas, estudantes, vistos, atividades, diários, recuperações e horários. O backup não altera os dados que estão no Firebase.</p>
-                    <div class="backup-actions">
-                        <button onclick="exportarBackupCompleto()" class="btn-main btn-blue" style="margin-top:0;">Baixar backup completo</button>
-                        <button onclick="document.getElementById('arquivo-backup').click()" class="btn-main btn-orange" style="margin-top:0;">Restaurar um backup</button>
-                    </div>
-                    <div class="sec-box" style="margin-top:12px; border-color:#f59e0b;">
-                        <h4>🧹 Limpeza de registros de turmas antigas</h4>
-                        <p class="backup-description">Remove somente as listas de estudantes e os diários das cinco turmas antigas identificadas na auditoria. Antes da exclusão, o sistema gera um backup completo e pede uma confirmação adicional.</p>
-                        <button type="button" onclick="limparRegistrosTurmasAntigas()" class="btn-main btn-orange" style="margin-top:0;">Preparar limpeza das turmas antigas</button>
-                    </div>
-                    <input id="arquivo-backup" type="file" accept="application/json,.json" class="hidden" onchange="restaurarBackupCompleto(this)">
-                    <p class="backup-warning">Ao restaurar, somente as áreas de dados do Connect Escolar serão substituídas. Antes disso, o sistema baixará uma cópia do estado atual.</p>
-
-                    <div class="offline-panel">
-                        <h4>💾 Modo offline deste aparelho</h4>
-                        <p class="offline-description">Prepare uma cópia local das turmas, estudantes, vistos, diários, recuperações e horários. Depois, você poderá consultar e registrar informações sem internet; as alterações serão enviadas ao Firebase quando a conexão voltar.</p>
-                        <p id="offline-status" class="offline-state">Verificando armazenamento local…</p>
-                        <p id="offline-pendencias" class="offline-pending">Nenhuma informação de sincronização disponível.</p>
-                        <div class="offline-actions">
-                            <button id="btn-preparar-offline" onclick="prepararDadosOffline()" class="btn-main btn-blue" style="margin-top:0;">Preparar / atualizar cópia local</button>
-                            <button id="btn-sincronizar-offline" onclick="window.iniciarSincronizacaoManualOffline()" class="btn-main btn-orange" style="margin-top:0;">Sincronizar pendências</button>
-                            <button id="btn-forcar-sincronizacao" onclick="forcarSincronizacaoOffline()" class="btn-main btn-red" style="display:none; margin-top:0;">Forçar envio após conferir</button>
-                        </div>
-                        <p class="offline-warning">Faça a preparação separadamente no computador e no celular, enquanto estiver conectado. O primeiro login neste aparelho precisa ser feito com internet. Os dados offline ficam armazenados neste navegador; evite usar um perfil compartilhado ou computador público.</p>
-                    </div>
                 </div>
             </div>
             <div id="aba-admin" class="card hidden">
