@@ -3180,7 +3180,7 @@
                 const cabecalhos = sH.val() || {};
                 const alunos = sA.val() || [];
                 const vistos = sV.val() || {};
-                const datas = Object.keys(vistos).filter(data => /^\\d{4}-\\d{2}-\\d{2}$/.test(data) && vistos[data] && typeof vistos[data] === 'object').sort().reverse();
+                const datas = Object.keys(vistos).filter(data => /^\d{4}-\d{2}-\d{2}$/.test(data) && vistos[data] && typeof vistos[data] === 'object').sort().reverse();
 
                 if (!datas.length) {
                     destino.innerHTML = '<div class="panel-empty">Esta turma ainda não possui vistos salvos neste bimestre.</div>';
@@ -3193,7 +3193,7 @@
                     html += '<section data-data="' + data + '" class="sec-box" style="margin:0;background:#fff;">' +
                         '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px;">' +
                         '<h4 style="margin:0;color:#1e3a8a;">Vistos de ' + data.split('-').reverse().join('/') + '</h4>' +
-                        '<button type="button" class="btn-main btn-green" style="margin:0;" onclick="salvarNotasDataExistente(\\'' + data + '\\',this)">Salvar esta data</button></div>' +
+                        '<button type="button" class="btn-main btn-green" style="margin:0;" data-date="' + data + '" onclick="salvarNotasDataExistente(this.dataset.date,this)">Salvar esta data</button></div>' +
                         '<div style="overflow-x:auto;"><table style="width:100%;min-width:520px;border-collapse:collapse;font-size:.82rem;"><thead><tr style="background:#eff6ff;"><th style="padding:9px;text-align:left;">Aluno</th>';
                     for (let v = 1; v <= 5; v++) {
                         html += '<th style="padding:9px;text-align:center;">' + escaparTextoPainelVistos(cabecalhos['h' + v] || ('Ativ. ' + v)) + '</th>';
@@ -3222,7 +3222,7 @@
         async function salvarNotasDataExistente(data, botao) {
             const t = limparT(document.getElementById('turma').value);
             const b = document.getElementById('bimestre').value;
-            if (!t || !/^\\d{4}-\\d{2}-\\d{2}$/.test(data)) return;
+            if (!t || !/^\d{4}-\d{2}-\d{2}$/.test(data)) return;
 
             const cartao = document.querySelector('#tabela-painel-coletivo-vistos [data-data="' + data + '"]');
             if (!cartao) return;
@@ -3490,7 +3490,7 @@
                     if (diaEncontrado) marcadores.push({ y: item.y, dia: diaEncontrado.dia });
 
                     // Aceita horário isolado ou combinado com o dia da semana.
-                    if (/(?:^|\\s)(?:13|14|15|16|17)\\s*h\\s*\\d{0,2}/i.test(texto)) {
+                    if (/(?:^|\\s)(?:13|14|15|16|17)\\s*h\\s*\d{0,2}/i.test(texto)) {
                         linhasHorario.push({ y: item.y, texto: item.texto });
                     }
                 });
